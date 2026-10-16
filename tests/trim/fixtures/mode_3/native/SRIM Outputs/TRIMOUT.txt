@@ -1,0 +1,15 @@
+============================== SRIM-2013.00 ==============================
+==============================================================================
+===== TRIMOUT.txt: File of Transmitted / Backscattered / Sputtered Atoms =====
+=  This file tabulates the kinetics of ions or atoms leaving the target.     =
+=  Column #1: S= Sputtered Atom, B= Backscattered Ion, T= Transmitted Ion.   =
+=  Col.#2: Ion Number, Col.#3: Z of atom leaving, Col.#4: Atom energy (eV).  =
+=  Col.#5-7: Last location:  X= Depth into target, Y,Z= Transverse axes.     =
+=  Col.#8-10: Cosines of final trajectory.                                   =
+= *** This data file is in the same format as TRIM.DAT (see manual for uses).=
+====== TRIM Calc.=  B(200 keV) ==> Tungsten+SiO2+Silicon( 3000 A) ============
+ Ion  Atom   Energy        Depth       Lateral-Position        Atom Direction      
+ Numb Numb    (eV)          X(A)        Y(A)       Z(A)      Cos(X)  Cos(Y) Cos(Z) 
+S    2 74 .1661324E+02   0000000E+00  .3157E+01  .7336E+02  -.8323126 -.5275425  .1701604
+B    2  5 .1232495E+06 -  5114802E-07  .7177E+01  .7446E+02  -.9357307  .1555339  .3165712
+T    3  5 .5966460E+05   3000938E-03 -.2268E+03  .2162E+02   .8245738  .2919993  .4845767

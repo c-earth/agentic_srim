@@ -1,0 +1,4 @@
+{"messages": ["Would you like a file of each Cascade ? [Y]\r\n\r\nThis activates the file SRIM Outputs\\COLLISON.txt\r\n and stores calculation results for EVERY cascade."], "title": "TRIM: Special for Neutron/Electron Damage"}
+{"messages": ["File SRIMOutput\\COLLISON.txt now active."], "title": "TRIM: Special for Neutron/Electron Damage"}
+{"messages": ["Would you like every collision filed? [Yes]\r\n\r\n \u00ba  This stores EVERY COLLISION in COLLISON.txt as\r\n \u00ba  well as the statistics of each cascade."], "title": "TRIM: Special for Neutron/Electron Damage"}
+{"messages": ["Calculation Complete (3 Ions)\r\n\r\n"], "title": "End of TRIM.DAT calculation"}

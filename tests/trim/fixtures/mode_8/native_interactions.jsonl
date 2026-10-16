@@ -1,0 +1,2 @@
+{"pid": 8956, "title": "TRIM: Special for Neutron/Electron Damage", "message": "Would you like a file of each Cascade ? [Y]\r\n\r\nThis activates the file SRIM Outputs\\COLLISON.txt\r\n and stores calculation results for EVERY cascade.", "button": "No", "ion_count": 3}
+{"pid": 8956, "title": "End of TRIM.DAT calculation", "message": "Calculation Complete (3 Ions)\r\n\r\n", "button": "OK", "ion_count": 3}

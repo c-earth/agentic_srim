@@ -1,0 +1,4 @@
+{"pid": 7816, "title": "TRIM: Special for Neutron/Electron Damage", "message": "Would you like a file of each Cascade ? [Y]\r\n\r\nThis activates the file SRIM Outputs\\COLLISON.txt\r\n and stores calculation results for EVERY cascade.", "button": "Yes", "ion_count": 3}
+{"pid": 7816, "title": "TRIM: Special for Neutron/Electron Damage", "message": "File SRIMOutput\\COLLISON.txt now active.", "button": "OK", "ion_count": 3}
+{"pid": 7816, "title": "TRIM: Special for Neutron/Electron Damage", "message": "Would you like every collision filed? [Yes]\r\n\r\n \u00ba  This stores EVERY COLLISION in COLLISON.txt as\r\n \u00ba  well as the statistics of each cascade.", "button": "No", "ion_count": 3}
+{"pid": 7816, "title": "End of TRIM.DAT calculation", "message": "Calculation Complete (3 Ions)\r\n\r\n", "button": "OK", "ion_count": 3}

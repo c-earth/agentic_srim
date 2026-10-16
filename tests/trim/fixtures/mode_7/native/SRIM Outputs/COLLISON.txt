@@ -1,0 +1,148 @@
+============================== SRIM-2013.00 ==============================
+==============================================================================
+------------------------------------------------------------------------------
+Installed B into W SiO2 Si software regression
+------------------------------------------------------------------------------
+============================================================
+======  Special Calculation based on TRIM.DAT file.  =======
+=                                                          =
+=Installed B into W SiO2 Si software regression=
+============================================================
+>      W  Displacement Energy of  W = 0021.00000 eV
+  Latt.Binding Energy of  W = 0002.10000 eV
+  SurfaceBind. Energy of  W = 0003.10000 eV
+>     Si  Displacement Energy of Si = 0022.00000 eV
+  Latt.Binding Energy of Si = 0002.20000 eV
+  SurfaceBind. Energy of Si = 0003.20000 eV
+>      O  Displacement Energy of  O = 0023.00000 eV
+  Latt.Binding Energy of  O = 0002.30000 eV
+  SurfaceBind. Energy of  O = 0003.30000 eV
+>     Si  Displacement Energy of Si = 0022.00000 eV
+  Latt.Binding Energy of Si = 0002.20000 eV
+  SurfaceBind. Energy of Si = 0003.20000 eV
+============================================================
+ 
+==========================  COLLISION HISTORY  =======================================================
+  NOTES: Only Ion Collisions which produce Displacements are tabulated.                               
+         Atom Sums and Averages are Incomplete if Recoil Cascades Leave Target.                       
+         Target DISPlacements = VACancies + REPLACement Collisions.                                   
+         Target VACancies = INTERstitials + Sputtered + Transmitted Atoms.                            
+                            Recoil Atoms which end at the surface, are not counted (see manual).      
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00001³41.86E-02³32015.E-02³-1781.E-03³ 2684.E-03³0003.00³  W ³45866.E-03³ <== Start of New Cascade  ³
+=================================================================================
+  Recoil Atom Energy(eV)   X (A)      Y (A)      Z (A)   Vac Repl Ion Numb 00001=
+Û 00001   74  45866.E-03 3201.E-01 -1781.E-03  2684.E-03  1   00 Û<ÄPrime RecoilÛ
+Û 00002   74  00000.E+00 3196.E-01 -1267.E-03  5071.E-03  0   01 Û
+Û 00003   74  37980.E-03 3196.E-01 -1267.E-03  5071.E-03  1   00 Û
+Û 00004   74  21920.E-03 3183.E-01 -3193.E-03  4073.E-03  1   00 Û
+==================================================================
+³                                Summary of Above Cascade ==> ³45866.E-03³000003³000002³000001³000003³
+³00001³37.27E-02³31958.E-02³-1267.E-03³ 5071.E-03³0002.83³  W ³22185.E-03³ <== Start of New Cascade  ³
+=================================================================================
+  Recoil Atom Energy(eV)   X (A)      Y (A)      Z (A)   Vac Repl Ion Numb 00001=
+Û 00001   74  22185.E-03 3196.E-01 -1267.E-03  5071.E-03  1   00 Û<ÄPrime RecoilÛ
+==================================================================
+³                                Summary of Above Cascade ==> ³22185.E-03³000001³000001³000000³000001³
+³00001³31.09E-02³32024.E-02³-5623.E-03³ 1056.E-02³0002.59³  W ³33326.E-03³ <== Start of New Cascade  ³
+=================================================================================
+  Recoil Atom Energy(eV)   X (A)      Y (A)      Z (A)   Vac Repl Ion Numb 00001=
+Û 00001   74  33326.E-03 3202.E-01 -5623.E-03  1056.E-02  1   00 Û<ÄPrime RecoilÛ
+==================================================================
+³                                Summary of Above Cascade ==> ³33326.E-03³000001³000001³000000³000001³
+³00001³19.20E-02³31068.E-02³-2067.E-02³ 7623.E-03³0002.03³  W ³27865.E-03³ <== Start of New Cascade  ³
+=================================================================================
+  Recoil Atom Energy(eV)   X (A)      Y (A)      Z (A)   Vac Repl Ion Numb 00001=
+Û 00001   74  27865.E-03 3107.E-01 -2067.E-02  7623.E-03  1   00 Û<ÄPrime RecoilÛ
+Û 00002   74  37266.E-05 3118.E-01 -2058.E-02  5362.E-03  0   01 Û
+Û 00003   74  25392.E-03 3118.E-01 -2058.E-02  5362.E-03  1   00 Û
+==================================================================
+³                                Summary of Above Cascade ==> ³27865.E-03³000002³000001³000001³000002³
+³00001³14.47E-02³31212.E-02³-2029.E-02³ 2899.E-03³0001.76³  W ³22747.E-03³ <== Start of New Cascade  ³
+=================================================================================
+  Recoil Atom Energy(eV)   X (A)      Y (A)      Z (A)   Vac Repl Ion Numb 00001=
+Û 00001   74  22747.E-03 3121.E-01 -2029.E-02  2899.E-03  1   00 Û<ÄPrime RecoilÛ
+==================================================================
+³                                Summary of Above Cascade ==> ³22747.E-03³000001³000001³000000³000001³
+======================================================================================================
+- For Ion 0000001:               For All Ions to date :                                              º
+- Displacements     = 000008.0   Average Displacements/Ion     = 0000008.000                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.000                         º
+- Vacancies         = 000006.0   Average Vacancies/Ion         = 0000006.000                         º
+- Interstitials     = 000008.0   Average Interstitials/Ion     = 0000008.000                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00002³49.95E-02³30499.E-02³-4935.E-05³-3148.E-04³0003.28³  W ³22696.E-03³ <== Start of New Cascade  ³
+=================================================================================
+  Recoil Atom Energy(eV)   X (A)      Y (A)      Z (A)   Vac Repl Ion Numb 00002=
+Û 00001   74  22696.E-03 3050.E-01 -4935.E-05 -3148.E-04  1   00 Û<ÄPrime RecoilÛ
+==================================================================
+³                                Summary of Above Cascade ==> ³22696.E-03³000001³000001³000000³000001³
+³00002³44.46E-02³30866.E-02³-8997.E-04³ 2981.E-03³0003.09³  W ³22559.E-03³ <== Start of New Cascade  ³
+=================================================================================
+  Recoil Atom Energy(eV)   X (A)      Y (A)      Z (A)   Vac Repl Ion Numb 00002=
+Û 00001   74  22559.E-03 3087.E-01 -8997.E-04  2981.E-03  1   00 Û<ÄPrime RecoilÛ
+==================================================================
+³                                Summary of Above Cascade ==> ³22559.E-03³000001³000001³000000³000001³
+³00002³25.34E-02³31787.E-02³ 2896.E-02³ 1325.E-02³0002.34³  W ³27285.E-03³ <== Start of New Cascade  ³
+=================================================================================
+  Recoil Atom Energy(eV)   X (A)      Y (A)      Z (A)   Vac Repl Ion Numb 00002=
+Û 00001   74  27285.E-03 3179.E-01  2896.E-02  1325.E-02  1   00 Û<ÄPrime RecoilÛ
+Û 00002   74  00000.E+00 3195.E-01  2773.E-02  1179.E-02  0   01 Û
+Û 00003   74  25115.E-03 3195.E-01  2773.E-02  1179.E-02  1   00 Û
+==================================================================
+³                                Summary of Above Cascade ==> ³27285.E-03³000002³000001³000001³000002³
+³00002³18.87E-02³32286.E-02³ 2459.E-02³ 6216.E-03³0002.01³  W ³26206.E-03³ <== Start of New Cascade  ³
+=================================================================================
+  Recoil Atom Energy(eV)   X (A)      Y (A)      Z (A)   Vac Repl Ion Numb 00002=
+Û 00001   74  26206.E-03 3229.E-01  2459.E-02  6216.E-03  1   00 Û<ÄPrime RecoilÛ
+Û 00002   74  00000.E+00 3225.E-01  2707.E-02  6417.E-03  0   01 Û
+Û 00003   74  23418.E-03 3225.E-01  2707.E-02  6417.E-03  1   00 Û
+==================================================================
+³                                Summary of Above Cascade ==> ³26206.E-03³000002³000001³000001³000002³
+======================================================================================================
+- For Ion 0000002:               For All Ions to date :                                              º
+- Displacements     = 000006.0   Average Displacements/Ion     = 0000007.000                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.000                         º
+- Vacancies         = 000004.0   Average Vacancies/Ion         = 0000005.000                         º
+- Interstitials     = 000006.0   Average Interstitials/Ion     = 0000007.000                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00003³47.17E-02³30932.E-02³ 5240.E-04³-2903.E-03³0003.19³  W ³74337.E-03³ <== Start of New Cascade  ³
+=================================================================================
+  Recoil Atom Energy(eV)   X (A)      Y (A)      Z (A)   Vac Repl Ion Numb 00003=
+Û 00001   74  74337.E-03 3093.E-01  5240.E-04 -2903.E-03  1   00 Û<ÄPrime RecoilÛ
+Û 00002   74  54230.E-03 3084.E-01 -1790.E-03 -2681.E-03  1   00 Û
+Û 00003   74  00000.E+00 3070.E-01 -3322.E-07 -3784.E-03  0   01 Û
+Û 00004   74  46616.E-03 3070.E-01 -3322.E-07 -3784.E-03  1   00 Û
+==================================================================
+³                                Summary of Above Cascade ==> ³74337.E-03³000003³000002³000001³000003³
+³00003³17.91E-02³30283.E-02³-2485.E-04³ 2967.E-02³0001.96³  W ³34783.E-03³ <== Start of New Cascade  ³
+=================================================================================
+  Recoil Atom Energy(eV)   X (A)      Y (A)      Z (A)   Vac Repl Ion Numb 00003=
+Û 00001   74  34783.E-03 3028.E-01 -2485.E-04  2967.E-02  1   00 Û<ÄPrime RecoilÛ
+==================================================================
+³                                Summary of Above Cascade ==> ³34783.E-03³000001³000001³000000³000001³
+======================================================================================================
+- For Ion 0000003:               For All Ions to date :                                              º
+- Displacements     = 000004.0   Average Displacements/Ion     = 0000006.000                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000001.700                         º
+- Vacancies         = 000003.0   Average Vacancies/Ion         = 0000004.300                         º
+- Interstitials     = 000004.0   Average Interstitials/Ion     = 0000006.000                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------

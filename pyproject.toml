@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools==84.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentic-srim"
+version = "0.1.0"
+description = "Auditable SR Module and TRIM calculations"
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+agentic-srim = "agentic_srim.interfaces.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

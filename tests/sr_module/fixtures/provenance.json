@@ -1,0 +1,16 @@
+{
+  "capture_date": "2026-10-15",
+  "files_sha256": {
+    "installed_example.in": "5eca8ae70716f9c2396d36e7daa3224f8575fbbebbc564ef2771f84a9b31af9d",
+    "installed_example.txt": "fd122ef801a2c831ec01fee1a0f8a2ddfe65dfb15144be047f152975e065a052",
+    "request.json": "de06922b0949c5ce7c569c2671332013f14566f56ebbb93082fd643099b7b82e"
+  },
+  "purpose": "Software regression fixture, not independent scientific validation",
+  "software_sha256": {
+    "SCOEF03.dat": "a328eaaa04e48efed1d15cfbcdf810849115ff352feaac1ee323c3bf4229ecea",
+    "SNUC03.dat": "4c7ff553b7be34a1b28a31a6ac89055b800392cbbf0401784da6afc5a693a030",
+    "SRModule.exe": "a679e55defdb12ebe39c02ca0562016b79ad73105dcaeddc9e8ba40f57c16288",
+    "VERSION": "f0265c292d60ec141b8518ed688b52b977f2ec81761b66195545024579ef4c40"
+  },
+  "source_input": "srim/SR Module/SR.IN"
+}

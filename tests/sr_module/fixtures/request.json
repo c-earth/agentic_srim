@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "ion_atomic_number": 1,
+  "ion_mass_u": 1.008,
+  "target": [
+    {"atomic_number": 1, "name": "Hydrogen", "atomic_amount": 8, "mass_u": 1.008},
+    {"atomic_number": 6, "name": "Carbon", "atomic_amount": 3, "mass_u": 12.011},
+    {"atomic_number": 8, "name": "Oxygen", "atomic_amount": 2, "mass_u": 15.999}
+  ],
+  "density_g_cm3": 1.0597,
+  "phase": "solid",
+  "compound_correction": 0.9457121,
+  "energy_min_keV": 10,
+  "energy_max_keV": 10000,
+  "stopping_unit": 5,
+  "sources": {
+    "ion": "Installed srim/SR Module/SR.IN example; not independently validated.",
+    "material": "Installed SR.IN: 1,3-propanediol, condensed phase, density and correction copied verbatim; not independently validated.",
+    "energy": "Installed SR.IN example interval, 10 to 10000 keV; SR Module selects the grid."
+  }
+}

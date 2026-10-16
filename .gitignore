@@ -1,0 +1,44 @@
+# Local environments and simulator installations
+/.venv/
+/venv/
+/srim/
+
+# Generated application data and disposable work
+/runtime/
+/tmp/
+/temp/
+*.tmp
+*.temp
+
+# Python bytecode, build metadata and test/tool caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+/build/
+/dist/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+/htmlcov/
+/coverage.xml
+
+# Machine-local agent/editor settings and credentials
+/.codex/
+/.idea/
+/.vscode/
+.env
+.env.*
+!.env.example
+
+# Editor and operating-system files
+*~
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+Desktop.ini

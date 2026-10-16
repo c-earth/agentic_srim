@@ -1,0 +1,150 @@
+{
+  "angle_degrees": 0.0,
+  "calculation_mode": 7,
+  "depth_max_nm": 300.0,
+  "depth_min_nm": 0.0,
+  "elements": [
+    {
+      "atomic_number": 74,
+      "displacement_eV": 21.0,
+      "lattice_binding_eV": 2.1,
+      "mass_u": 183.0,
+      "name": "W",
+      "surface_binding_eV": 3.1
+    },
+    {
+      "atomic_number": 14,
+      "displacement_eV": 22.0,
+      "lattice_binding_eV": 2.2,
+      "mass_u": 28.0,
+      "name": "SiOx",
+      "surface_binding_eV": 3.2
+    },
+    {
+      "atomic_number": 8,
+      "displacement_eV": 23.0,
+      "lattice_binding_eV": 2.3,
+      "mass_u": 16.0,
+      "name": "O",
+      "surface_binding_eV": 3.3
+    },
+    {
+      "atomic_number": 14,
+      "displacement_eV": 22.0,
+      "lattice_binding_eV": 2.2,
+      "mass_u": 28.0,
+      "name": "Si",
+      "surface_binding_eV": 3.2
+    }
+  ],
+  "energy_keV": 200.0,
+  "ion_atomic_number": 5,
+  "ion_count": 3,
+  "ion_mass_u": 11.0,
+  "layers": [
+    {
+      "atomic_amounts": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "compound_correction": 1.0,
+      "density_g_cm3": 19.3,
+      "name": "Tungsten",
+      "phase": "solid",
+      "width_nm": 100.0
+    },
+    {
+      "atomic_amounts": [
+        0.0,
+        0.333333,
+        0.666667,
+        0.0
+      ],
+      "compound_correction": 1.0,
+      "density_g_cm3": 2.33,
+      "name": "SiO2",
+      "phase": "solid",
+      "width_nm": 100.0
+    },
+    {
+      "atomic_amounts": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "compound_correction": 1.0,
+      "density_g_cm3": 2.32,
+      "name": "Silicon",
+      "phase": "solid",
+      "width_nm": 100.0
+    }
+  ],
+  "outputs": {
+    "backscatter": true,
+    "collisions": 2,
+    "exyz_interval_eV": 10000,
+    "ranges": true,
+    "sputter": true,
+    "transmit": true
+  },
+  "particles": [
+    {
+      "atomic_number": 74,
+      "direction": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "energy_eV": 500.0,
+      "event": "0",
+      "position_nm": [
+        30.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "atomic_number": 74,
+      "direction": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "energy_eV": 500.0,
+      "event": "1",
+      "position_nm": [
+        30.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "atomic_number": 74,
+      "direction": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "energy_eV": 500.0,
+      "event": "2",
+      "position_nm": [
+        30.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "random_seed": 12345,
+  "schema_version": 1,
+  "sources": {
+    "calculation": "Three events, seed 12345, mode 7 (recoil_list_monolayer_cascades). Enabled outputs: ranges, backscatter, transmit, sputter; collisions: ion and recoil records; EXYZ interval: 10000 eV. Software format regression only, not a scientific reference.",
+    "ion": "Boron Z=5, mass=11 u and the 200 keV beam setting originate from the installed TRIM.IN example; not independently validated. This retained beam field does not describe the external event energies or, in recoil modes, their species; see particles. The captured B-into-target title is retained as a historical label.",
+    "material": "Layer compositions, dimensions, densities and damage energies originate from the installed TRIM.IN example and are retained for software regression only.",
+    "particles": "Three explicit 500 eV tungsten recoils at (30,0,0) nm with direction (1,0,0). These are software test inputs, not an independently validated physical source; their original selection rationale is not retained."
+  },
+  "stopping_power_version": 0,
+  "title": "Installed B into W SiO2 Si software regression"
+}

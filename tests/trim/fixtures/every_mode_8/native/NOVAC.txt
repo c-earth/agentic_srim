@@ -1,0 +1,14 @@
+====== Installed B into W SiO2 Si software regression =======
+        SRIM-2013.00
+=========================================
+        Replacement Collisions       
+ See SRIM Outputs\TDATA.txt for calc. details   
+=========================================
+Installed B into W SiO2 Si software regression
+------------------------------------------------------------------------------
+--------------------------------------------------------------------
+    Recoil/Damage Calculations made with Kinchin-Pease Estimates    
+--------------------------------------------------------------------
+
+ There are NO Replacement Collisions calculated.
+ You must execute a full TRIM cascade calculation for these.

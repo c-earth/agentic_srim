@@ -1,0 +1,4 @@
+srim_directory = 'D:\local\srim\srim_2013'
+runtime_directory = "../runtime"
+timeout_seconds = 30
+max_attempts = 1
