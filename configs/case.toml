@@ -1,0 +1,4 @@
+runtime_directory = "../runtime"
+
+[stores]
+local = "../runtime"

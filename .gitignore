@@ -1,8 +1,13 @@
 /.venv/
 /srim/
+# Runtime stores, attempt archives, and caches.
 /runtime/
 /tmp/
-/.codex/
+# Share reviewed portable Codex rules; keep local registration and approvals private.
+/.codex/*
+!/.codex/rules/
+/.codex/rules/*
+!/.codex/rules/git.rules
 __pycache__/
 *.py[cod]
 *.egg-info/

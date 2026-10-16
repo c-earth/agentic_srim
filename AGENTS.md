@@ -39,7 +39,7 @@
 - Follow the agreed component-first test layout: backend tests under `tests/{sr_module,trim}/` with input/output/execution modules and fixtures; shared process/workspace, persistence and interface tests under `tests/{execution,storage,interfaces}/`. Do not accumulate backend tests in a top-level bundle or require renewed approval to follow this agreed organization.
 - The later whole-project audit instruction authorizes removal of departures and bounded isolated execution verification with complete temporary-artifact cleanup. The root examples folder was removed; required regression request data belong in test fixtures, and MCP receives request objects directly. Do not restore example/probe/report folders as permanent application structure.
 - Completed historical execution approvals do not carry forward into a new review. The current review's scope, individually pending behavior changes, withdrawn proposals and verification limits are recorded in `HANDOFF.md`; maintain that explicit list instead of an unspecified reference to remaining suggestions.
-- The single configured installation root is `D:\local\srim\srim_2013`, outside this project. Derive backend locations from `configs/application.toml`; do not restore the deleted project-local `srim/` duplicate.
+- Use the single installation root selected by `srim_directory` in `configs/application.toml`, outside this project. Preserve this host's selected root recorded in `HANDOFF.md`; derive backend locations from configuration and do not restore a project-local `srim/` duplicate.
 
 ## Context checkpoints
 
@@ -63,9 +63,9 @@
 
 ## Python environment
 
-- Project root: `D:\projects\agentic_srim`.
-- Virtual environment: `D:\projects\agentic_srim\.venv`.
-- Required Python interpreter: `D:\projects\agentic_srim\.venv\Scripts\python.exe`.
+- Project root: the directory containing this `AGENTS.md`.
+- Virtual environment: `.venv` under that project root.
+- Required Python interpreter: `.venv\Scripts\python.exe` under that project root on Windows. Resolve its absolute path from the current clone rather than using another computer's checkout path.
 - Use this interpreter for all authorized Python scripts, tests, and Python tooling in this project. Do not use global Python, `py`, or a bare `python` command.
 - Install and manage dependencies through this interpreter with `-m pip`; do not use bare `pip` or install project dependencies globally.
 - Call the interpreter directly; activation is optional and is not required.
@@ -74,10 +74,12 @@
 
 ## PowerShell examples
 
+From the project root:
+
 ```powershell
-& 'D:\projects\agentic_srim\.venv\Scripts\python.exe' script.py
-& 'D:\projects\agentic_srim\.venv\Scripts\python.exe' -m pip install <package>
-& 'D:\projects\agentic_srim\.venv\Scripts\python.exe' -m pip check
+& .\.venv\Scripts\python.exe script.py
+& .\.venv\Scripts\python.exe -m pip install <package>
+& .\.venv\Scripts\python.exe -m pip check
 ```
 
 These instructions specify which environment to use; they do not grant additional permission to execute commands.

@@ -1,47 +1,47 @@
 # Project handoff
 
-Updated: 2026-10-15
+Updated: 2026-10-16
 
-## State and next action
+## Current state and direction
 
-SR Module interval tables and TRIM modes 1–8 are implemented and software-checked through shared execution/storage and CLI/MCP interfaces. Scientific validation remains deferred: successful runs are CHECKED, never scientifically ACCEPTED.
+Windows delivery: Case MCP (10 tools), SRIM MCP (10, including export_run_data), Analysis MCP (13). Branch codex/case-mcp; user authorized commit/push of the current delivery on 2026-10-16.
 
-Native verification and cleanup are complete. Git uses main and repository-local c-earth author settings; public origin https://github.com/c-earth/agentic_srim was created and main pushed with user approval. README now targets new users with portable Windows setup, capabilities, CLI and generic MCP configuration; author/session references are excluded by AGENTS.md. Minimal ignore rules and fixtures remain. Implementation and native execution remain paused; wait for the next request.
+User direction: operational Case → SRIM → Analysis/plots → saved answers first; further patches deferred. Later requests authorize temporary skills, portable Codex setup, README audit/verification and commit/push. Broader implementation/testing, native runs, successor chats and automation remain stopped. PROJECT_CHECKLIST.md owns expanded acceptance.
 
-## Active constraints
+Next: user-specified case, inputs and execution permission/budget; reload MCP configuration before use. Procedures: README.md.
 
-- Follow AGENTS.md. Use D:\projects\agentic_srim\.venv\Scripts\python.exe; do not install dependencies or resume simulations without relevant authorization.
-- Local `.codex/rules/git.rules` allows routine Git file changes/new commits/reverts and `push origin main`; checkpoint/history changes need explicit instruction. AGENTS.md prohibits bypasses through flags/aliases/APIs. Prefix rules are limited; reload requires restarting Codex with the trusted project layer. The rule file stays ignored/local.
-- Preserve the external installation D:\local\srim\srim_2013. Derive paths from configs/application.toml: runtime ../runtime, timeout 30 seconds, one attempt. Never restore a project-local SRIM duplicate.
-- Each runtime has one locked worker with sibling workers/worker-1/{sr_module,trim}/ workspaces and shared .lock/active_attempt.json. Separate runtimes can run concurrently; no shared-runtime worker pool exists. The marker retains the last owner after completion.
-- Keep component-first tests under tests/{sr_module,trim,execution,storage,interfaces}/. Preserve regression fixtures and actual application attempt archives. Remove disposable test/probe workspaces; no permanent examples/probes/reports folders.
-- The host owns AI reasoning. Deferred architecture stays absent until needed; see PROJECT_CHECKLIST.md. No application-side agents or empty placeholder groups.
-- SR grid-completeness proposal (original item 5) was withdrawn; do not resume its implementation/probes without explicit direction. TRIM detail-completeness proposal (item 6) remains unchanged for insufficient evidence. No pending approved fixes remain.
-- Context checkpoint: user-reported capacity 475000 tokens; notify, save and pause before approximately 427500. No exact live counter exists. Do not request compaction; preserve stops after host-triggered compaction.
+Portable setup (2026-10-16): .gitignore exposes .codex/rules/git.rules and .agents/skills/{adaptive-search,hand-drawn-curve-detection}/SKILL.md; config.toml/python.rules stay local. AGENTS.md uses clone-relative paths. Skills validated/discovered; behavior untested. Ignore/path checks passed. README covers three-server setup and verification; 13 PowerShell/two JSON/two TOML blocks, local links, 33 tool names, two fixtures and three CLI helps passed without execution jobs. Fresh-clone execution untested. Later replace/remove skills via self-improvement, possibly as Analysis MCP methods; service/promotion deferred.
 
-## Latest verification evidence
+## Delivered and verified
 
-Checks on 2026-10-15 used the required interpreter, -B and inherited bytecode suppression.
+- src/analysis/, configs/analysis.toml and agentic-analysis entry points: immutable bundles, environment identity, versions/assessments, idempotent jobs/reuse/recomputation, snapshots, budgets and pinned outputs. Trusted local execution supersedes mandatory OS/container isolation.
+- Built-ins: dataset_summary/aligned_comparison/render_figures v1, experimental. Ordered sampled statistics/exact-grid comparisons; no transformations. Matplotlib 3.10.8 supports PNG/SVG/separate/overlay/shared panels. Verification, experimental operation, promotion and scientific acceptance remain distinct; no promotions.
+- src/agentic_srim/storage/exports.py: indexed immutable manifest/JSONL exports with typed selection, units/normalization, conditions/lineage; native archives unchanged. Alias-only resolution checks producer indexes/hashes and snapshots bytes; no MCP-to-MCP calls or automatic simulation.
+- src/case/: typed pending actions and atomic artifact/progress/resolution. Coordinator owns intent/key, job ID and reconciliation; failed links never recompute. Older revisions remain readable; attachment never completes a case or cancels shared jobs.
+- One independent postprocessing.lock/job per runtime; durable startup ownership gate, Windows kill-on-close jobs, timeout/cancel/descendant cleanup and recovery. Ambiguous living ownership remains RECOVERY_REQUIRED. Queue/read/cancel are independent of method execution. POSIX support is implemented but unverified.
+- Retain runtime/methods/, postprocessing.sqlite and analyses/<job_id>/attempts/<attempt_id>/. Six verification jobs: three previous-environment, three current; one test each. Renderer bundles only an import/version smoke check; regressions cover actual rendering. All methods remain experimental.
 
-| Check | Observed result |
+Current verification IDs: summary d51418a1b0c44b2f9e7a0298abdc1fb9; comparison 3f4f1eb755c84c78bed9f60c4ab19a2d; renderer 5689bd6d50da47b48f90533efc6cba5a. Manifests/reports: runtime/analyses/, indexed by postprocessing.sqlite.
+
+## Latest evidence
+
+| Check (2026-10-16; native gates 0) | Observed result |
 |---|---|
-| Full native-enabled suite | 94 tests / 61.932 s: 93 passed; one new test incorrectly expected owner-marker deletion. All 26 native calculations reached CHECKED. |
-| Corrected workspace test | 1 passed / 6.002 s, eight more calculations. Corrected the assertion to the retained-owner contract; application behavior unchanged. |
-| Combined native coverage | All five native methods passed across those runs; 34 calculations total (12 SR, 22 TRIM). No second full native run. |
-| Final ordinary suite, both gates 0 | 94 tests / 24.543 s: 89 passed, five native skipped. |
-| Structural/fixture checks | 44 Python files passed AST/docstring-placement/no-comment checks; three TOML files parsed; 452 fixture checksums verified. |
-| Integrity and cleanup | Before/after hashes matched 219 installation files, 4 SR fixtures, 450 TRIM fixtures and production metadata.sqlite. SQLite integrity_check=ok; all four tables empty. Disposable runtimes, empty test parent and bytecode removed; no native process visible. |
-| Documentation/Git follow-up | 506 tracked paths reviewed; 454 fixture blobs byte-identical. Portable README: ten PowerShell blocks, JSON/TOML examples and three local links checked; nine MCP tools documented, two requests validated read-only. All 26 open items retained. No suite/installation/simulator rerun; application source/settings unchanged. |
-| Local Git rules | Native execpolicy checker passed 39 forms: 21 allow (including existing Python rule), 15 prompt, three unmatched. Tested commands were not executed. Existing Python policy preserved; app reload not performed. |
+| Component suite | 125 tests / 12.250 s: 120 passed, five native skipped; includes 27 Case tests and captured SR/TRIM export checks. |
+| Analysis suite | 19 passed / 24.383 s: all thirteen tools over live stdio/fresh CLI, numerics, reuse/concurrency, corruption, Case recovery, timeout/cancel, actual supervisor death/descendant termination and budgets. |
+| Rendering | Overlay/separate/shared panels, PNG/SVG validation, deterministic recomputation, plot reuse and failure isolation passed; PNG labels/units/source IDs/gaps visually inspected. |
+| Setup/registration | Plotting extra/editable install and pip check passed. Protected local registration preserves Case/SRIM. Configured fresh launch lists 13 tools and three CHECKED v1 methods. Desktop Analysis discovery/mutations still require reload/verification. |
+| Integrity | Original installation 219 files, SR fixtures four files, TRIM fixtures 450 files and production metadata.sqlite hash unchanged against this turn's baseline. No native simulations ran. |
 
-Retained native evidence: tests/{sr_module,trim}/test_execution.py covers SR fixture rows, all eight TRIM modes, both mode-8 choices and optional outputs off. tests/execution/test_workers.py:NativeWorkspaceTests verifies four overlapping SR/SR, TRIM/TRIM and mixed pairs, independent archives and sealed retrieval after reuse. tests/interfaces/test_mcp.py verifies fresh native CLI/MCP execution, nine tools and bounded pages for fourteen TRIM output families.
+Delivery children exited; desktop MCP services are app-managed. Disposable checks were cleaned; application archives stay. Case desktop discovery/list/search passed; desktop mutations and SRIM client freshness remain unverified.
 
-Backend/shared tests retain regression coverage for storage integrity, input validation, native parsing and interface/worker diagnostics.
+## Persistent constraints and deferred work
 
-## Remaining limits
-
-Active timeout/cancellation, retries and abandoned recovery have mocked/synthetic coverage; native interfaces checked completed-run cancellation and empty recovery. Forced process-tree death/PID-recording gap, service/session-0 operation, clean-environment rebuild, CI, backup/restore and independent scientific accuracy/convergence remain unverified.
-
-Installed GUI modes 6=full recoil, 7=full monolayer, 8=quick KP conflict with Input PDF p. 8-17 (6=quick/7=full, no 8). Mode-6 collision levels 1/2 reproduce a warning even with GUI-matched controls; internal cause is unknown. Keep mode-6 collisions off and KP full-cascade rejection; never substitute mode 7. Mode-8/collisions=1 requires explicit summary/every, owner-checked dialog handling and provenance. Three tested 500-eV events gave identical records for both choices; do not generalize. Recoil inputs do not transport external neutrons/electrons/photons.
-
-Fresh subprocesses exercised current source. The desktop MCP connection was not explicitly restarted; its loaded-code freshness and host approval prompts remain unknown. An MCP server may remain open; no native processes were visible at the verification closeout.
+- Follow AGENTS.md, required .venv, component test layout and native gates. Preserve fixtures/application audits/history; no permanent examples/probes/reports. runtime/cache/development-tests/ is allowed for disposable checks. No further tests are requested now.
+- Preserve D:\local\srim\srim_2013; derive paths from configs/application.toml. Runtime ../runtime, native timeout 30 s/one attempt. Workers remain symmetric workers/worker-1/{sr_module,trim}/ siblings with shared .lock/active_attempt.json; one backend per worker. No project-local simulator duplicate/shared worker pool.
+- Coordinator owns reasoning/case writes; optional subagents are bounded/read-only evidence consumers. Memory is conceptual persistence; catalog before RAG. Improvement promotion requires specific-version human approval and retained rollback/evidence. Map/labels remain in checklist; draw only when requested, one relationship at a time.
+- Expanded acceptance, scientific reference/accuracy/convergence, workflow/Memory/improvement systems, case-wide enforcement, deletion/reset, clean rebuild, CI and backup/restore are deferred. Deletion design retains tombstones and blocks live references/jobs; no deletion/reset implementation is authorized. No automatic skill/workflow promotion.
+- Native historical evidence remains 2026-10-15: five methods/34 CHECKED calculations (12 SR/22 TRIM), corrected owner-marker focused rerun; no second full native suite. Native hard-crash/PID gap, timeout/cancel/retry recovery, service/session-0 and science remain unverified; Analysis process checks do not close native gaps.
+- GUI modes 6/7/8 conflict with Input PDF p.8-17. Mode-6 collision warning cause unknown: keep off; never substitute mode 7. Mode-8 collisions=1 requires summary/every choice and provenance. Three 500-eV events matching both choices do not generalize; recoil input does not transport external neutrons/electrons/photons.
+- Withdrawn SR grid-completeness probes stay withdrawn; TRIM detail completeness unchanged. No optimizer/ion count/scientific defaults selected. Preserve Git checkpoints: no amend/rebase/force push/history deletion; local rule/app reload limits remain.
+- User reports 475000-token context; notify/save/pause before approximately 427500, using an explicit estimate. No exact live counter; never initiate compaction; preserve stops after automatic compaction.

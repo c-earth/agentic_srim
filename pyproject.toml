@@ -9,8 +9,13 @@ description = "Auditable SR Module and TRIM calculations"
 requires-python = ">=3.13"
 dependencies = []
 
+[project.optional-dependencies]
+plotting = ["matplotlib==3.10.8"]
+
 [project.scripts]
 agentic-srim = "agentic_srim.interfaces.cli:main"
+agentic-case = "case.__main__:main"
+agentic-analysis = "analysis.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

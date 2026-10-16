@@ -29,7 +29,7 @@ class MCPTests(IsolatedTest):
 
     @unittest.skipUnless(os.environ.get("AGENTIC_SRIM_INTEGRATION") == "1" and os.environ.get("AGENTIC_SRIM_TRIM_INTEGRATION") == "1", "Both native gates explicitly required")
     def test_native_cli_and_fresh_mcp_cover_all_tools_and_output_pages(self) -> None:
-        """Accept no inputs; run both backends via CLI/MCP, check nine tools and page native outputs; return nothing."""
+        """Accept no inputs; run both backends via CLI/MCP, check ten tools and page native outputs; return nothing."""
         config = self.runtime / "app.toml"
         config.write_text(f"srim_directory = '{self.settings.sr_module_directory.parent.as_posix()}'\nruntime_directory = '{self.runtime.as_posix()}'\n", encoding="utf-8")
         command = [sys.executable, "-B", "-m", "agentic_srim.interfaces.cli", "--config", str(config)]
@@ -52,7 +52,7 @@ class MCPTests(IsolatedTest):
             self.assertEqual(response.returncode, 0, response.stderr)
             replies = [json.loads(line) for line in response.stdout.splitlines()]
             self.assertEqual([reply["id"] for reply in replies], list(range(len(messages))))
-            self.assertEqual(len(replies[1]["result"]["tools"]), 9)
+            self.assertEqual(len(replies[1]["result"]["tools"]), 10)
             results = []
             for reply in replies[2:]:
                 result = reply["result"]
@@ -255,7 +255,7 @@ class MCPTests(IsolatedTest):
             ('bad-json', -32700),
             ('{"jsonrpc":"2.0","id":NaN,"method":"ping"}', -32700),
             ('{"jsonrpc":"2.0","id":Infinity,"method":"ping"}', -32700),
-            ('{"jsonrpc":"2.0","id":1e400,"method":"ping"}', -32600),
+            ('{"jsonrpc":"2.0","id":1e400,"method":"ping"}', -32700),
             ('[' * 10000 + '0' + ']' * 10000, -32700),
             ('{"jsonrpc":"2.0","id":' + '9' * 5000 + ',"method":"ping"}', -32700),
             (json.dumps({"jsonrpc": "2.0", "id": [], "method": "ping"}), -32600),
@@ -290,7 +290,7 @@ class MCPTests(IsolatedTest):
         initialized = handle({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05"}}, self.settings)
         self.assertEqual(initialized["result"]["protocolVersion"], "2024-11-05")
         listed = handle({"jsonrpc": "2.0", "id": 2, "method": "tools/list"}, self.settings)
-        self.assertEqual(len(listed["result"]["tools"]), 9)
+        self.assertEqual(len(listed["result"]["tools"]), 10)
         self.assertIn("get_stopping_range_output", {tool["name"] for tool in listed["result"]["tools"]})
         valid = call_tool("validate_stopping_range", {"request": self.data}, self.settings)
         self.assertFalse(valid["isError"])
@@ -338,7 +338,7 @@ class MCPTests(IsolatedTest):
         wire = subprocess.run(command + ["mcp"], input="".join(json.dumps(request) + "\n" for request in requests), capture_output=True, text=True, timeout=15, env=environment)
         self.assertEqual(wire.returncode, 0, wire.stderr)
         responses = [json.loads(line)["result"] for line in wire.stdout.splitlines()]
-        self.assertEqual(len(responses[1]["tools"]), 9)
+        self.assertEqual(len(responses[1]["tools"]), 10)
         self.assertNotIn("result", json.loads(responses[2]["content"][0]["text"]))
         self.assertEqual(json.loads(responses[3]["content"][0]["text"]), record["result"])
 

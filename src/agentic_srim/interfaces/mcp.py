@@ -20,6 +20,8 @@ from agentic_srim.config import Settings
 from agentic_srim.execution.workers import dispatch
 from agentic_srim.capabilities.trim.inputs import REQUEST_SCHEMA as TRIM_SCHEMA, Request as TrimRequest
 from agentic_srim.capabilities.trim.workflow import submit as submit_trim, read_output
+from agentic_srim.storage.exports import EXPORT_SCHEMA, export_run_data
+from analysis.records import loads
 
 
 def tool_definitions() -> list[dict]:
@@ -39,6 +41,7 @@ def tool_definitions() -> list[dict]:
                      "offset": {"type": "integer", "minimum": 0, "maximum": 2147483647}, "limit": {"type": "integer", "minimum": 1, "maximum": 1000}},
                      "required": ["run_id", "name", "offset", "limit"], "additionalProperties": False}
     definitions = [
+        {"name": "export_run_data", "description": "Publish immutable selected JSONL data from an exact CHECKED run attempt; starts no simulation.", "inputSchema": EXPORT_SCHEMA},
         {"name": "validate_stopping_range", "description": "Validate explicit inputs without simulation.", "inputSchema": request_schema},
         {"name": "run_stopping_range", "description": "Execute one bounded stopping/range run. Scientific accuracy is not validated.", "inputSchema": request_schema},
         {"name": "get_stopping_range_output", "description": "Read a verified stopping, range and straggling table with units and provenance.", "inputSchema": run_schema},
@@ -69,6 +72,9 @@ def call_tool(name: str, arguments: dict, settings: Settings) -> dict:
     storage failures return isError, keeping the protocol session usable.
     """
     try:
+        if name == "export_run_data":
+            result = export_run_data(settings.runtime_directory, arguments)
+            return {"content": [{"type": "text", "text": json.dumps(result, allow_nan=False)}], "isError": False}
         expected = {t["name"]: set(t["inputSchema"]["properties"]) for t in tool_definitions()}
         if not isinstance(name, str) or name not in expected or not isinstance(arguments, dict) or set(arguments) != expected[name]:
             raise ValueError("Unknown tool or invalid argument fields")
@@ -107,6 +113,9 @@ def call_tool(name: str, arguments: dict, settings: Settings) -> dict:
         return {"content": [{"type": "text", "text": json.dumps(result, allow_nan=False)}],
                 "isError": name in ("run_stopping_range", "run_trim") and (result.get("state") != "CHECKED" or bool(result.get("error")))}
     except (ValueError, OSError, RuntimeError, KeyError, TypeError, OverflowError, sqlite3.Error) as exc:
+        if name == "export_run_data":
+            return {"isError": True, "content": [{"type": "text", "text": json.dumps({"error": {
+                "code": getattr(exc, "code", "storage_error"), "message": str(exc), "details": getattr(exc, "details", {})}})}]}
         return {"isError": True, "content": [{"type": "text", "text": str(exc)}]}
 
 
@@ -149,9 +158,17 @@ def serve(settings: Settings) -> None:
     Invalid JSON, integer conversion limits and excessive nesting yield parse
     errors for that line; subsequent requests continue through the same session.
     """
-    for line in sys.stdin:
+    maximum = 16 * 1024 * 1024
+    while line := sys.stdin.readline(maximum + 1):
+        if len(line.encode("utf-8")) > maximum:
+            while not line.endswith("\n"):
+                line = sys.stdin.readline(maximum + 1)
+                if not line:
+                    break
+            print(json.dumps({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Message exceeds 16 MiB"}}), flush=True)
+            continue
         try:
-            message = json.loads(line, parse_constant=reject_json_constant)
+            message = loads(line)
         except (ValueError, RecursionError):
             response = {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Parse error"}}
         else:

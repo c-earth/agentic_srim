@@ -1,0 +1,96 @@
+prefix_rule(
+    pattern = ["git", ["status", "diff", "log", "show", "rev-parse", "ls-files", "ls-remote", "cat-file", "check-ignore", "check-attr", "blame"]],
+    decision = "allow",
+    justification = "Allow routine Git inspection.",
+    match = ["git status --short", "git status --short --branch", "git diff --check", "git log -5 --oneline"],
+    not_match = ["git reset --hard", "git -c alias.wipe=reset wipe"],
+)
+
+prefix_rule(
+    pattern = ["git", ["add", "rm", "mv", "commit", "fetch", "merge", "restore", "revert"]],
+    decision = "allow",
+    justification = "Allow ordinary file changes and new commits while preserving committed checkpoints.",
+    match = ["git add -- README.md", "git rm -- obsolete.txt", "git commit -m checkpoint"],
+    not_match = ["git rebase main", "git clean -fdx"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "origin", "main"],
+    decision = "allow",
+    justification = "Allow the normal push of main to this project's existing origin.",
+    match = ["git push origin main"],
+    not_match = ["git push --force origin main", "git push origin --delete main"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "origin", "main", ["--force", "-f", "--force-with-lease", "--force-if-includes", "--mirror", "--delete", "-d"]],
+    decision = "prompt",
+    justification = "Require explicit approval before force-pushing or deleting published checkpoints.",
+    match = ["git push origin main --force", "git push origin main --delete"],
+)
+
+prefix_rule(
+    pattern = ["git", ["reset", "rebase", "filter-branch", "filter-repo", "reflog", "gc", "prune", "repack", "update-ref", "replace", "worktree"]],
+    decision = "prompt",
+    justification = "Review operations that can rewrite or prune history, delete references, or change Git execution behavior.",
+    match = ["git reset --hard HEAD~1", "git reflog expire --expire=now --all", "git gc --prune=now"],
+)
+
+prefix_rule(
+    pattern = ["git", "commit", "--amend"],
+    decision = "prompt",
+    justification = "Create a new commit instead of replacing a committed checkpoint unless explicitly approved.",
+    match = ["git commit --amend --no-edit"],
+)
+
+prefix_rule(
+    pattern = ["git", "branch", "--list"],
+    decision = "allow",
+    justification = "Allow read-only branch listing used in this project.",
+    match = ["git branch --list"],
+    not_match = ["git branch -D old-checkpoint", "git branch --delete old-checkpoint"],
+)
+
+prefix_rule(
+    pattern = ["git", "switch", "-c"],
+    decision = "allow",
+    justification = "Allow creating and switching to a new branch without replacing an existing branch.",
+    match = ["git switch -c codex/case-mcp"],
+    not_match = ["git switch -C main", "git switch --discard-changes main"],
+)
+
+prefix_rule(
+    pattern = ["git", "branch", ["-d", "-D", "--delete", "-m", "-M", "--move", "-c", "-C", "--copy", "-f", "--force"]],
+    decision = "prompt",
+    justification = "Review branch deletion, rename, copy and forced reference changes to preserve older checkpoints; other unlisted branch forms remain unapproved.",
+    match = ["git branch -D old-checkpoint", "git branch --delete old-checkpoint", "git branch -M main"],
+    not_match = ["git branch --list"],
+)
+
+prefix_rule(
+    pattern = ["git", "tag"],
+    decision = "prompt",
+    justification = "Review tag-reference changes to preserve named checkpoints.",
+    match = ["git tag -d checkpoint"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", ["--force", "-f", "--force-with-lease", "--force-if-includes", "--mirror", "--delete", "-d"]],
+    decision = "prompt",
+    justification = "Review force pushes and remote checkpoint deletion.",
+    match = ["git push --force origin main", "git push --delete origin main"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "origin", ["--force", "-f", "--force-with-lease", "--force-if-includes", "--mirror", "--delete", "-d"]],
+    decision = "prompt",
+    justification = "Review force pushes and remote checkpoint deletion.",
+    match = ["git push origin --force main", "git push origin --delete main"],
+)
+
+prefix_rule(
+    pattern = ["git", "fetch", ["--prune", "--prune-tags", "-p", "-P"]],
+    decision = "prompt",
+    justification = "Review deletion of remote-tracking checkpoint references.",
+    match = ["git fetch --prune origin"],
+)

@@ -1,0 +1,17 @@
+runtime_directory = "../runtime"
+
+[stores]
+local = "../runtime"
+
+[limits]
+wall_seconds = 60
+total_seconds = 180
+max_attempts = 3
+input_bytes = 67108864
+input_rows = 1000000
+columns = 64
+candidates = 32
+output_bytes = 268435456
+log_bytes = 2097152
+figure_files = 32
+figure_pixels = 4096
