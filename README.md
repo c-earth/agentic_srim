@@ -17,7 +17,7 @@ An editable install points the virtual environment at `src/agentic_srim`; Python
 
 Install SRIM separately and configure `configs/application.toml`. The package neither downloads nor bundles SRIM. Set the single `srim_directory` installation root in TOML. It must contain `TRIM.exe`, `Data/`, and `SR Module/`; the latter contains `SRModule.exe`, `SCOEF03.dat`, `SNUC03.dat`, and `VERSION`. Both backend paths are derived from that root; moving an unchanged installation only requires updating this setting. Keep its installation and runtime directories disjoint. Relative configuration paths resolve against the TOML file's directory.
 
-The local Git repository tracks application code, configuration, regression fixtures and project documentation. `.gitignore` excludes the virtual environment, generated runtime data, local `.codex`/editor settings, build/test caches, temporary files and local secrets. `.gitattributes` preserves every regression fixture byte without line-ending conversion. SRIM is installed separately; simulator redistribution/deployment licensing review remains pending. See `Data/LEGAL.rtf` beneath the configured SRIM root before distribution.
+The local Git repository tracks application code, configuration, regression fixtures and project documentation. `.gitignore` excludes the project virtual environment, project-local simulator copies, runtime data, disposable `tmp/` work, local `.codex` settings, Python bytecode and packaging outputs. `.gitattributes` preserves every regression fixture byte without line-ending conversion. SRIM is installed separately; simulator redistribution/deployment licensing review remains pending. See `Data/LEGAL.rtf` beneath the configured SRIM root before distribution.
 
 ## Run the capability
 

@@ -20,6 +20,7 @@
 - After relevant changes, check all three documents for contradictory status, stale paths, repository state, test counts and next actions. Documentation-only housekeeping does not authorize native execution or resume paused implementation.
 - Keep only application code/configuration, reusable support, regression tests/fixtures and necessary documentation in the permanent project structure. Disposable checks must clean their verified workspaces and empty parents. Preserve actual application attempt archives under the runtime retention contract; never remove fixtures or audit records merely to make the tree look clean.
 - Maintain `.gitignore` for environments, runtime data, temporary/build/test caches, machine-local settings and credentials. Keep application configuration, regression fixtures and continuity documents trackable; do not use broad native-output/binary patterns that hide required fixtures. Review tracked/staged paths before commits, and keep local author configuration local rather than modifying global Git settings.
+- Scope ignore rules to this project's actual layout and tools. Do not add generic editor, operating-system or unused-tool boilerplate; add patterns when a concrete need exists.
 - Preserve fixture bytes in Git attributes. Native captures and their checksum metadata must not undergo automatic line-ending conversion; verify staged fixture blobs against working files when changing repository attributes or preparing the initial snapshot.
 
 ## User directions and approval continuity

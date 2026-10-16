@@ -15,7 +15,7 @@ Build an auditable SRIM/TRIM system with durable execution, reusable scientific 
 | [x] | SR interval-table parsing; TRIM summary, seven profile and seven detail families with bounded retrieval | Backend output tests/fixtures; native integration methods |
 | [x] | Input/session/storage error handling, worker diagnostics and completed-result warnings | tests/interfaces/test_{cli,mcp}.py, tests/execution/test_workers.py, backend input tests |
 | [x] | Native all-mode and CLI/MCP coverage, separate-runtime concurrency and archive isolation | Five native methods; latest results and exact limits in HANDOFF.md |
-| [x] | Continuity rules, docstring conventions, application-only cleanup and local Git setup | AGENTS.md, HANDOFF.md, .gitignore; repository checks recorded in the handoff |
+| [x] | Continuity rules, docstring conventions, application-only cleanup and local Git setup with project-specific ignore rules | AGENTS.md, HANDOFF.md, .gitignore; repository checks recorded in the handoff |
 
 Latest software evidence (2026-10-15): 89 ordinary tests passed, five native tests skipped in the final ordinary run; all five native methods passed across the full native run and corrected focused rerun. All 34 calculations reached CHECKED. Full details are recorded once in HANDOFF.md. These checks do not establish scientific accuracy, all possible truncation detection, or hard-worker-crash recovery.
 
