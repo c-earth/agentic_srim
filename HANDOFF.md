@@ -6,7 +6,7 @@ Updated: 2026-10-15
 
 SR Module interval tables and TRIM modes 1–8 are implemented and software-checked through shared execution/storage and CLI/MCP interfaces. Scientific validation remains deferred: successful runs are CHECKED, never scientifically ACCEPTED.
 
-Native verification and cleanup are complete. Documentation is consolidated and AGENTS.md requires ongoing cleanliness. Git uses main and repository-local c-earth author settings. The user approved public publication: https://github.com/c-earth/agentic_srim is created and configured as origin for pushing main. The minimal ignore rules and regression fixtures are retained. Implementation and native execution remain paused; wait for the user's next request.
+Native verification and cleanup are complete. Git uses main and repository-local c-earth author settings; public origin https://github.com/c-earth/agentic_srim was created and main pushed with user approval. README now targets new users with portable Windows setup, capabilities, CLI and generic MCP configuration; author/session references are excluded by AGENTS.md. Minimal ignore rules and fixtures remain. Implementation and native execution remain paused; wait for the next request.
 
 ## Active constraints
 
@@ -30,7 +30,7 @@ Checks on 2026-10-15 used the required interpreter, -B and inherited bytecode su
 | Final ordinary suite, both gates 0 | 94 tests / 24.543 s: 89 passed, five native skipped. |
 | Structural/fixture checks | 44 Python files passed AST/docstring-placement/no-comment checks; three TOML files parsed; 452 fixture checksums verified. |
 | Integrity and cleanup | Before/after hashes matched 219 installation files, 4 SR fixtures, 450 TRIM fixtures and production metadata.sqlite. SQLite integrity_check=ok; all four tables empty. Disposable runtimes, empty test parent and bytecode removed; no native process visible. |
-| Documentation/Git follow-up | Local Markdown links/fences and all 26 open acceptance items checked; 506 tracked paths reviewed, all 454 fixture blobs byte-identical. Ignore rules are limited to project environments/data, local settings, bytecode and packaging outputs; no unused-tool boilerplate. No tests or simulators rerun; source behavior unchanged. |
+| Documentation/Git follow-up | 506 tracked paths reviewed; all 454 fixture blobs byte-identical. Ignore rules remain project-specific. Portable README checks: ten PowerShell blocks parsed without execution, JSON/TOML examples parsed, three local links checked, nine MCP tools documented, two fixture requests validated read-only. No suite, installation or simulator rerun; source/configuration unchanged. All 26 open acceptance items retained. |
 
 Retained native evidence: tests/{sr_module,trim}/test_execution.py covers SR fixture rows, all eight TRIM modes, both mode-8 choices and optional outputs off. tests/execution/test_workers.py:NativeWorkspaceTests verifies four overlapping SR/SR, TRIM/TRIM and mixed pairs, independent archives and sealed retrieval after reuse. tests/interfaces/test_mcp.py verifies fresh native CLI/MCP execution, nine tools and bounded pages for fourteen TRIM output families.
 

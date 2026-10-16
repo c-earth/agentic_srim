@@ -14,6 +14,7 @@
 ## Project and documentation cleanliness
 
 - Keep each root document focused: `README.md` owns setup, usage and operational contracts; `PROJECT_CHECKLIST.md` owns acceptance criteria, incomplete work and deferred architecture; `HANDOFF.md` owns current state, active directions, latest verification, unresolved limits and the next action. Link to the owning document instead of repeating its contents.
+- Write the README for new users setting up their own computers. Use portable setup examples and explain available capabilities; omit author-specific paths, chat references, approval history and session status.
 - Replace superseded status in place. Do not append chains of session closeouts, review transcripts, obsolete test counts, completed-task narratives or deleted artifact paths. Retain only history needed to preserve an active decision, approval boundary, unresolved contradiction or verification limitation.
 - Keep `HANDOFF.md` normally within 800 words and 80 lines. Prefer concise tables or bullets for current evidence. Remove stale details before adding new ones; never meet the size target by dropping unresolved work, user constraints, pauses or material limitations. Explain any necessary exception briefly in the handoff.
 - Preserve every incomplete acceptance requirement when consolidating the checklist. Mark completion only with evidence; explain deferrals, withdrawals and replacements. Keep completed evidence concise and avoid duplicating the handoff's execution log.
