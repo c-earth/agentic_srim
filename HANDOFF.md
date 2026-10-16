@@ -6,7 +6,7 @@ Updated: 2026-10-15
 
 SR Module interval tables and TRIM modes 1–8 are implemented and software-checked through shared execution/storage and CLI/MCP interfaces. Scientific validation remains deferred: successful runs are CHECKED, never scientifically ACCEPTED.
 
-Native verification and cleanup are complete. Documentation is consolidated and AGENTS.md requires ongoing cleanliness. The local Git repository uses main and c-earth with repository-local author settings. Current scope: commit the project-specific ignore/documentation cleanup and prepare GitHub. Private repository creation/push versus local-only preparation awaits the user's answer; no remote exists yet. Implementation and native execution remain paused.
+Native verification and cleanup are complete. Documentation is consolidated and AGENTS.md requires ongoing cleanliness. Git uses main and repository-local c-earth author settings. The user approved public publication: https://github.com/c-earth/agentic_srim is created and configured as origin for pushing main. The minimal ignore rules and regression fixtures are retained. Implementation and native execution remain paused; wait for the user's next request.
 
 ## Active constraints
 

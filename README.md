@@ -1,5 +1,7 @@
 # Agentic SRIM
 
+Repository: [c-earth/agentic_srim](https://github.com/c-earth/agentic_srim).
+
 The `stopping_range` capability runs the installed SR Module in energy-interval mode and returns stopping, range, and straggling with units and source-run provenance. The `trim` capability supports calculation codes 1–8 with the installed-version output restrictions below. All eight modes, both mode-8 collision-record choices, native integration, and fresh CLI/MCP execution/paging have software verification. Scientific accuracy validation is deferred at the user's request; successful software checks produce `CHECKED`, never scientifically `ACCEPTED` evidence.
 
 ## Installation
