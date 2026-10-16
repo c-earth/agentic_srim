@@ -16,6 +16,7 @@ Build an auditable SRIM/TRIM system with durable execution, reusable scientific 
 | [x] | Input/session/storage error handling, worker diagnostics and completed-result warnings | tests/interfaces/test_{cli,mcp}.py, tests/execution/test_workers.py, backend input tests |
 | [x] | Native all-mode and CLI/MCP coverage, separate-runtime concurrency and archive isolation | Five native methods; latest results and exact limits in HANDOFF.md |
 | [x] | Continuity rules, docstring conventions, application-only cleanup and Git setup with project-specific ignore rules and public GitHub origin | AGENTS.md, HANDOFF.md, .gitignore; https://github.com/c-earth/agentic_srim |
+| [x] | Project-local routine Git allow rules with committed-checkpoint preservation instructions | Ignored .codex/rules/git.rules, AGENTS.md; 39 execpolicy checks passed, app reload still required |
 | [x] | Portable Windows onboarding, capability guide, CLI walkthroughs and generic MCP client configuration | README.md; ten PowerShell blocks parsed, JSON/TOML examples parsed, both supplied requests validated without native execution |
 
 Latest software evidence (2026-10-15): 89 ordinary tests passed, five native tests skipped in the final ordinary run; all five native methods passed across the full native run and corrected focused rerun. All 34 calculations reached CHECKED. Full details are recorded once in HANDOFF.md. These checks do not establish scientific accuracy, all possible truncation detection, or hard-worker-crash recovery.

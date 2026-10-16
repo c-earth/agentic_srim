@@ -11,6 +11,7 @@ Native verification and cleanup are complete. Git uses main and repository-local
 ## Active constraints
 
 - Follow AGENTS.md. Use D:\projects\agentic_srim\.venv\Scripts\python.exe; do not install dependencies or resume simulations without relevant authorization.
+- Local `.codex/rules/git.rules` allows routine Git file changes/new commits/reverts and `push origin main`; checkpoint/history changes need explicit instruction. AGENTS.md prohibits bypasses through flags/aliases/APIs. Prefix rules are limited; reload requires restarting Codex with the trusted project layer. The rule file stays ignored/local.
 - Preserve the external installation D:\local\srim\srim_2013. Derive paths from configs/application.toml: runtime ../runtime, timeout 30 seconds, one attempt. Never restore a project-local SRIM duplicate.
 - Each runtime has one locked worker with sibling workers/worker-1/{sr_module,trim}/ workspaces and shared .lock/active_attempt.json. Separate runtimes can run concurrently; no shared-runtime worker pool exists. The marker retains the last owner after completion.
 - Keep component-first tests under tests/{sr_module,trim,execution,storage,interfaces}/. Preserve regression fixtures and actual application attempt archives. Remove disposable test/probe workspaces; no permanent examples/probes/reports folders.
@@ -30,11 +31,12 @@ Checks on 2026-10-15 used the required interpreter, -B and inherited bytecode su
 | Final ordinary suite, both gates 0 | 94 tests / 24.543 s: 89 passed, five native skipped. |
 | Structural/fixture checks | 44 Python files passed AST/docstring-placement/no-comment checks; three TOML files parsed; 452 fixture checksums verified. |
 | Integrity and cleanup | Before/after hashes matched 219 installation files, 4 SR fixtures, 450 TRIM fixtures and production metadata.sqlite. SQLite integrity_check=ok; all four tables empty. Disposable runtimes, empty test parent and bytecode removed; no native process visible. |
-| Documentation/Git follow-up | 506 tracked paths reviewed; all 454 fixture blobs byte-identical. Ignore rules remain project-specific. Portable README checks: ten PowerShell blocks parsed without execution, JSON/TOML examples parsed, three local links checked, nine MCP tools documented, two fixture requests validated read-only. No suite, installation or simulator rerun; source/configuration unchanged. All 26 open acceptance items retained. |
+| Documentation/Git follow-up | 506 tracked paths reviewed; 454 fixture blobs byte-identical. Portable README: ten PowerShell blocks, JSON/TOML examples and three local links checked; nine MCP tools documented, two requests validated read-only. All 26 open items retained. No suite/installation/simulator rerun; application source/settings unchanged. |
+| Local Git rules | Native execpolicy checker passed 39 forms: 21 allow (including existing Python rule), 15 prompt, three unmatched. Tested commands were not executed. Existing Python policy preserved; app reload not performed. |
 
 Retained native evidence: tests/{sr_module,trim}/test_execution.py covers SR fixture rows, all eight TRIM modes, both mode-8 choices and optional outputs off. tests/execution/test_workers.py:NativeWorkspaceTests verifies four overlapping SR/SR, TRIM/TRIM and mixed pairs, independent archives and sealed retrieval after reuse. tests/interfaces/test_mcp.py verifies fresh native CLI/MCP execution, nine tools and bounded pages for fourteen TRIM output families.
 
-Completed fixes are covered by tests/execution/test_jobs.py, tests/storage/test_database.py, tests/interfaces/test_{cli,mcp}.py and backend tests: sealed-result linkage, coherent SQLite reads, CLI SQLite errors, MCP input/session robustness, worker diagnostics/separate warnings, SR mass/Bragg matching, finite native TRIM lengths and corrected fixture descriptions. Older checkpoint counts and deleted diagnostics are superseded by the evidence above.
+Backend/shared tests retain regression coverage for storage integrity, input validation, native parsing and interface/worker diagnostics.
 
 ## Remaining limits
 

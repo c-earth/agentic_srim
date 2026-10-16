@@ -23,6 +23,7 @@
 - Maintain `.gitignore` for environments, runtime data, temporary/build/test caches, machine-local settings and credentials. Keep application configuration, regression fixtures and continuity documents trackable; do not use broad native-output/binary patterns that hide required fixtures. Review tracked/staged paths before commits, and keep local author configuration local rather than modifying global Git settings.
 - Scope ignore rules to this project's actual layout and tools. Do not add generic editor, operating-system or unused-tool boilerplate; add patterns when a concrete need exists.
 - Preserve fixture bytes in Git attributes. Native captures and their checksum metadata must not undergo automatic line-ending conversion; verify staged fixture blobs against working files when changing repository attributes or preparing the initial snapshot.
+- Routine Git file changes, including deletion, are allowed within authorized work. Preserve committed checkpoints and prior versions: create new commits (or revert with a new commit) rather than amending, rebasing, force-pushing, deleting checkpoint references, expiring reflogs or pruning history. These history-changing actions need a new explicit user instruction. Never delete `.git` or bypass this boundary through alternate flag order, aliases, wrappers or APIs. Local prefix rules cover common command forms; they are not immutable backups or a complete parser of Git options.
 
 ## User directions and approval continuity
 
