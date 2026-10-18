@@ -25,7 +25,7 @@ class TestPaths(unittest.TestCase):
         root = Path(__file__).absolute().parent / "project"
         self.assertEqual(
             get_project_paths(root),
-            ProjectPaths(root, root / "memory" / "srim", root / "memory" / "post", root / "case", root / "worker"),
+            ProjectPaths(root, root / "memory" / "srim", root / "memory" / "post", root / "case", root / "worker", root / "memory" / "resources"),
         )
 
     def test_relative_root_rejected(self: TestPaths) -> None:
@@ -47,7 +47,7 @@ class TestPaths(unittest.TestCase):
         """Check creation and report order for self's fixture; return None and clean directories."""
         with TemporaryDirectory(dir=Path(__file__).parent) as directory:
             root = Path(directory) / "project"
-            expected = (root, root / "memory", root / "memory" / "srim", root / "memory" / "post", root / "case", root / "worker")
+            expected = (root, root / "memory", root / "memory" / "srim", root / "memory" / "post", root / "case", root / "worker", root / "memory" / "resources")
             self.assertEqual(create_base_directories(get_project_paths(root)), DirectoryReport(expected, ()))
             self.assertTrue(all(path.is_dir() for path in expected))
             self.assertEqual(set(root.rglob("*")), set(expected[1:]))
@@ -60,7 +60,7 @@ class TestPaths(unittest.TestCase):
             expected = (
                 base / "first", base / "first" / "second", root,
                 root / "memory", root / "memory" / "srim", root / "memory" / "post",
-                root / "case", root / "worker",
+                root / "case", root / "worker", root / "memory" / "resources",
             )
             self.assertEqual(create_base_directories(get_project_paths(root)), DirectoryReport(expected, ()))
             self.assertTrue(all(path.is_dir() for path in expected))
@@ -119,7 +119,7 @@ class TestPaths(unittest.TestCase):
                     report = create_base_directories(get_project_paths(root))
             self.assertEqual(report.created, ())
             self.assertEqual(report.already_existed, (
-                root, root / "memory", root / "memory" / "srim", root / "memory" / "post", root / "case", root / "worker",
+                root, root / "memory", root / "memory" / "srim", root / "memory" / "post", root / "case", root / "worker", root / "memory" / "resources",
             ))
             self.assertGreater(mocked.call_count, 0)
 
@@ -202,7 +202,7 @@ class TestPaths(unittest.TestCase):
         with TemporaryDirectory(dir=Path(__file__).parent) as directory:
             paths = get_project_paths(Path(directory) / "project")
             report = create_base_directories(paths)
-            for name in ("root", "simulation_memory", "postprocessing_memory", "cases", "workers"):
+            for name in ("root", "simulation_memory", "postprocessing_memory", "cases", "workers", "resources"):
                 with self.subTest(field=name):
                     with self.assertRaises(FrozenInstanceError):
                         setattr(paths, name, Path(directory))

@@ -84,7 +84,7 @@ def _validate_paths(paths: ProjectPaths) -> None:
     """Validate paths' absolute agreed layout and existing link-free bases; raise ValueError/OSError, write nothing."""
     if paths != get_project_paths(paths.root):
         raise ValueError("Project paths must use the agreed layout")
-    for target in (paths.root, paths.simulation_memory, paths.postprocessing_memory, paths.cases, paths.workers):
+    for target in (paths.root, paths.simulation_memory, paths.postprocessing_memory, paths.cases, paths.workers, paths.resources):
         for ancestor in (*reversed(target.parents), target):
             if ancestor.is_symlink() or ancestor.is_junction():
                 raise OSError(errno.ELOOP, "Links and junctions are not allowed", str(ancestor))

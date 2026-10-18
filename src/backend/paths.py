@@ -10,8 +10,8 @@ class ProjectPaths:
     """Store immutable project directory paths without constructor validation.
 
     Construction requires root, simulation_memory, postprocessing_memory, cases,
-    and workers Path arguments. These public fields describe the project root,
-    simulation and postprocessing storage, case storage, and worker storage.
+    workers, and resources Path arguments. These public fields describe the project root,
+    simulation and postprocessing storage, case storage, worker storage, and shared resources.
     Use get_project_paths to obtain the agreed layout from an absolute root.
     """
 
@@ -20,6 +20,7 @@ class ProjectPaths:
     postprocessing_memory: Path
     cases: Path
     workers: Path
+    resources: Path
 
 
 @dataclass(frozen=True)
@@ -43,7 +44,7 @@ def get_project_paths(root: Path) -> ProjectPaths:
             environment-variable expansion is performed.
 
     Returns:
-        Immutable paths for root, memory/srim, memory/post, case, and worker.
+        Immutable paths for root, memory/srim, memory/post, case, worker, and memory/resources.
         This function has no filesystem side effects.
 
     Raises:
@@ -57,6 +58,7 @@ def get_project_paths(root: Path) -> ProjectPaths:
         postprocessing_memory=root / "memory" / "post",
         cases=root / "case",
         workers=root / "worker",
+        resources=root / "memory" / "resources",
     )
 
 
@@ -74,7 +76,7 @@ def create_base_directories(paths: ProjectPaths) -> DirectoryReport:
 
     Side effects:
         Creates directories individually, processing root, memory, simulation
-        memory, postprocessing memory, cases, and workers in that order. Creates
+        memory, postprocessing memory, cases, workers, and resources in that order. Creates
         no files and prints nothing. Calls have independent state and no locking;
         directories created first by another call are reported as existing.
         Paths and all ancestors, including those above the project root, are
@@ -101,6 +103,7 @@ def create_base_directories(paths: ProjectPaths) -> DirectoryReport:
             paths.postprocessing_memory,
             paths.cases,
             paths.workers,
+            paths.resources,
         ):
             if target in recorded:
                 continue

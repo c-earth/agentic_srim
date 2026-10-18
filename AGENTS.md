@@ -22,6 +22,7 @@
 - Specify applicable data schemas, file formats, directory layouts, naming rules, defaults, configuration, lifecycle, concurrency behavior, and verification steps before implementation.
 - Ask the user about every unresolved detail before implementing it. Do not silently choose assumptions or defaults.
 - Obtain the user's explicit approval of the complete proposal before implementing it. If implementation requires a change to the approved design, present that change and obtain approval before proceeding.
+- Before starting a long coding task after the user's approval, explicitly tell the user that implementation is about to begin.
 
 # Documentation and type annotations
 
