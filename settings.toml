@@ -1,0 +1,8 @@
+[time]
+# Accepts "system", "UTC", or "UTC±HH:MM".
+timezone = "UTC"
+
+[srim]
+# Absolute SRIM installation root.
+# Escape Windows backslashes by doubling them.
+root = "D:\\local\\srim\\srim_2013_std"
