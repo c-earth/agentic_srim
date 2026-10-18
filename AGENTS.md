@@ -8,6 +8,11 @@
 - Follow the user's requirements literally. Do not expand the requested scope.
 - Ask if something is ambiguous.
 - Before reporting completion, verify that the result matches the user's requirements and is internally consistent.
+- Handoffs must not repeat instructions or context already loaded; record only additional state and unresolved work.
+
+# Git command execution
+
+- Never use standalone `--` in Git commands; it triggers sandbox permission errors. Use `./` for filenames starting with `-`.
 
 # Proposal and approval before implementation
 
