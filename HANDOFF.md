@@ -1,74 +1,27 @@
 # Handoff
 
-Continue filesystem design for the SRIM/TRIM MCP project in `D:\projects\agentic_srim`.
+## Newly implemented
 
-The SR investigation summary is in [`.cache/outputs/sr-simulation-summary.txt`](.cache/outputs/sr-simulation-summary.txt).
+The combined timestamp, suffix allocation, mixed-batch creation/deletion, and durable tombstone design was explicitly approved and implemented in `src/backend/records.py`. Changes remain uncommitted.
 
-## Agreed structure
+- `create_directories(paths, config, requests)` and `delete_directories(paths, config, requests)` validate all request inputs before mutation. Base directories must already exist. Operations stop at the first operational error and raise `BatchOperationError` with the original cause and a `BatchReport` containing earlier successes, the failed index, unattempted indices, and surviving partial paths.
+- Simulation, postprocessing, and case directories use configured-timezone timestamps plus unpadded numeric suffixes. Each request captures its timestamp once. Supplied timestamps must be aware. Each continuation simulation receives a fresh `srim_...` directory; this component does not encode continuation relationships.
+- Workers use `worker/worker_n/{sr,trim}` with no timestamp. Deleted worker numbers may be reused.
+- Each parent uses a persistent `.records.lock` file and nonblocking Windows byte-range locking. Lock contention fails immediately; process exit releases the lock. Allocation also uses atomic directory creation. A batch locks one parent per item, not the entire batch.
+- Record deletion writes `.deleted/<record-name>.json` before recursive removal. Version-one JSON contains `schema_version`, `kind`, `name`, `state`, `requested_at`, `deleted_at`, and `reason`. Pending tombstones reserve identities permanently and support interrupted-deletion retries; completed tombstones permit idempotent deletion only when the original directory remains absent. Retries retain the original request time and reason.
+- Tombstones use UTF-8 JSON with two-space indentation and a final newline, synchronized through a temporary file before atomic replacement. Failed writes may leave reported temporary files. Filesystem replacement races and storage-dependent power-loss limitations remain.
+- Paths, lock/tombstone locations, and deletion descendants reject symlinks and Windows junctions. Deletion checks descendants before entering directories. No rollback is performed.
 
-```text
-src/
-  backend/
-  srim/
-  case/
-  analysis/
-  memory/
-  plan/
-memory/
-  srim/
-    srim_yyyymmdd_hhmmss_n/
-  post/
-    post_yyyymmdd_hhmmss_n/
-case/
-  case_yyyymmdd_hhmmss_n/
-worker/
-  worker_n/
-    sr/
-    trim/
+## Verification
+
+All 33 backend unittest tests pass, including 12 new record tests. Coverage includes mixed batches, naming collisions, worker reuse, timezone conversion, validation, pending/completed deletion recovery, malformed tombstones, partial failures, link rejection, separate-process allocation/lock contention, and process-exit lock release.
+
+Run from the project root:
+
+```powershell
+D:\projects\agentic_srim\.venv\Scripts\python.exe -B -m unittest discover -s test/backend -p "test_*.py" -v
 ```
 
-## Agreed responsibilities
+## Unresolved work
 
-- `memory/srim`: raw and parsed simulation outputs.
-- `memory/post`: processed results and evidence.
-- `case`: goals and answers supported by evidence in postprocessing records.
-- `memory` broadly: durable records, reusable knowledge, and future RAG/database storage.
-- `src/plan`: workflow management and reuse of skills and workflows.
-- `worker/worker_n/{sr,trim}`: temporary execution directories. One worker owns one task at a time, whether SR, TRIM, or another future engine.
-- Shared configuration and filesystem support live in `src/backend`; engine and workflow modules retain their existing locations.
-- Simulations may exist independently. Postprocessing references simulations; cases reference postprocessing evidence.
-- Record every simulation attempt in `memory/srim`, including failed attempts. Explicit deletion must leave a durable trace; its exact representation remains to be designed.
-
-## Agreed naming and configuration
-
-- Numeric suffixes are unpadded and start at 1: `_1`, `_2`, ..., `_100`. This applies to records and workers. Sort suffixes numerically rather than lexicographically.
-- `n` in the layout above represents that numeric suffix.
-- Project configuration is stored in `settings.toml` at the project root, using double-quoted string values with escaped Windows backslashes.
-- `[time].timezone` accepts `system`, `UTC`, or a fixed offset formatted `UTC±HH:MM`. Named timezones are excluded.
-- `system` follows the Windows local timezone at execution, including daylight saving. Fixed offsets do not observe daylight saving.
-- The current configured timezone is `UTC`.
-- `[srim].root` is the absolute SRIM installation root. Executable and resource paths will be derived from it.
-- The current configured root is `D:\local\srim\srim_2013_std`.
-
-## Current state
-
-The base directories contain `.gitkeep` files. No worker instances or timestamped records exist. The earlier premature implementation was removed; the configuration and base-directory implementations below were subsequently approved individually and implemented. Project instructions are in `AGENTS.md`.
-
-`settings.toml` was approved and created with double-quoted strings and escaped Windows backslashes.
-
-- `src/backend/config.py` provides immutable `Config` and `load_config(path)`. Configuration paths are explicit. Missing timezone settings default to UTC; `srim.root` is required. Unknown sections and keys, incorrect types, invalid timezone formats, and non-absolute Windows roots are rejected. Fixed offsets allow hours 00–23 and minutes 00–59; signed zero offsets normalize to UTC. Installation existence is not checked. File-access errors and TOML parsing errors propagate unchanged. The `system` setting is retained for future timestamp generation.
-- `src/backend/paths.py` provides immutable `ProjectPaths`, `DirectoryReport`, read-only `get_project_paths(root)`, and explicit `create_base_directories(paths)`. Roots must be absolute. The memory parent is derived from `simulation_memory.parent`. Setup reports created and already-existing directories, including missing ancestors it creates but excluding existing ancestors above the project root. Failures retain partial work and attach a human-readable partial report to the original filesystem exception.
-- Symlinks and Windows junctions are rejected at required directories and their ancestors, including above the project root, with `OSError(errno.ELOOP)`. Checks are not atomic with filesystem operations; concurrent replacement remains possible. Reports describe observations during each call, without locking or rollback.
-- `test/backend/test_config.py` and `test/backend/test_paths.py` contain 21 passing standard-library unittest tests. Link rejection uses mocked detection and needs no Windows link privileges. Fixtures are created beneath `test/backend` and automatically removed by `TemporaryDirectory`.
-
-Run both backend test files from the project root with `D:\projects\agentic_srim\.venv\Scripts\python.exe -B -m unittest discover -s test/backend -p "test_*.py" -v`.
-
-## Commit status
-
-- Implementation, tests, settings, and the previous handoff are committed as `08782e0` (`Add validated backend configuration and directory setup`). All 21 backend tests passed at review.
-
-## Next step
-
-Configuration loading, base-directory handling, and their tests are complete. Select the next filesystem component for design review.
-
-Metadata schemas, timestamp generation APIs, suffix allocation and collision handling, deletion traces, and worker lifecycle/concurrency behavior beyond exclusive ownership remain unresolved.
+Simulation/postprocessing/case metadata schemas and continuation relationships remain undesigned. Worker task ownership, scheduling, execution lifecycle, and concurrency beyond filesystem operations remain undesigned. No next implementation component has been selected.
