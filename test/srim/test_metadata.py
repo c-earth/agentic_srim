@@ -233,6 +233,33 @@ class TestMetadata(unittest.TestCase):
         self.assertTrue(any("Surviving temporary file" in note for note in caught.exception.__notes__))
         self.assertEqual(read_simulation(self.paths, fresh.path.name)["status"], "created")
 
+    def test_prepared_engine_inputs(self: TestMetadata) -> None:
+        """Check self's prepared bytes, safe names, inventories, and unpublished metadata on write failure; return None or assertions and use fixture cleanup."""
+        for engine_inputs in (
+            {"../outside": b"bad"}, {"CON": b"bad"}, {"bad:name": b"bad"},
+            {"trailing.": b"bad"}, {"trailing ": b"bad"}, {"": b"bad"},
+            {"bad\nname": b"bad"}, {"dir\\file": b"bad"},
+            {"SR.IN": b"one", "sr.in": b"two"}, {"SR.IN": "not bytes"},
+            {1: b"bad"}, [],
+        ):
+            with self.assertRaises(ValueError):
+                initialize_simulation(self.paths, self.created, self.engine, self.request, self.resolved, engine_inputs=engine_inputs)
+            self.assertEqual(list(self.created.path.iterdir()), [])
+        engine_inputs = {"SR.IN": b"prepared\r\n", "VERSION": b"module version\x00\xff"}
+        metadata = initialize_simulation(self.paths, self.created, self.engine, self.request, self.resolved, engine_inputs=engine_inputs)
+        for name, contents in engine_inputs.items():
+            self.assertEqual((self.created.path / "input" / "engine" / name).read_bytes(), contents)
+            self.assertIn({"path": f"input/engine/{name}", "size_bytes": len(contents), "sha256": hashlib.sha256(contents).hexdigest()}, metadata["inputs"])
+        engine_inputs["SR.IN"] = b"caller mutation"
+        self.assertEqual((self.created.path / "input" / "engine" / "SR.IN").read_bytes(), b"prepared\r\n")
+        fresh = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
+        with patch("src.srim.metadata._write_input_file", side_effect=PermissionError("engine write blocked")):
+            with self.assertRaises(PermissionError) as caught:
+                initialize_simulation(self.paths, fresh, self.engine, self.request, self.resolved, engine_inputs={"SR.IN": b"input"})
+        self.assertTrue((fresh.path / "input" / "request.json").exists())
+        self.assertFalse((fresh.path / "metadata.json").exists())
+        self.assertTrue(any("retained" in note for note in caught.exception.__notes__))
+
     def test_links_and_lock_contention(self: TestMetadata) -> None:
         """Check self's simulated input links and record/resource lock contention preserve metadata; return None and use fixture cleanup."""
         initialize_simulation(self.paths, self.created, self.engine, self.request, self.resolved)

@@ -1,23 +1,19 @@
 # Handoff
 
-## CAB resource APIs
+## SRModule input and runtime preparation
 
-- Added `src/srim/cab.py`: `register_cab_default(paths, config, kind, source)`, `create_cab_variant(paths, config, kind, *, source=None, base_version=None, updates=None)`, and `load_cab(paths, kind, version)`.
-- Kind is core or bond. Explicit baselines become cab/<kind>/default; variants use the existing independent max-vN-plus-one allocation and immutable resource publication.
-- Sources accept local JSON Paths, UTF-8 JSON str/bytes, or Python mappings. Imports normalize rather than preserve raw JSON bytes. Update mode requires an existing version and nonempty mapping, adds/replaces keys, and leaves other entries unchanged; no deletion is included.
-- Python core keys accept atomic numbers 1 through 118 or case-sensitive standard symbols, normalized to integers. Bond keys accept symbol strings such as Cl#C or tuples (element, element, bond); endpoints sort by atomic number and bond types are -, =, #.
-- Values normalize to finite nonnegative floats, excluding bool. Zero and sparse/empty datasets are valid; no H entry is inserted automatically.
-- Stored UTF-8 JSON has schema_version=1 and entries. Core entries are {element: int, value: float}; bond entries are {elements: [int, int], bond: str, value: float}. Exact fields are enforced; arrays sort by canonical key, formatting uses two spaces and a final newline.
-- Equivalent duplicate keys in imports/updates and duplicate JSON object fields are rejected. Reversed JSON bond endpoints normalize on import. Updates may replace keys in the base. No checks require endpoints to exist in any core dataset.
-- Loading returns fresh Python dictionaries and checks resource integrity plus read bytes. File inputs reject links and verify read bytes against their hash.
-- No experimental baseline was invented or registered. Existing engine changes and the untracked electronic/dafault test resource remain intact and uncommitted.
+- Added `src/srim/inputs.py`: `validate_sr_request(request)` and `render_sr_input(request)`. The explicit version-one schema supports energy ranges and ordered lists of 1–1,000 energies, preserves decimal strings, and renders ASCII CRLF `SR.IN` with output name `stopping.txt`.
+- Added `src/srim/runtime.py`: `prepare_sr_simulation(paths, config, created, worker, request, electronic, nuclear)` returns `worker/<worker_id>/sr/<simulation_id>`. Callers supply existing empty simulation/worker allocations and complete electronic/nuclear resource selections.
+- Runtime preparation copies exact selected coefficient bytes plus `SRModule.exe` and `VERSION` from the configured installation's `SR Module` directory. The module VERSION's trimmed first line supplies engine.version; installed Data/VERSION is not substituted.
+- Five synchronized runtime files publish through a staging-directory rename. Record inputs include `SR.IN`, exact `VERSION`, and a sorted five-file hash/size manifest in `input/engine/runtime.json`. Source attribution and transformation provenance are retained. Preparation leaves status created and never launches an executable.
+- `initialize_simulation` now accepts optional keyword-only `engine_inputs: Mapping[str, bytes] | None = None`. It validates safe flat filenames and exact bytes before writes, inventories prepared files, and publishes metadata last. Existing callers remain compatible.
+- Errors retain staging/runtime/record evidence with exception notes; preparation does not overwrite existing destinations, retry, clean up, or mark simulations failed. Worker-parent locking nests simulation/resource operations in that order.
 
 ## Verification
 
-- All 67 tests pass using the project interpreter with -B -W error: 38 backend and 29 SRIM tests.
-- Seven new CAB tests cover source forms, canonicalization, equivalent/JSON duplicates, immutable baselines, sparse/empty data, zero/nonfinite/negative values, updates, independent sequences, integrity, links, contention, and failed publication/retry.
-- Module/class/function docstring, argument/return annotation, and no-comment checks passed for both new CAB Python files.
+- All 78 tests pass with warnings treated as errors: 38 backend and 40 SRIM tests, including 11 new tests for request schemas, serialization, provenance, isolation, integrity, collisions, links, lock contention, and publication failures.
+- Module/class/function docstring, argument/return annotation, and no-comment checks passed for all six changed Python files. No installed executable was run; tests use synthetic installations.
 
 ## Remaining work
 
-Actual CAB strength baselines must be derived from later SR.exe experiments. CAB calculation, worker runtime copying, and input preparation remain outside this change.
+Design and obtain approval for SRModule execution and output parsing integrated with simulation lifecycle transitions, including runtime-manifest verification before launch and collection of `stopping.txt`. Live executable compatibility remains unverified. CAB baseline experiments and CAB calculation remain deferred.

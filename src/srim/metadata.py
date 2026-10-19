@@ -14,14 +14,16 @@ Bonds use identifier/count. Overrides use dataset, entry_id, value, units, and r
 Reference conditions and calculation provenance are validated structurally; input
 builders retain responsibility for physical compatibility and CAB calculations.
 
-Local input files are inventoried on initialization and sealed when execution
-starts. Shared payloads remain in the resource store. Metadata APIs do not run an
-engine, copy runtime resources, generate engine inputs, or parse outputs. JSON
-schemas are exact version-one objects; engine-specific parameters remain opaque.
+Local input files, including optional caller-prepared engine bytes, are inventoried
+on initialization and sealed when execution starts. Shared payloads remain in the
+resource store. Metadata APIs do not run an engine, copy runtime resources,
+generate engine inputs, or parse outputs. JSON schemas are exact version-one
+objects; engine-specific parameters remain opaque.
 """
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 import errno
@@ -301,9 +303,56 @@ def _write_json(path: Path, document: JSONObject) -> None:
     _write_resource_json(path, document)
 
 
-def initialize_simulation(paths: ProjectPaths, created: CreatedDirectory, engine: JSONObject, request: JSONObject, resolved: JSONObject, continuation: JSONObject | None = None) -> JSONObject:
+def _validate_engine_inputs(engine_inputs: Mapping[str, bytes] | None) -> dict[str, bytes]:
+    """Return an independent engine_inputs dictionary, or empty data for None.
+
+    Require byte values and safe Windows leaf filenames without case-insensitive
+    collisions. Raise ValueError on invalid mappings, names, or values. Perform
+    no filesystem operations or changes to the supplied mapping.
+    """
+    if engine_inputs is None:
+        return {}
+    if not isinstance(engine_inputs, Mapping):
+        raise ValueError("Engine inputs must be a mapping or None")
+    result = dict(engine_inputs)
+    names: set[str] = set()
+    for name, contents in result.items():
+        if not isinstance(name, str) or not name or name in (".", "..") or any(ord(character) < 32 or character in '<>:"/\\|?*' for character in name) or name.endswith((".", " ")) or os.path.isreserved(name):
+            raise ValueError("Engine input names must be safe Windows leaf filenames")
+        if name.casefold() in names:
+            raise ValueError("Case-insensitive engine input filename collision")
+        if not isinstance(contents, bytes):
+            raise ValueError("Engine input contents must be bytes")
+        names.add(name.casefold())
+    return result
+
+
+def _write_input_file(path: Path, contents: bytes) -> None:
+    """Create path exclusively with contents, returning None after flush and fsync.
+
+    Require an existing parent and reject links or junctions anywhere in path.
+    Create no directories and overwrite nothing. Propagate OSError for filesystem
+    failures with a note naming any surviving partial file; contents is unchanged.
+    """
+    try:
+        for entry in (*reversed(path.parents), path):
+            if entry.is_symlink() or entry.is_junction():
+                raise OSError(errno.ELOOP, "Input path contains a link or junction", str(entry))
+        with path.open("xb") as stream:
+            stream.write(contents)
+            stream.flush()
+            os.fsync(stream.fileno())
+    except OSError as error:
+        if os.path.lexists(path):
+            error.add_note(f"Surviving input file: {path}")
+        raise
+
+
+def initialize_simulation(paths: ProjectPaths, created: CreatedDirectory, engine: JSONObject, request: JSONObject, resolved: JSONObject, continuation: JSONObject | None = None, *, engine_inputs: Mapping[str, bytes] | None = None) -> JSONObject:
     """Initialize created's empty simulation under paths with engine/request/resolved and optional TRIM continuation.
 
+    engine_inputs optionally maps safe flat filenames to exact bytes, defaulting
+    to no prepared files. Write these under input/engine before inventorying inputs.
     Return independent stored metadata. Validate all inputs and shared resources
     before creating the layout under the simulation-parent lock. Raise ValueError
     on schema/identity conflicts or OSError on file/lock failure. Keep partial
@@ -312,6 +361,7 @@ def initialize_simulation(paths: ProjectPaths, created: CreatedDirectory, engine
     _validate_document(engine, "engine")
     _validate_document(request, "request")
     _validate_document(resolved, "resolved")
+    prepared_inputs = _validate_engine_inputs(engine_inputs)
     if created.kind != "srim" or created.timestamp is None or created.timestamp.utcoffset() is None or type(created.suffix) is not int or created.suffix < 1:
         raise ValueError("Expected an allocated simulation with aware timestamp")
     instant = created.timestamp
@@ -340,6 +390,10 @@ def initialize_simulation(paths: ProjectPaths, created: CreatedDirectory, engine
             for filename, document in (("input/request.json", request), ("input/resolved.json", resolved)):
                 target = record / filename
                 _write_json(target, document)
+                completed.append(target)
+            for filename in sorted(prepared_inputs):
+                target = record / "input" / "engine" / filename
+                _write_input_file(target, prepared_inputs[filename])
                 completed.append(target)
             metadata["inputs"] = _inventory(record / "input", record)
             _write_json(record / "metadata.json", metadata)
