@@ -31,7 +31,7 @@ class TestMetadata(unittest.TestCase):
         self.config = Config("UTC", self.paths.root)
         self.source = self.paths.root / "custom-coefficients.dat"
         self.source.write_bytes(b"coefficients")
-        self.reference = register_resource(self.paths, self.config, "engine", "electronic-stopping", "srim-coefficients", "v1", self.source)
+        self.reference = register_resource(self.paths, self.config, "engine", "srim-coefficients", "v1", self.source)
         self.engine = {"name": "sr", "version": "2013", "executable": {"name": "SRModule.exe", "sha256": "a" * 64}}
         self.request = {"schema_version": 1, "parameters": {"energy_keV": "125"}}
         self.resolved = {"schema_version": 1, "parameters": {"energy_keV": "125"}, "sources": [], "resources": [{"reference": asdict(self.reference), "source": {"description": "Custom coefficients", "version": "2013", "citation": None}, "runtime_filename": "SCOEF03.dat"}], "cab": None}
@@ -43,6 +43,7 @@ class TestMetadata(unittest.TestCase):
         self.assertEqual(metadata["status"], "created")
         self.assertEqual(metadata["created_at"], self.created.timestamp.isoformat())
         self.assertEqual(metadata["resources"], [asdict(self.reference)])
+        self.assertNotIn("subcategory", metadata["resources"][0])
         self.assertNotIn("worker", metadata)
         self.assertFalse((self.created.path / "input" / "resources").exists())
         self.assertEqual([item["path"] for item in metadata["inputs"]], ["input/request.json", "input/resolved.json"])
@@ -119,8 +120,8 @@ class TestMetadata(unittest.TestCase):
 
     def test_cab_shared_datasets_and_overrides(self: TestMetadata) -> None:
         """Check self's independent CAB references, precise overrides, no contribution copies, and decimal/schema rejection; return None and use fixture cleanup."""
-        core = register_resource(self.paths, self.config, "cab", "core", "srim-contributions", "v1", self.source)
-        bond = register_resource(self.paths, self.config, "cab", "bond", "srim-contributions", "v2", self.source)
+        core = register_resource(self.paths, self.config, "cab", "core", "v1", self.source)
+        bond = register_resource(self.paths, self.config, "cab", "bond", "v2", self.source)
         cab = {"mode": "derived", "core_dataset": asdict(core), "bond_dataset": asdict(bond), "core_entries": ["oxygen"], "bond_entries": ["hydrogen-oxygen"], "composition": [{"atomic_number": 1, "atomic_mass": "1.008", "atom_count": "2"}, {"atomic_number": 8, "atomic_mass": "15.999", "atom_count": "1"}], "bonds": [{"identifier": "hydrogen-oxygen", "count": "2"}], "overrides": [{"dataset": "core", "entry_id": "oxygen", "value": "5.360000", "units": "reference-stopping-units", "reason": "user parameter set"}], "reference": {"projectile": 1, "mass_amu": "1.008", "energy_keV": "125", "phase": "solid", "contribution_units": "reference-stopping-units", "normalization": "per formula unit"}, "calculation": {"method": "cab-ratio", "version": "v1", "intermediate_totals": {"cab": "25.53", "bragg": "24.94"}, "calculated_factor": "1.023656776"}, "applied_factor": "1.02"}
         resolved = self.resolved | {"cab": cab}
         metadata = initialize_simulation(self.paths, self.created, self.engine, self.request, resolved)
@@ -138,13 +139,17 @@ class TestMetadata(unittest.TestCase):
             _validate_document(invalid, "cab")
         with self.assertRaises(ValueError):
             _validate_document(cab | {"core_dataset": asdict(bond)}, "cab")
+        with self.assertRaises(ValueError):
+            _validate_document(cab | {"bond_dataset": asdict(core)}, "cab")
+        with self.assertRaises(ValueError):
+            _validate_document(cab | {"core_dataset": asdict(replace(core, category="engine"))}, "cab")
         _validate_document({"mode": "none", "applied_factor": "1.0"}, "cab")
         _validate_document({"mode": "supplied", "applied_factor": "1.05", "source": "measurement", "reason": "fit"}, "cab")
 
     def test_transformed_resource_provenance(self: TestMetadata) -> None:
         """Check self's custom resource references retain source transformation data without payload duplication; return None and use fixture cleanup."""
         self.source.write_bytes(b"truncated coefficients")
-        transformed = register_resource(self.paths, self.config, "engine", "electronic-stopping", "srim-coefficients", "first-95-fields", self.source)
+        transformed = register_resource(self.paths, self.config, "engine", "srim-coefficients", "first-95-fields", self.source)
         resolved = deepcopy(self.resolved)
         selection = resolved["resources"][0]
         selection["reference"] = asdict(transformed)

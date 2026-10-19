@@ -70,7 +70,7 @@ def _validate_document(document: JSONObject, document_type: str) -> None:
         if type(document.get("schema_version")) is not int or document["schema_version"] != 1:
             raise ValueError("Unsupported simulation schema")
     if document_type == "reference":
-        if set(document) != {"category", "subcategory", "name", "version", "sha256", "size_bytes"}:
+        if set(document) != {"category", "name", "version", "sha256", "size_bytes"}:
             raise ValueError("Invalid resource reference fields")
         _validate_reference(ResourceReference(**document))
     elif document_type == "selection":
@@ -135,8 +135,8 @@ def _validate_document(document: JSONObject, document_type: str) -> None:
         if mode == "derived":
             for part in ("core", "bond"):
                 _validate_document(document[f"{part}_dataset"], "reference")
-                if document[f"{part}_dataset"]["category"] != "cab" or document[f"{part}_dataset"]["subcategory"] != part:
-                    raise ValueError("CAB dataset category/subcategory mismatch")
+                if document[f"{part}_dataset"]["category"] != "cab" or document[f"{part}_dataset"]["name"] != part:
+                    raise ValueError("CAB dataset category/name mismatch")
                 entries = document[f"{part}_entries"]
                 if not isinstance(entries, list) or any(not isinstance(item, str) or not item.strip() for item in entries) or len(entries) != len(set(entries)):
                     raise ValueError("Invalid CAB entry identifiers")
