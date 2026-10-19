@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from src.backend.config import Config
 from src.backend.paths import create_base_directories, get_project_paths
@@ -54,6 +54,37 @@ class TestResources(unittest.TestCase):
             with self.assertRaises(ValueError):
                 register_resource(paths, config, first.category, first.name, first.version, source)
             self.assertEqual(resolve_resource(paths, first.category, first.name, first.version), first)
+            byte_reference = register_resource(paths, config, first.category, first.name, "byte-copy", source.read_bytes())
+            self.assertEqual(verify_resource(paths, byte_reference).read_bytes(), source.read_bytes())
+            text_reference = register_resource(paths, config, "engine", "text-input", "default", "raw\r\ntext\n")
+            self.assertEqual(verify_resource(paths, text_reference).read_bytes(), b"raw\r\ntext\n")
+            text_directory = paths.resources / "engine" / "text-input"
+            before = set(text_directory.iterdir())
+            with self.assertRaises(ValueError):
+                register_resource(paths, config, "engine", "text-input", None, "non-ASCII \u03bb")
+            self.assertEqual(set(text_directory.iterdir()), before)
+            with self.assertRaises(ValueError):
+                register_resource(paths, config, "engine", "text-input", None, 123)
+            self.assertEqual(register_resource(paths, config, "engine", "text-input", None, "").version, "v1")
+            for label in ("default", "dafault", "v01", "variant"):
+                register_resource(paths, config, "engine", "allocation", label, b"opaque")
+            self.assertEqual(register_resource(paths, config, "engine", "allocation", None, b"opaque").version, "v1")
+            for boundary in (9, 99, 100):
+                register_resource(paths, config, "engine", "allocation", f"v{boundary}", b"opaque")
+                self.assertEqual(register_resource(paths, config, "engine", "allocation", None, b"opaque").version, f"v{boundary + 1}")
+            numeric_file = paths.resources / "engine" / "allocation" / "v200"
+            numeric_file.write_bytes(b"blocked")
+            with self.assertRaises(OSError):
+                register_resource(paths, config, "engine", "allocation", None, b"opaque")
+            for method in ("is_symlink", "is_junction"):
+                entry = Mock(spec=Path)
+                entry.name = "v1"
+                entry.is_symlink.return_value = method == "is_symlink"
+                entry.is_junction.return_value = method == "is_junction"
+                entry.is_dir.return_value = True
+                with patch.object(Path, "iterdir", return_value=iter([entry])):
+                    with self.assertRaises(OSError):
+                        register_resource(paths, config, "engine", "allocation", None, b"opaque")
             with self.assertRaises(FrozenInstanceError):
                 first.version = "changed"
 

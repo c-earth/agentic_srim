@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from contextlib import nullcontext
 from dataclasses import dataclass
+from io import BytesIO
 from datetime import datetime
 import errno
 import hashlib
@@ -121,8 +123,15 @@ def _write_json(path: Path, document: dict[str, object]) -> None:
         raise
 
 
-def register_resource(paths: ProjectPaths, config: Config, category: str, name: str, version: str, source: Path) -> ResourceReference:
-    """Register regular source bytes under paths/category/name/version using config time.
+def register_resource(paths: ProjectPaths, config: Config, category: str, name: str, version: str | None, source: Path | str | bytes) -> ResourceReference:
+    """Register source Path, ASCII str, or bytes under paths/category/name using config time.
+
+    Inputs paths, category, and name identify storage; config supplies time.
+    An explicit version is immutable; None allocates one beyond the highest vN
+    directory under the publication lock, starting at v1 and never filling gaps.
+    Source paths must be regular and link-free; byte inputs are preserved exactly.
+    Strings are payload content encoded as ASCII, never filesystem paths.
+    Non-ASCII strings raise ValueError before any filesystem writes.
 
     Return an immutable reference, copying and synchronizing source bytes before
     publication under the resource-root lock. Existing labels cannot change.
@@ -131,18 +140,37 @@ def register_resource(paths: ProjectPaths, config: Config, category: str, name: 
     are identified in exception notes. No resource deletion is performed.
     """
     directory = _resource_directory(paths, category, name)
-    _validate_identifier(version)
+    if version is not None:
+        _validate_identifier(version)
+    if isinstance(source, str):
+        try:
+            source = source.encode("ascii")
+        except UnicodeError as error:
+            raise ValueError("String payloads must be ASCII") from error
+    if not isinstance(source, (Path, bytes)):
+        raise ValueError("Source must be a Path, ASCII str, or bytes")
     timestamp = _record_time(config, None).isoformat()
-    source = source.absolute()
-    for entry in (*reversed(source.parents), source):
-        if entry.is_symlink() or entry.is_junction():
-            raise OSError(errno.ELOOP, "Source contains a link or junction", str(entry))
-    if not stat.S_ISREG(source.stat().st_mode):
-        raise OSError(errno.EINVAL, "Source must be a regular file", str(source))
+    if isinstance(source, Path):
+        source = source.absolute()
+        for entry in (*reversed(source.parents), source):
+            if entry.is_symlink() or entry.is_junction():
+                raise OSError(errno.ELOOP, "Source contains a link or junction", str(entry))
+        if not stat.S_ISREG(source.stat().st_mode):
+            raise OSError(errno.EINVAL, "Source must be a regular file", str(source))
     artifacts: list[Path] = []
     try:
         with _lock_parent(paths.resources):
             directory = _resource_directory(paths, category, name)
+            if version is None:
+                highest = 0
+                if directory.exists():
+                    for entry in directory.iterdir():
+                        if re.fullmatch(r"v[1-9][0-9]*", entry.name):
+                            if entry.is_symlink() or entry.is_junction() or not entry.is_dir():
+                                raise OSError(errno.EINVAL, "Numeric version must be a link-free directory", str(entry))
+                            highest = max(highest, int(entry.name[1:]))
+                version = f"v{highest + 1}"
+                _validate_identifier(version)
             destination = directory / version
             for entry in (directory, destination):
                 if entry.is_symlink() or entry.is_junction():
@@ -152,7 +180,7 @@ def register_resource(paths: ProjectPaths, config: Config, category: str, name: 
             artifacts.append(staging)
             digest = hashlib.sha256()
             size = 0
-            with source.open("rb") as incoming, (staging / "payload").open("xb") as outgoing:
+            with (source.open("rb") if isinstance(source, Path) else nullcontext(BytesIO(source))) as incoming, (staging / "payload").open("xb") as outgoing:
                 while chunk := incoming.read(1024 * 1024):
                     outgoing.write(chunk)
                     digest.update(chunk)
