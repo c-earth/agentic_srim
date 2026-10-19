@@ -1,0 +1,49 @@
+COMPOUND CORRECTION COMPARISON - 2026-10-19
+
+RESULT: all 30 SR/TIN pairs match exactly at full UI field precision.
+Tested 2008, 2013 Standard and 2013 Pro independently: 10 compounds per installation.
+Every captured correction is positive and differs from 1.
+
+INTERPRETATION
+The matching results strongly suggest that SR and TIN use the same compound-
+correction formula across the three tested installations. This is an inference
+from numerical agreement, not proof of identical formulas or implementation.
+Ten compounds do not establish equality for every composition or bond structure.
+
+Compound                  2008 SR / TIN              2013 Standard SR / TIN     2013 Pro SR / TIN
+Acetaldehyde              0.9723836 / 0.9723836      0.9723836 / 0.9723836      0.9723836 / 0.9723836
+Acetic acid               0.9429053 / 0.9429053      0.9429053 / 0.9429053      0.9429053 / 0.9429053
+Acetone                   0.9756683 / 0.9756683      0.9756683 / 0.9756683      0.9756683 / 0.9756683
+Acetylene                 1.027025 / 1.027025        1.027025 / 1.027025        1.027025 / 1.027025
+Methanol                  0.9470706 / 0.9470706      0.9470706 / 0.9470706      0.9470706 / 0.9470706
+Ethanol                   0.9592651 / 0.9592651      0.9592651 / 0.9592651      0.9592651 / 0.9592651
+Propanol                  0.9654536 / 0.9654536      0.9654536 / 0.9654536      0.9654536 / 0.9654536
+Undecanol                 0.978018 / 0.978018        0.978018 / 0.978018        0.978018 / 0.978018
+Allene                    1.034087 / 1.034087        1.034087 / 1.034087        1.034087 / 1.034087
+Ammonia                   0.9681199 / 0.9681199      0.9681199 / 0.9681199      0.9681199 / 0.9681199
+
+METHOD AND LIMITS
+Selected the first ten starred compounds in the original LIQUIDS / GASES category.
+Captured each SR Compound Correction field and each TIN layer Compound Corr field
+using the accessibility value immediately after selecting the corresponding entry.
+Each selection was visually checked in the dictionary. Original label spellings
+and exact composition/bond records are retained in tested-records.json per version.
+No factors were typed into the correction fields. Selection itself updates the factor,
+even before Add to Target / Add to Current Layer commits target composition.
+
+Test copies used local common-controls v6 sidecar manifests for legacy UI compatibility.
+SR.exe, TIN.exe, Compound.dat, ATOMDATA, SCOEF03.DAT and SNUC03.dat bytes were
+verified identical to their respective installations after the captures.
+An initial reduced-dictionary experiment was abandoned; complete original dictionaries
+were restored before restarting the six processes used for the recorded captures.
+
+This establishes dictionary-generated field-value agreement for these ten compounds
+within all three installations, not universal equality for every compound, identical
+transport calculations, or equality at hidden internal precision. Saved SR.IN/TRIM.IN
+serialization and runtime application of each factor were not tested in this comparison.
+
+EVIDENCE
+.cache/compound-ten-20261019/ui-results.json: all 60 values and raw accessibility trees.
+.cache/compound-ten-20261019/comparison.json: all 30 pairs and source-file provenance.
+.cache/compound-ten-20261019/{2008,2013-std,2013-pro}/tested-records.json: exact source records.
+No project implementation code or source installation files were changed.
