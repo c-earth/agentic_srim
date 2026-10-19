@@ -18,3 +18,11 @@
 ## Remaining work
 
 CAB derivation mode, including baseline experiments and correction-factor calculation, is excluded from the current plan for now. SR requests continue to use the existing none or supplied correction modes.
+
+## TIN investigation completed 2026-10-19
+
+- Read `TIN_FINDINGS.txt` for the consolidated user-observed field inventory, version differences, verified Damage/plot mappings, tests and documentation qualifications.
+- Supported Damage inputs: 2008 codes 1-7; 2013 Standard/Pro codes 1-8. User explicitly excluded code 0 in both and code 8 in 2008. Plot inputs are 0-5; 2008's third-menu label is wrong and actually produces ions only. 2013 input codes 6/7/8 become runtime cascade codes 7/8/6 in `TDATA.sav`.
+- All intended Damage modes completed one event/ion; all plot modes completed 100 ions. Some `TRIM.DAT` modes still require dialogs despite `TRIMAUTO=1`. These checks do not establish complete unattended execution or numerical accuracy.
+- Temporary folders moved to `.cache/tin-investigation-20261019/{work,tmp}`; 9616 file hashes verified after relocation. The archived damage JSON reports now reference their relocated paths. `archive-manifest.json` retains pre-relocation hashes; only report path strings changed afterward.
+- Next: investigate complete TRIM input formats, dependencies, output controls, batch lifecycle and resume. No TIN/TRIM implementation was added or approved. Existing SR work and its verification above remain unchanged; no project tests were rerun for this documentation-only update.

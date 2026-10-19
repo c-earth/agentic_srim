@@ -1,0 +1,251 @@
+TIN INVESTIGATION - CONSOLIDATED FINDINGS
+Recorded: 2026-10-19
+
+1. SCOPE AND EVIDENCE
+
+Investigated TIN/TRIM 2008.04 and 2013.00 Standard. The user inventoried the
+interfaces, supplied screenshots, and generated initial comparison inputs.
+Later computer-use checks selected the Damage menu entries and captured TIN's
+generated TRIM.IN files. Direct TRIM runs tested the resulting calculation codes.
+Original installation documentation was used, rather than earlier cached TRIM
+documentation summaries. No project implementation code was changed.
+
+Source installations:
+  D:\local\srim\srim_2008
+  D:\local\srim\srim_2013_std
+  D:\local\srim\srim_2013_pro
+
+2013 Standard and Pro TIN.exe are byte-identical: 732672 bytes, SHA-256
+25A376E46D5EA789EFA7554645FED5421F739ED87706B8C539B259975D8FE13C.
+Both TRIM manuals and all 97 shared RTF help files also match between these
+2013 editions. Standard supplies the tested 2013 interface/engine baseline;
+no separate Pro execution test was needed for this TIN investigation.
+
+TIN prepares TRIM.IN and launches TRIM.exe. A complete minimal dependency
+bundle for TIN or TRIM has not been established by these tests.
+
+2. INPUT INVENTORY
+
+Incident ion:
+  Symbol, name, atomic number, mass (amu), total energy (keV), incidence angle.
+  Confirmed angle range: 0 to 89.9 degrees; zero is normal incidence.
+  Periodic Table (PT) selection is available. Symbol/name/number identify the
+  same element. Help recommends the most abundant isotope for projectile mass.
+
+Target hierarchy:
+  Target -> layers -> components -> component damage energies.
+
+Each layer:
+  Layer name; width; width unit (Angstrom, micrometre, mm, cm, m, km);
+  density (g/cm3); compound correction; gas checkbox.
+
+Each component in a layer:
+  Symbol, name, atomic number, weight (amu), atomic stoichiometry, displayed
+  atomic percentage, displacement energy, lattice-binding energy, and
+  surface-binding energy (all three energies in eV).
+  The percentage field is greyed out and follows entered atomic stoichiometry.
+
+Target controls:
+  Add Layer, Add Element to Layer, Compound Dictionary, PT, delete layer,
+  delete component. Deletion and general navigation are not central to the
+  intended input-building workflow.
+
+Density:
+  The user observed automatic recalculation when adding an element to a layer.
+  No separate Auto checkbox was visible. Whether a manual density value survives
+  subsequent composition edits has not been checked.
+
+Damage energies:
+  Disp: energy needed for a recoil to escape its original site by more than one
+        atomic spacing; otherwise it is assumed to return and lose energy to phonons.
+  Latt: energy lost to phonons when a target recoil leaves its lattice site.
+  Surf: energy needed to leave the target surface, important for sputtering;
+        this is not simply a chemical bond dissociation energy.
+  Separate entries for the same element allow different damage properties in
+  different layers, e.g. Si in SiO2 versus Si in a silicon substrate.
+
+Special parameters:
+  Calculation name; stopping-power version (only SRIM-2008 observed in both
+  2008 and 2013); autosave interval in ions; total ion count; random seed;
+  minimum/maximum plotting-window depths in Angstrom.
+
+Requested output controls:
+  Ion Ranges; Backscattered Ions; Transmitted Ions/Recoils; Sputtered Atoms;
+  Collision Details (checkbox); Special EXYZ File Increment (numeric, eV).
+  EXYZ records positions at approximate energy-loss intervals, not spatial steps.
+
+Actions:
+  Save Input & Run TRIM; Clear All; Restore Last TRIM Data;
+  Calculate Quick Range Table; Resume Saved TRIM Calculation.
+  The 2008 interface also displays Use TRIM-96 (DOS); its operation was excluded.
+  Later computer-use inspection showed Resume as a button in 2013, whereas it
+  is a checkbox in 2008; the 2013 window did not display the 2008 DOS checkbox.
+  These action-control presentation differences do not alter the core field inventory.
+
+3. DAMAGE / CALCULATION-TYPE INPUT CODES
+
+Codes below are numbers written to TRIM.IN, not saved-state runtime numbers.
+The Damage menus are one-based: every observed menu position equals its input code.
+
+Calculation                                  2008 input    2013 input
+Ion distribution, quick damage                    1             1
+Detailed ion calculation, full cascades            2             2
+Surface sputtering / monolayer collision steps     3             3
+Specified ion energy/angle/depth, quick damage     4             4
+Specified ion energy/angle/depth, full cascades    5             5
+Recoil cascades from neutrons/etc., quick damage   6             8
+Recoil cascades from neutrons/etc., full cascades  7             6
+Recoil cascades plus monolayer steps               -             7
+
+2013 reverses the wording of option 3 to Monolayer Collision Steps / Surface
+Sputtering, calls quick damage KP (Kinchin-Pease), and revises the text of
+specified-ion and recoil selections. The key change is the final three options.
+
+Modes 4+ require TRIM.DAT. Ion modes consume initial particle conditions;
+neutron/electron/photon modes consume externally generated target recoil events.
+TRIM does not calculate the initiating neutron/electron/photon transport itself.
+The added monolayer recoil mode is documented as useful for thin targets or
+low energies.
+
+Saved-state distinction:
+  2008 TDATA.sav preserves input codes 1-7 in the tested cases.
+  2013 input 1-5 -> saved runtime 1-5.
+  2013 input 6   -> saved runtime 7 (full recoil cascades).
+  2013 input 7   -> saved runtime 8 (monolayer recoil cascades).
+  2013 input 8   -> saved runtime 6 (quick recoil damage).
+Do not interpret a TDATA.sav cascade number using the 2013 TRIM.IN menu mapping.
+
+SUPPORTED SCOPE - USER DECISION:
+  2008: intended input codes 1-7 only.
+  2013 Standard/Pro: intended input codes 1-8 only.
+  Exclude code 0 for both and code 8 for 2008, despite their executable behavior.
+
+4. BASIC PLOT INPUT CODES
+
+Both versions expose the same six choices for every Damage menu entry.
+Direct tests confirmed identical plot meanings in 2008 and 2013:
+
+Menu position   TRIM.IN PlotType   Result
+     1                 0          XY: ions and recoils (Depth vs. Y-Axis)
+     2                 1          XZ: ions and recoils (Depth vs. Z-Axis)
+     3                 2          XY: ions only (Ion Trajectories)
+     4                 3          YZ: transverse ions/recoils (Transverse View)
+     5                 4          All four views
+     6                 5          No graphics; no newly saved plot images
+
+2008's third label is wrong: Recoil Distribution only (No Ions) projected on
+Y-Plane. The actual plot is XY Ions Only / Ion Trajectories. 2013 corrects the
+label to Ion Distribution only (no recoils) projected on Y-Plane, agreeing with
+both executable behavior and the plot help. This discrepancy is resolved.
+
+5. TEST METHOD AND LIMITS
+
+Plot tests: 12 isolated runs, six codes for each version, each completed 100 ions.
+Baseline: Ar, Z18, mass 39.962 amu, 50 keV, zero incidence angle; one 3000 Angstrom
+solid Si layer, density 2.3212 g/cm3, mass 28.086 amu, stoichiometry 1, correction
+1; Disp/Latt/Surf = 15/2/4.7 eV; seed 12345; no optional output files.
+PlotType 4 saved TP0.bmp through TP3.bmp; PlotType 5 produced no new plot images.
+User screenshots and generated inputs confirmed third plot -> code 2 in both.
+TIN wrote density 2.3212 rather than the originally requested 2.32; actual file
+values were preserved. Ordinary plot comparisons establish display meaning,
+not cross-version numerical equivalence.
+
+Damage tests: all 15 intended version/mode combinations completed one ion/event,
+with direct input seed 12345 and no graphics. Modes 1-3 used the Ar-Si baseline.
+Modes 4+ used a synthetic TRIM.DAT: ten header lines; one five-character event
+name T0001; Si Z14, 1000 eV, depth 100 Angstrom, Y=Z=0, direction cosines 1,0,0;
+ASCII CRLF and terminal EOF byte 0x1A. The original installations were untouched.
+The 2008 GUI mode-2 mapping uses the earlier user-generated capture; remaining
+captures were made through computer use. Tests are operational one-event checks,
+not validation of physics accuracy or complete file-format/boundary coverage.
+
+Dialogs / automation:
+  TIN saves TRIM.IN before its TRIM.DAT warning. Cancel at that warning preserves
+  the input without starting TRIM.
+  Direct batch runs used TRIMAUTO=1, but some modes still required UI handling.
+  2008 codes 6/7 and 2013 codes 6/8 asked whether to save each cascade in
+  COLLISON.txt. No was selected. Initial 2008 timeouts were these prompts,
+  not demonstrated calculation failures.
+  2013 codes 5-8 required acknowledgment of the End of TRIM.DAT calculation dialog.
+  Complete unattended execution of every mode is therefore not established.
+
+6. EXCLUDED-CODE EXPERIMENTS (EVIDENCE ONLY; NOT SUPPORTED INPUTS)
+
+Code 0 in 2008 and 2013 executed as full cascades, saved runtime code 2, and
+matched code 2's saved results byte-for-byte in each tested version:
+  2008: 11 result files; 2013: 17 result files, excluding TRIMIN.sav input copies.
+
+2008 code 8 ran one ion, retained runtime code 8, and produced saved outputs.
+Its physics meaning is unidentified. Controlled comparison with every 2013
+input code 0-8 used identical TRIM.IN bytes except the Damage line, identical
+TRIM.DAT, seed 12345, and each installation's own runtime resources.
+None matched 2008 code 8 numerically or as a complete saved-output set.
+
+Version/code   Reported range (Angstrom)   Vacancies per ion/event
+2008 / 8               684.62                     930
+2013 / 0               615.03                     915
+2013 / 1               944.68                     596.38
+2013 / 2               615.03                     915
+2013 / 3               263.32                    1128
+2013 / 4               120.22                      22.073
+2013 / 5               111.92                      34
+2013 / 6               100.00                      29
+2013 / 7               132.62                      26
+2013 / 8               100.00                      21.034
+
+The first 2013 engine scan had a different Bragg-control flag from 2008 (1 vs 0).
+The controlled comparison removed that difference; do not use the initial scan
+to claim otherwise identical cross-version inputs. Do not infer universal mode
+equivalence, or its absence, from a single ion/event.
+
+7. DOCUMENTATION QUALIFICATIONS AND REMAINING WORK
+
+Manuals: 2008 HELP - TRIM Setup and Input.pdf; 2013 HELP - TRIM Input.pdf.
+Relevant installed SRIMHelp files include Help1.rtf (types), help10.rtf (plots),
+help9.rtf (target), help18.rtf (stopping version), help7.rtf (angle),
+helpTR16.rtf (autosave), help66.rtf (EXYZ), and Help15.rtf (recoil-event input).
+
+The manuals/help retain older material: stopping help and setup screenshots
+refer to 2003 despite the observed 2008 selector. Some TRIM.IN example headings
+list only seven modes, even in 2013. DOS help contradicts its visible 2008
+control. Manual energy ceilings conflict: 2 GeV/amu in the introduction versus
+10 GeV/amu in the ion-input section. Do not turn those into verified limits.
+
+Documented, not boundary-tested: 8 layers; up to 12 target elements per layer;
+ion count to 9999999; integer seed 0-999999999; autosave 1-32000 ions, with higher
+values described as disabling autosave. Exact defaults and validation rules
+remain to be verified. Target help's historical Auto checkbox was not observed;
+the user instead observed automatic density recalculation on element addition.
+Stoichiometry is normalized internally. Plot depth defines the 100 depth bins
+for averaged stored data, not merely the displayed viewport.
+
+TIN field inventory, plot meanings, and intended Damage input mapping are complete
+for this investigation. Next work belongs to TRIM input/runtime investigation:
+  - Complete TRIM.IN and TRIM.DAT formats, conversions, limits and validation.
+  - Runtime dependencies, working-directory requirements and clean isolation.
+  - Output-option behavior, formats, and provenance.
+  - Batch dialogs, lifecycle, interruption and resume-state requirements.
+  - Numeric boundary checks and unresolved density-edit behavior if needed.
+Implementation has not been proposed or approved by this investigation.
+
+8. ARCHIVED EVIDENCE
+
+All temporary work and PDF render files from this chat moved to:
+  .cache/tin-investigation-20261019/
+    work/tin_investigation/                 initial unused 2013 copy
+    work/tin_input_checks_20261019/         plot runs, screenshots, inputs
+    work/tin_damage_checks_20261019/        GUI captures and engine runs
+    tmp/pdfs/                              rendered manual pages
+
+Damage evidence reports under work/tin_damage_checks_20261019/:
+  damage-check-results.json
+  damage-codes-0-8-2008.json
+  compare-2008-8-with-2013-6-7-8.json
+  compare-2008-8-with-2013-0-through-8.json
+
+archive-manifest.json records sizes and hashes of all 9616 files before moving;
+every moved file matched that hash immediately after relocation. Report path
+strings were subsequently updated to their archived locations, so those JSON
+reports intentionally no longer match the pre-relocation manifest hashes.
+Raw input/output bytes were not changed during relocation. Cache is ignored by
+Git; this consolidated findings file and the additional handoff are committed.
