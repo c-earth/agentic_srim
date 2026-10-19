@@ -1,0 +1,8 @@
+Ion = Hydrogen    , Mass = 1.008
+Tgt =  H +  O (Solid), Density = 1 g/cm3
+Stopping Units = MeV/(mg/cm2) 
+Energy(keV)  S(Elec)    S(Nuc)
+3.980E+00   2.957E-01  1.681E-02 
+1.020E+00   1.555E-01  3.921E-02 
+3.980E+00   2.957E-01  1.681E-02 
+1.000E+04   4.657E-02  2.665E-05 

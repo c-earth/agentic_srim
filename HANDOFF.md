@@ -1,19 +1,20 @@
 # Handoff
 
-## SRModule input and runtime preparation
+## SRModule execution and parsing
 
-- Added `src/srim/inputs.py`: `validate_sr_request(request)` and `render_sr_input(request)`. The explicit version-one schema supports energy ranges and ordered lists of 1–1,000 energies, preserves decimal strings, and renders ASCII CRLF `SR.IN` with output name `stopping.txt`.
-- Added `src/srim/runtime.py`: `prepare_sr_simulation(paths, config, created, worker, request, electronic, nuclear)` returns `worker/<worker_id>/sr/<simulation_id>`. Callers supply existing empty simulation/worker allocations and complete electronic/nuclear resource selections.
-- Runtime preparation copies exact selected coefficient bytes plus `SRModule.exe` and `VERSION` from the configured installation's `SR Module` directory. The module VERSION's trimmed first line supplies engine.version; installed Data/VERSION is not substituted.
-- Five synchronized runtime files publish through a staging-directory rename. Record inputs include `SR.IN`, exact `VERSION`, and a sorted five-file hash/size manifest in `input/engine/runtime.json`. Source attribution and transformation provenance are retained. Preparation leaves status created and never launches an executable.
-- `initialize_simulation` now accepts optional keyword-only `engine_inputs: Mapping[str, bytes] | None = None`. It validates safe flat filenames and exact bytes before writes, inventories prepared files, and publishes metadata last. Existing callers remain compatible.
-- Errors retain staging/runtime/record evidence with exception notes; preparation does not overwrite existing destinations, retry, clean up, or mark simulations failed. Worker-parent locking nests simulation/resource operations in that order.
+- Added `src/srim/outputs.py`: `parse_sr_output(contents, request)` validates ASCII range/list formats, all eight stopping-unit labels, range conversion footers, numeric values, list counts/order, and printed energy precision. Results preserve numeric strings, mixed units, duplicate list energies, original requested energies, and raw-output hashes/sizes.
+- Added `src/srim/execution.py`: `verify_sr_runtime(paths, simulation_id, runtime)` checks the prepared five-file manifest, initialized input inventory, engine identity, and resource provenance. `run_sr_simulation(paths, config, simulation_id, runtime, *, timeout_seconds=60.0)` runs synchronously under the global worker-parent lock and integrates the existing lifecycle.
+- Outputs are exclusive binary `output/raw/stdout.bin`, `stderr.bin`, and available `stopping.txt`, plus version-one `output/raw/execution.json` and successful `output/parsed/result.json`. Runtime files remain available. Inputs and runtime bytes are rechecked after execution, including unsuccessful exits.
+- Expected execution/parsing failures return failed metadata. Invalid caller/state/collision checks and lock contention raise without taking ownership. Filesystem/publication errors propagate after best-effort evidence preservation and failed finalization. Interruptions are re-raised. Failed metadata publication can leave the preceding status; exception notes identify secondary failures and retained paths.
+- Added captured ASCII CRLF range/list fixtures and twelve workflow tests in `test/srim/test_runtime.py`.
 
 ## Verification
 
-- All 78 tests pass with warnings treated as errors: 38 backend and 40 SRIM tests, including 11 new tests for request schemas, serialization, provenance, isolation, integrity, collisions, links, lock contention, and publication failures.
-- Module/class/function docstring, argument/return annotation, and no-comment checks passed for all six changed Python files. No installed executable was run; tests use synthetic installations.
+- All 90 tests pass with warnings treated as errors: 38 backend and 52 SRIM tests. Coverage includes transformed resources, malformed manifests, terminal guards, lock contention, timeouts, failed exits, corrupted inputs, output publication failures, and interruption.
+- Live checks using the configured installation succeeded for a 79-row range and a four-row ordered list with a duplicate energy. A forced timeout produced failed metadata. Raw output, input/output inventories, and runtime hashes were verified; installed executable/version/coefficient hashes remained unchanged.
+- Live evidence: `.cache/sr-execution-verified-iet9uq8y/integration-check.json` and its simulation records. Earlier format probes also confirmed all eight unit labels.
+- Module/class/function docstrings, complete argument/return annotations, absence of Python comments, fixture ASCII/CRLF, and Python whitespace checks passed for the changed code. `git diff --check` passed.
 
 ## Remaining work
 
-Design and obtain approval for SRModule execution and output parsing integrated with simulation lifecycle transitions, including runtime-manifest verification before launch and collection of `stopping.txt`. Live executable compatibility remains unverified. CAB baseline experiments and CAB calculation remain deferred.
+CAB derivation mode, including baseline experiments and correction-factor calculation, is excluded from the current plan for now. SR requests continue to use the existing none or supplied correction modes.

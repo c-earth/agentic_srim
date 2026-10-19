@@ -1,4 +1,4 @@
-"""Verify isolated SRModule preparation, provenance, integrity, locks, and failure evidence."""
+"""Verify SRModule preparation, parsing, execution, result preservation, and lifecycle evidence."""
 
 from __future__ import annotations
 
@@ -9,7 +9,9 @@ import hashlib
 import json
 from operator import eq
 from pathlib import Path
+import subprocess
 from tempfile import TemporaryDirectory
+from typing import BinaryIO
 import unittest
 from unittest.mock import patch
 
@@ -18,20 +20,24 @@ from src.backend.paths import create_base_directories, get_project_paths
 from src.backend.records import CreateRequest, _lock_parent, create_directories
 from src.backend.resources import register_resource, verify_resource
 from src.srim.inputs import render_sr_input
-from src.srim.metadata import JSONObject, read_simulation, start_simulation
+from src.srim.execution import run_sr_simulation, verify_sr_runtime
+from src.srim.metadata import JSONObject, _inventory, _write_json, read_simulation, start_simulation
+from src.srim.outputs import STOPPING_LABELS, _matches_printed, _parse_number, parse_sr_output
 from src.srim.runtime import _read_selected_resource, prepare_sr_simulation
 
 
 class TestSRRuntime(unittest.TestCase):
-    """Test preparation using unittest's inherited test-method-name constructor.
+    """Test SR workflows using unittest's inherited test-method-name constructor.
 
     setUp supplies temporary, paths, config, module, created, worker, request,
     electronic/nuclear selection dictionaries, and their resource references.
-    These public fixtures isolate writes and are removed by registered cleanup.
+    engine_output, process_returncode, process_error, produce_output,
+    mutate_runtime, and mutate_input configure the subprocess mock. These public
+    fixtures isolate writes and are removed by registered cleanup.
     """
 
     def setUp(self: TestSRRuntime) -> None:
-        """Create self's temporary project, installation, selections, and allocations; return None, register cleanup, and propagate setup errors."""
+        """Create self's temporary project, installation, selections, allocations, and mock process configuration; return None, register cleanup, and propagate setup errors."""
         self.temporary = TemporaryDirectory(dir=Path(__file__).parent)
         self.addCleanup(self.temporary.cleanup)
         self.paths = get_project_paths(Path(self.temporary.name).absolute())
@@ -73,6 +79,53 @@ class TestSRRuntime(unittest.TestCase):
                 "energy": {"mode": "range", "minimum_keV": "10", "maximum_keV": "10000"},
             },
         }
+        self.engine_output = (Path(__file__).parent / "fixtures" / "sr-range.txt").read_bytes()
+        self.process_returncode = 0
+        self.process_error: BaseException | None = None
+        self.produce_output = True
+        self.mutate_runtime = False
+        self.mutate_input = False
+
+    def _fake_sr_run(
+        self: TestSRRuntime,
+        args: list[str],
+        *,
+        cwd: Path,
+        stdin: int,
+        stdout: BinaryIO,
+        stderr: BinaryIO,
+        timeout: float,
+        check: bool,
+        creationflags: int,
+    ) -> subprocess.CompletedProcess[bytes]:
+        """Simulate args at cwd for self's process/output fixture configuration.
+
+        Assert closed stdin, writable binary stdout/stderr, positive timeout,
+        disabled check, hidden-window creationflags, running metadata, and worker
+        locking. Write exact diagnostics and optional output or configured input
+        mutations. Return configured exit status or raise configured process_error.
+        Effects remain in self's temporary project; assertion failures propagate.
+        """
+        self.assertEqual(args, [str(cwd / "SRModule.exe")])
+        self.assertEqual(stdin, subprocess.DEVNULL)
+        self.assertGreater(timeout, 0)
+        self.assertFalse(check)
+        self.assertEqual(creationflags, subprocess.CREATE_NO_WINDOW)
+        self.assertEqual(read_simulation(self.paths, cwd.name)["status"], "running")
+        with self.assertRaises(OSError):
+            with _lock_parent(self.paths.workers):
+                pass
+        stdout.write(b"engine stdout\x00\xff\r\n")
+        stderr.write(b"engine stderr\r\n")
+        if self.produce_output:
+            (cwd / "stopping.txt").write_bytes(self.engine_output)
+        if self.mutate_runtime:
+            (cwd / "SCOEF03.dat").write_bytes(b"changed during execution")
+        if self.mutate_input:
+            (self.paths.simulation_memory / cwd.name / "input" / "engine" / "SR.IN").write_bytes(b"changed sealed input")
+        if self.process_error is not None:
+            raise self.process_error
+        return subprocess.CompletedProcess(args, self.process_returncode)
 
     def test_prepared_layout_and_provenance(self: TestSRRuntime) -> None:
         """Check self's complete bytes, manifests, module version, immutable sources, and lifecycle input sealing; return None or assertion failures."""
@@ -256,3 +309,277 @@ class TestSRRuntime(unittest.TestCase):
         third = prepare_sr_simulation(self.paths, self.config, third_created, other_worker, self.request, self.electronic, self.nuclear)
         self.assertEqual(third.parent, other_worker.path / "sr")
         self.assertEqual((third / "SCOEF03.dat").read_bytes(), (first / "SCOEF03.dat").read_bytes())
+
+    def test_parse_sr_range(self: TestSRRuntime) -> None:
+        """Check self's captured range fixture, mixed units, precision, and source hash; return None without writes or raise assertions."""
+        original = deepcopy(self.request)
+        result = parse_sr_output(self.engine_output, self.request)
+        self.assertEqual(set(result), {"schema_version", "energy_mode", "source", "stopping_units", "rows"})
+        self.assertEqual(result["energy_mode"], "range")
+        self.assertEqual(result["source"], {"filename": "stopping.txt", "sha256": hashlib.sha256(self.engine_output).hexdigest(), "size_bytes": len(self.engine_output)})
+        self.assertEqual(result["stopping_units"], {"code": 5, "label": "MeV/(mg/cm2)"})
+        self.assertEqual(len(result["rows"]), 79)
+        self.assertEqual(result["rows"][0], {
+            "energy": {"value": "10.00", "unit": "keV"},
+            "electronic_stopping": "4.556E-01", "nuclear_stopping": "8.659E-03",
+            "projected_range": {"value": "2507", "unit": "A"},
+            "longitudinal_straggling": {"value": "651", "unit": "A"},
+            "lateral_straggling": {"value": "678", "unit": "A"},
+        })
+        self.assertEqual(result["rows"][-1]["energy"], {"value": "10.00", "unit": "MeV"})
+        self.assertEqual(result["rows"][-1]["projected_range"], {"value": "1.20", "unit": "mm"})
+        self.assertEqual(result["rows"][-1]["longitudinal_straggling"], {"value": "53.86", "unit": "um"})
+        self.assertEqual(self.request, original)
+
+    def test_parse_sr_list(self: TestSRRuntime) -> None:
+        """Check self's ordered duplicate and rounded list energies, numeric precision, and 1000 rows; return None or assertions without writes."""
+        contents = (Path(__file__).parent / "fixtures" / "sr-list.txt").read_bytes()
+        values = ["3.98", "1.02", "3.98", "10000"]
+        self.request["parameters"]["energy"] = {"mode": "list", "values_keV": values}
+        result = parse_sr_output(contents, self.request)
+        self.assertEqual(result["energy_mode"], "list")
+        self.assertEqual([row["requested_energy_keV"] for row in result["rows"]], values)
+        self.assertEqual(result["rows"][0]["electronic_stopping"], "2.957E-01")
+        self.assertEqual(result["rows"][0]["nuclear_stopping"], "1.681E-02")
+        self.assertNotIn("projected_range", result["rows"][0])
+        self.request["parameters"]["energy"]["values_keV"] = ["3.98001", "1.0200001", "3.97999", "10000.01"]
+        self.assertEqual(parse_sr_output(contents, self.request)["rows"][0]["requested_energy_keV"], "3.98001")
+        self.assertTrue(_matches_printed("1.235E+00", "1.23456789"))
+        self.assertFalse(_matches_printed("1.235E+00", "1.24"))
+        self.assertFalse(_matches_printed("0", "1"))
+        self.request["parameters"]["energy"]["values_keV"] = ["3.98"] * 1000
+        lines = contents.splitlines()
+        large = b"\r\n".join(lines[:4] + [lines[4]] * 1000) + b"\r\n"
+        self.assertEqual(len(parse_sr_output(large, self.request)["rows"]), 1000)
+
+    def test_parse_sr_units(self: TestSRRuntime) -> None:
+        """Check self's range/list unit labels for all eight selected codes; return None or assertions without filesystem writes."""
+        list_contents = (Path(__file__).parent / "fixtures" / "sr-list.txt").read_bytes()
+        for mode, contents in (("range", self.engine_output), ("list", list_contents)):
+            self.request["parameters"]["energy"] = {"mode": "range", "minimum_keV": "10", "maximum_keV": "10000"} if mode == "range" else {"mode": "list", "values_keV": ["3.98", "1.02", "3.98", "10000"]}
+            for code, label in enumerate(STOPPING_LABELS, 1):
+                with self.subTest(mode=mode, code=code):
+                    self.request["parameters"]["stopping_units"] = code
+                    lines = contents.decode("ascii").splitlines()
+                    units_index = next(index for index, line in enumerate(lines) if line.strip().startswith("Stopping Units ="))
+                    lines[units_index] = "Stopping Units = " + label
+                    modified = ("\r\n".join(lines) + "\r\n").encode("ascii")
+                    self.assertEqual(parse_sr_output(modified, self.request)["stopping_units"], {"code": code, "label": label})
+
+    def test_parse_sr_invalid_output(self: TestSRRuntime) -> None:
+        """Check self's malformed, truncated, negative, unordered, nonfinite, and mismatched outputs; return None or assertions without writes."""
+        contents = self.engine_output
+        invalid = [
+            b"", b"\xff", contents.decode("ascii"), contents[:100],
+            contents.replace(b"MeV/(mg/cm2)", b"wrong units", 1),
+            contents.replace(b"10.00 keV", b"0.00 keV", 1),
+            contents.replace(b"11.00 keV", b"9.00 keV", 1),
+            contents.replace(b"4.556E-01", b"-4.556E-01", 1),
+            contents.replace(b"4.556E-01", b"NaN", 1),
+            contents.replace(b"2507 A", b"2507 furlong", 1),
+            contents.replace(b"10.00 keV", b"10.00 joule", 1),
+            contents.replace(b"2507 A", b"A", 1),
+            contents[:contents.index(b" Multiply Stopping")],
+            contents.replace(b"9.9997E+00", b"-9.9997E+00", 1),
+            contents.replace(b"(C) 1984", b"copyright 1984", 1),
+        ]
+        for index, payload in enumerate(invalid):
+            with self.subTest(range_case=index), self.assertRaises(ValueError):
+                parse_sr_output(payload, self.request)
+        for token in ("-1", "NaN", "Infinity", "1,2", "1_000", "", "1e"):
+            with self.subTest(token=token), self.assertRaises(ValueError):
+                _parse_number(token, "test")
+        self.request["parameters"]["energy"] = {"mode": "list", "values_keV": ["3.98", "1.02", "3.98", "10000"]}
+        contents = (Path(__file__).parent / "fixtures" / "sr-list.txt").read_bytes()
+        for payload in (contents.rsplit(b"\r\n", 2)[0], contents + b"1 2 3\r\n", contents.replace(b"3.980E+00", b"3.990E+00", 1), contents.replace(b"2.957E-01", b"-1", 1), contents.replace(b"Energy(keV)", b"Energy(MeV)", 1), self.engine_output):
+            with self.subTest(list_payload=payload[:40]), self.assertRaises(ValueError):
+                parse_sr_output(payload, self.request)
+
+    def test_verify_sr_runtime(self: TestSRRuntime) -> None:
+        """Check self's verified request, all runtime files, record inputs, resource provenance, and links; return None or assertions, restoring temporary edits."""
+        runtime = prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, self.electronic, self.nuclear)
+        self.assertEqual(verify_sr_runtime(self.paths, self.created.path.name, runtime), self.request)
+        for name in ("SRModule.exe", "VERSION", "SCOEF03.dat", "SNUC03.dat", "SR.IN"):
+            path = runtime / name
+            original = path.read_bytes()
+            path.write_bytes(original + b"changed")
+            with self.subTest(filename=name), self.assertRaises(ValueError):
+                verify_sr_runtime(self.paths, self.created.path.name, runtime)
+            path.write_bytes(original)
+        extra = runtime / "stopping.txt"
+        extra.write_bytes(b"old output")
+        with self.assertRaises(ValueError):
+            verify_sr_runtime(self.paths, self.created.path.name, runtime)
+        extra.unlink()
+        manifest = self.created.path / "input" / "engine" / "runtime.json"
+        original = manifest.read_bytes()
+        manifest.write_bytes(b"{}")
+        with self.assertRaises(ValueError):
+            verify_sr_runtime(self.paths, self.created.path.name, runtime)
+        manifest.write_bytes(original)
+        for method in ("is_symlink", "is_junction"):
+            with patch.object(Path, method, autospec=True, side_effect=partial(eq, runtime / "SRModule.exe")), self.assertRaises(OSError):
+                verify_sr_runtime(self.paths, self.created.path.name, runtime)
+        payload = verify_resource(self.paths, self.electronic_reference)
+        original = payload.read_bytes()
+        payload.write_bytes(b"corrupted resource")
+        with self.assertRaises(ValueError):
+            verify_sr_runtime(self.paths, self.created.path.name, runtime)
+        payload.write_bytes(original)
+        transformed_reference = register_resource(self.paths, self.config, "engine", "electronic", "changed", b"transformed coefficients")
+        transformed = deepcopy(self.electronic)
+        transformed["reference"] = asdict(transformed_reference)
+        transformed["transformation"] = {"original": asdict(self.electronic_reference), "method": "test", "version": "v1", "parameters": {}}
+        for selection in (transformed, self.electronic | {"transformation": {"original": asdict(self.electronic_reference), "method": "identity", "version": "v1", "parameters": {}}}):
+            created = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
+            other_runtime = prepare_sr_simulation(self.paths, self.config, created, self.worker, self.request, selection, self.nuclear)
+            self.assertEqual(verify_sr_runtime(self.paths, created.path.name, other_runtime), self.request)
+        metadata = read_simulation(self.paths, self.created.path.name)
+        valid_manifest = json.loads(manifest.read_bytes())
+        malformed = [valid_manifest | {"schema_version": True}, valid_manifest | {"files": {}}, valid_manifest | {"extra": 1}]
+        for field, value in (("size_bytes", True), ("filename", "../outside"), ("sha256", "INVALID")):
+            invalid_manifest = deepcopy(valid_manifest)
+            invalid_manifest["files"][0][field] = value
+            malformed.append(invalid_manifest)
+        for invalid_manifest in malformed:
+            _write_json(manifest, invalid_manifest)
+            with patch("src.srim.execution._inventory", return_value=metadata["inputs"]), self.assertRaises(ValueError):
+                verify_sr_runtime(self.paths, self.created.path.name, runtime)
+        _write_json(manifest, valid_manifest)
+        metadata = read_simulation(self.paths, self.created.path.name)
+        metadata["engine"]["executable"]["sha256"] = "0" * 64
+        _write_json(self.created.path / "metadata.json", metadata)
+        with self.assertRaises(ValueError):
+            verify_sr_runtime(self.paths, self.created.path.name, runtime)
+
+    def test_run_sr_success(self: TestSRRuntime) -> None:
+        """Check self's range/list execution, exact evidence, inventories, timestamps, immutable sources, and terminal guard; return None or assertions using mocks."""
+        for mode in ("range", "list"):
+            created = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
+            if mode == "list":
+                self.request["parameters"]["energy"] = {"mode": "list", "values_keV": ["3.98", "1.02", "3.98", "10000"]}
+                self.engine_output = (Path(__file__).parent / "fixtures" / "sr-list.txt").read_bytes()
+            runtime = prepare_sr_simulation(self.paths, self.config, created, self.worker, self.request, self.electronic, self.nuclear)
+            before = {entry.name: entry.read_bytes() for entry in runtime.iterdir()}
+            with patch("src.srim.execution.subprocess.run", side_effect=self._fake_sr_run) as launched:
+                result = run_sr_simulation(self.paths, self.config, created.path.name, runtime)
+                launched.assert_called_once()
+            self.assertEqual(result["status"], "succeeded")
+            self.assertIsNotNone(result["started_at"])
+            self.assertIsNotNone(result["finished_at"])
+            self.assertEqual(result["outputs"], _inventory(created.path / "output", created.path))
+            raw = created.path / "output" / "raw"
+            self.assertEqual((raw / "stopping.txt").read_bytes(), self.engine_output)
+            self.assertEqual((raw / "stdout.bin").read_bytes(), b"engine stdout\x00\xff\r\n")
+            self.assertEqual((raw / "stderr.bin").read_bytes(), b"engine stderr\r\n")
+            self.assertEqual({name: (runtime / name).read_bytes() for name in before}, before)
+            diagnostic = json.loads((raw / "execution.json").read_bytes())
+            self.assertEqual(diagnostic, {"schema_version": 1, "simulation_id": created.path.name, "runtime_path": runtime.relative_to(self.paths.root).as_posix(), "timeout_seconds": 60.0, "stage": "completed", "exit_code": 0, "timed_out": False, "message": None})
+            parsed = json.loads((created.path / "output" / "parsed" / "result.json").read_bytes())
+            self.assertEqual(parsed, parse_sr_output(self.engine_output, self.request))
+            self.assertEqual((raw / "execution.json").read_bytes(), (json.dumps(diagnostic, indent=2) + "\n").encode("utf-8"))
+            with patch("src.srim.execution.subprocess.run") as launched, self.assertRaises(ValueError):
+                run_sr_simulation(self.paths, self.config, created.path.name, runtime)
+            launched.assert_not_called()
+
+    def test_run_sr_preflight_failure(self: TestSRRuntime) -> None:
+        """Check self's preflight corruption and stale runtime output fail before launch with created-state timestamps; return None or assertions using mocks."""
+        for name in ("SRModule.exe", "SR.IN", "VERSION", "SCOEF03.dat", "SNUC03.dat", "stopping.txt"):
+            created = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
+            runtime = prepare_sr_simulation(self.paths, self.config, created, self.worker, self.request, self.electronic, self.nuclear)
+            (runtime / name).write_bytes(b"changed or stale")
+            with patch("src.srim.execution.subprocess.run") as launched:
+                result = run_sr_simulation(self.paths, self.config, created.path.name, runtime)
+                launched.assert_not_called()
+            self.assertEqual(result["status"], "failed")
+            self.assertIsNone(result["started_at"])
+            self.assertIsNotNone(result["finished_at"])
+            self.assertTrue(result["failure"]["message"].startswith("preflight:"))
+
+    def test_run_sr_process_failures(self: TestSRRuntime) -> None:
+        """Check self's launch, timeout, and nonzero exit cases preserve diagnostics/output and failed metadata; return None or assertions using configured mocks."""
+        for stage in ("launch", "timeout", "exit"):
+            created = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
+            runtime = prepare_sr_simulation(self.paths, self.config, created, self.worker, self.request, self.electronic, self.nuclear)
+            self.process_error = subprocess.TimeoutExpired("SRModule.exe", 0.25) if stage == "timeout" else None
+            self.process_returncode = 7 if stage == "exit" else 0
+            self.mutate_runtime = stage == "exit"
+            effect = OSError("cannot launch") if stage == "launch" else self._fake_sr_run
+            with patch("src.srim.execution.subprocess.run", side_effect=effect):
+                result = run_sr_simulation(self.paths, self.config, created.path.name, runtime, timeout_seconds=0.25)
+            self.assertEqual(result["status"], "failed")
+            self.assertEqual(result["failure"]["exit_code"], 7 if stage == "exit" else None)
+            diagnostic = json.loads((created.path / "output" / "raw" / "execution.json").read_bytes())
+            self.assertEqual(diagnostic["stage"], stage)
+            self.assertEqual(diagnostic["timed_out"], stage == "timeout")
+            if stage == "exit":
+                self.assertIn("Runtime files changed", diagnostic["message"])
+            if stage != "launch":
+                self.assertEqual((created.path / "output" / "raw" / "stopping.txt").read_bytes(), self.engine_output)
+            self.assertFalse((created.path / "output" / "parsed" / "result.json").exists())
+
+    def test_run_sr_output_failures(self: TestSRRuntime) -> None:
+        """Check self's missing, malformed, changed-runtime and changed-sealed-input outcomes retain evidence and fail; return None or assertions using mocks."""
+        for stage in ("missing", "parse", "integrity", "sealed"):
+            created = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
+            runtime = prepare_sr_simulation(self.paths, self.config, created, self.worker, self.request, self.electronic, self.nuclear)
+            self.produce_output = stage != "missing"
+            self.engine_output = b"partial malformed output" if stage == "parse" else (Path(__file__).parent / "fixtures" / "sr-range.txt").read_bytes()
+            self.mutate_runtime = stage == "integrity"
+            self.mutate_input = stage == "sealed"
+            with patch("src.srim.execution.subprocess.run", side_effect=self._fake_sr_run):
+                result = run_sr_simulation(self.paths, self.config, created.path.name, runtime)
+            self.assertEqual(result["status"], "failed")
+            self.assertEqual((runtime / "stopping.txt").exists(), stage != "missing")
+            self.assertEqual((created.path / "output" / "raw" / "stopping.txt").exists(), stage != "missing")
+            diagnostic = json.loads((created.path / "output" / "raw" / "execution.json").read_bytes())
+            self.assertEqual(diagnostic["stage"], {"missing": "output", "sealed": "integrity"}.get(stage, stage))
+
+    def test_run_sr_preservation_failures(self: TestSRRuntime) -> None:
+        """Check self's copy/JSON/finalization failures preserve evidence, report secondary errors, and avoid false completion; return None or assertions using mocks."""
+        for operation in ("copy", "json", "finish"):
+            created = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
+            runtime = prepare_sr_simulation(self.paths, self.config, created, self.worker, self.request, self.electronic, self.nuclear)
+            target = {"copy": "src.srim.execution._write_input_file", "json": "src.srim.execution._write_json", "finish": "src.srim.execution.finish_simulation"}[operation]
+            with patch("src.srim.execution.subprocess.run", side_effect=self._fake_sr_run), patch(target, side_effect=PermissionError("publication blocked")), self.assertRaises(PermissionError) as caught:
+                run_sr_simulation(self.paths, self.config, created.path.name, runtime)
+            self.assertEqual((runtime / "stopping.txt").read_bytes(), self.engine_output)
+            self.assertTrue(any(str(runtime) in note for note in caught.exception.__notes__))
+            result = read_simulation(self.paths, created.path.name)
+            self.assertEqual(result["status"], "running" if operation == "finish" else "failed")
+            if operation == "finish":
+                self.assertTrue(any("finalization" in note for note in caught.exception.__notes__))
+            self.assertTrue((created.path / "output" / "raw" / "stdout.bin").exists())
+
+    def test_run_sr_state_and_contention(self: TestSRRuntime) -> None:
+        """Check self's invalid arguments/configuration, collisions, links, and locks leave created state without launching; return None or assertions using mocks."""
+        runtime = prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, self.electronic, self.nuclear)
+        for timeout in (0, -1, True, "60", None, float("nan"), float("inf"), 10 ** 1000):
+            with self.subTest(timeout=repr(timeout)), self.assertRaises(ValueError):
+                run_sr_simulation(self.paths, self.config, self.created.path.name, runtime, timeout_seconds=timeout)
+        with self.assertRaises(ValueError):
+            run_sr_simulation(self.paths, Config("invalid", self.config.srim_root), self.created.path.name, runtime)
+        for wrong in (Path("relative"), runtime.parent / "wrong", self.paths.root / "other" / "sr" / self.created.path.name):
+            with self.assertRaises(ValueError):
+                run_sr_simulation(self.paths, self.config, self.created.path.name, wrong)
+        for parent in (self.paths.workers, self.paths.simulation_memory, self.paths.resources):
+            with _lock_parent(parent), self.assertRaises(OSError):
+                run_sr_simulation(self.paths, self.config, self.created.path.name, runtime)
+        blocker = self.created.path / "output" / "raw" / "stdout.bin"
+        blocker.write_bytes(b"keep")
+        with patch("src.srim.execution.subprocess.run") as launched, self.assertRaises(FileExistsError):
+            run_sr_simulation(self.paths, self.config, self.created.path.name, runtime)
+        launched.assert_not_called()
+        self.assertEqual(blocker.read_bytes(), b"keep")
+        self.assertEqual(read_simulation(self.paths, self.created.path.name)["status"], "created")
+
+    def test_run_sr_interruption(self: TestSRRuntime) -> None:
+        """Check self's interrupted child preserves output, records failed status, and reraises interruption; return None or assertions using mocks."""
+        runtime = prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, self.electronic, self.nuclear)
+        self.process_error = KeyboardInterrupt()
+        with patch("src.srim.execution.subprocess.run", side_effect=self._fake_sr_run), self.assertRaises(KeyboardInterrupt):
+            run_sr_simulation(self.paths, self.config, self.created.path.name, runtime)
+        result = read_simulation(self.paths, self.created.path.name)
+        self.assertEqual(result["status"], "failed")
+        self.assertTrue(result["failure"]["message"].startswith("interrupted:"))
+        self.assertEqual((self.created.path / "output" / "raw" / "stopping.txt").read_bytes(), self.engine_output)
