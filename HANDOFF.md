@@ -17,7 +17,7 @@
 
 ## Remaining work
 
-CAB derivation mode, including baseline experiments and correction-factor calculation, is excluded from the current plan for now. SR requests continue to use the existing none or supplied correction modes.
+CAB experiments and the agreed integration direction are recorded in `memory/srim/CAB_HANDOFF.md`. Integration is now the next intended work, but no detailed implementation proposal has been approved. SR requests currently continue to use the existing none or supplied correction modes.
 
 ## TIN investigation completed 2026-10-19
 
