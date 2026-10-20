@@ -149,7 +149,7 @@ class TestMetadata(unittest.TestCase):
     def test_transformed_resource_provenance(self: TestMetadata) -> None:
         """Check self's custom resource references retain source transformation data without payload duplication; return None and use fixture cleanup."""
         self.source.write_bytes(b"truncated coefficients")
-        transformed = register_resource(self.paths, self.config, "engine", "srim-coefficients", "first-95-fields", self.source)
+        transformed = register_resource(self.paths, self.config, "engine", "srim-coefficients", "v2", self.source)
         resolved = deepcopy(self.resolved)
         selection = resolved["resources"][0]
         selection["reference"] = asdict(transformed)

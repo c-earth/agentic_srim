@@ -1,29 +1,17 @@
-"""Persist simulation provenance, shared references, and execution lifecycle metadata.
+"""Persist strict simulation provenance, typed preparation bundles and execution lifecycle.
 
-Request documents contain schema_version and an opaque parameters object.
-Resolved documents contain schema_version, parameters, sources, resources, and
-cab. Each engine resource selection contains a ResourceReference-shaped reference,
-source description/version/citation, and a runtime_filename. Optional transformation
-provenance contains original reference, method, version, and parameters. Sources
-contain id, name, nullable version/citation, and sha256.
-
-Derived CAB snapshots reference independent core_dataset and bond_dataset objects;
-core_entries and bond_entries identify selected dataset rows without copying their
-original contributions. Composition uses atomic_number, atomic_mass, and atom_count.
-Bonds use identifier/count. Overrides use dataset, entry_id, value, units, and reason.
-Reference conditions and calculation provenance are validated structurally; input
-builders retain responsibility for physical compatibility and CAB calculations.
-
-Local input files, including optional caller-prepared engine bytes, are inventoried
-on initialization and sealed when execution starts. Shared payloads remain in the
-resource store. Metadata APIs do not run an engine, copy runtime resources,
-generate engine inputs, or parse outputs. JSON schemas are exact version-one
-objects; engine-specific parameters remain opaque.
+Legacy records retain their original schemas. Version-two records link original
+intent, effective numeric input, pinned default generations, effective resource
+snapshots and immutable calculated-entry references. Initialization inventories
+preserved input bytes before publishing metadata; lifecycle transitions seal inputs
+and retain terminal output/failure evidence. These APIs perform no engine execution
+or CAB recovery and require no live installation merely to read historical metadata.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 import errno
@@ -43,8 +31,41 @@ type JSONValue = None | bool | int | float | str | list[JSONValue] | dict[str, J
 type JSONObject = dict[str, JSONValue]
 
 
+@dataclass(frozen=True)
+class ResolvedSRInputs:
+    """Carry request/selections intent, effective_request, resolved evidence and pinned bytes.
+
+    Construction stores supplied JSON objects and snapshots/engine_files tuples
+    without validation or I/O. snapshots contains safe input-relative name/bytes
+    pairs; engine_files contains executable/version/coefficient name/bytes pairs.
+    Producers and consumers validate and defensively copy these public attributes.
+    """
+
+    request: JSONObject
+    selections: JSONObject
+    effective_request: JSONObject
+    resolved: JSONObject
+    snapshots: tuple[tuple[str, bytes], ...]
+    engine_files: tuple[tuple[str, bytes], ...]
+
+
+@dataclass(frozen=True)
+class SRDependencyInputs:
+    """Carry pinned defaults/resources/atomdata JSON and engine_files name/bytes pairs.
+
+    Construction stores explicitly supplied inputs without validation or I/O.
+    Public attributes identify effective Bragg dependencies, never supplied stopping
+    values. Producers and consumers validate and independently snapshot nested data.
+    """
+
+    defaults: JSONObject
+    resources: JSONObject
+    atomdata: JSONObject
+    engine_files: tuple[tuple[str, bytes], ...]
+
+
 def _validate_document(document: JSONObject, document_type: str) -> None:
-    """Validate document against document_type's version-one schema; return None or raise ValueError without filesystem effects.
+    """Validate document against document_type's exact legacy or version-two schema; return None or raise ValueError without filesystem effects.
 
     Nested references, selections, manifests, CAB snapshots, continuation links,
     and lifecycle timestamps are structurally validated here. Engine physics,
@@ -69,8 +90,123 @@ def _validate_document(document: JSONObject, document_type: str) -> None:
         elif value is not None and type(value) not in (str, bool, int, float):
             raise ValueError("Unsupported JSON value")
     if document_type in ("request", "resolved", "metadata"):
-        if type(document.get("schema_version")) is not int or document["schema_version"] != 1:
+        if type(document.get("schema_version")) is not int or document["schema_version"] not in (1, 2):
             raise ValueError("Unsupported simulation schema")
+    if document_type == "entry-reference":
+        if set(document) != {"dataset", "dependency_key", "entry_id", "sha256", "size_bytes"}:
+            raise ValueError("Invalid calculated entry reference fields")
+        _validate_document(document["dataset"], "reference")
+        dataset = document["dataset"]
+        if dataset["category"] != "cab" or dataset["name"] not in ("core", "bond", "bragg") or re.fullmatch(r"v[1-9][0-9]*", dataset["version"]) is None:
+            raise ValueError("Calculated entries require concrete CAB datasets")
+        for field in ("dependency_key", "sha256"):
+            if not isinstance(document[field], str) or re.fullmatch(r"[0-9a-f]{64}", document[field]) is None:
+                raise ValueError("Invalid entry hash")
+        if not isinstance(document["entry_id"], str) or re.fullmatch(r"z[0-9]{3}(?:-z[0-9]{3}-[sdt])?", document["entry_id"]) is None or type(document["size_bytes"]) is not int or document["size_bytes"] < 0:
+            raise ValueError("Invalid entry identity/size")
+        return
+    if document_type == "recorded-generation":
+        from src.srim.defaults import _validate_default_generation
+        if set(document) != {"generation", "sha256", "size_bytes"}:
+            raise ValueError("Invalid recorded generation")
+        _validate_default_generation(document["generation"])
+        encoded = (json.dumps(document["generation"], indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False) + "\n").encode("utf-8")
+        import hashlib
+        if document["sha256"] != hashlib.sha256(encoded).hexdigest() or type(document["size_bytes"]) is not int or document["size_bytes"] != len(encoded):
+            raise ValueError("Recorded generation hash/size mismatch")
+        return
+    if document_type == "resolved-role":
+        if set(document) != {"reference", "base", "source", "overrides", "effective", "published"} or not isinstance(document["overrides"], list):
+            raise ValueError("Invalid resolved resource role")
+        for field in ("reference", "base", "published"):
+            if document[field] is not None:
+                _validate_document(document[field], "reference")
+        source = document["source"]
+        if not isinstance(source, dict) or set(source) != {"kind", "origin", "snapshot"} or source["kind"] not in ("version", "file", "inline"):
+            raise ValueError("Invalid resolved source")
+        if source["kind"] == "version":
+            _validate_document(source["origin"], "reference")
+        elif not isinstance(source["origin"], str) or (source["kind"] == "file" and not Path(source["origin"]).is_absolute()) or (source["kind"] == "inline" and source["origin"] != "inline"):
+            raise ValueError("Invalid resolved source origin")
+        _validate_document(source["snapshot"], "manifest")
+        _validate_document(document["effective"], "manifest")
+        if any(not item["path"].startswith("input/resources/") for item in (source["snapshot"], document["effective"])):
+            raise ValueError("Resource snapshots must be under input/resources")
+        return
+    if document_type == "cab-v2":
+        if document.get("mode") != "derived":
+            _validate_document(document, "cab")
+            return
+        if set(document) != {"mode", "applied_factor", "core_entries", "bond_entries", "bragg_entries", "composition", "bonds", "omissions", "reference", "calculation"}:
+            raise ValueError("Invalid derived CAB fields")
+        quantities: list[tuple[object, bool]] = [(document["applied_factor"], True)]
+        for kind in ("core", "bond"):
+            entries = document[f"{kind}_entries"]
+            if not isinstance(entries, list):
+                raise ValueError("CAB contributions require lists")
+            seen: set[str] = set()
+            for item in entries:
+                if not isinstance(item, dict) or set(item) != {"entry_id", "value", "origin", "entry_reference", "snapshot", "override_index"} or item["origin"] not in ("dataset", "override", "recovered-default", "bragg-fallback", "zero-fallback", "convention") or not isinstance(item["entry_id"], str) or item["entry_id"] in seen:
+                    raise ValueError("Invalid/duplicate CAB contribution")
+                seen.add(item["entry_id"])
+                quantities.append((item["value"], False))
+                if item["entry_reference"] is not None:
+                    _validate_document(item["entry_reference"], "entry-reference")
+                if item["snapshot"] is not None:
+                    _validate_document(item["snapshot"], "manifest")
+                if item["override_index"] is not None and (type(item["override_index"]) is not int or item["override_index"] < 0):
+                    raise ValueError("Invalid contribution override index")
+        if not isinstance(document["bragg_entries"], list) or not isinstance(document["composition"], list) or not document["composition"] or not isinstance(document["bonds"], list) or not isinstance(document["omissions"], list):
+            raise ValueError("Invalid CAB arrays")
+        for item in document["bragg_entries"]:
+            _validate_document(item, "entry-reference")
+        for item in document["composition"]:
+            if not isinstance(item, dict) or set(item) != {"atomic_number", "atomic_mass", "atom_count"} or type(item["atomic_number"]) is not int or not 1 <= item["atomic_number"] <= 92:
+                raise ValueError("Invalid CAB composition")
+            quantities.extend(((item["atomic_mass"], True), (item["atom_count"], True)))
+        for item in document["bonds"]:
+            if not isinstance(item, dict) or set(item) != {"identifier", "count"} or not isinstance(item["identifier"], str):
+                raise ValueError("Invalid CAB bond")
+            quantities.append((item["count"], False))
+        for item in document["omissions"]:
+            if not isinstance(item, dict) or set(item) != {"dataset", "entry_id", "reason"} or item["dataset"] not in ("core", "bond") or not isinstance(item["entry_id"], str) or item["reason"] not in ("missing-user-entry", "removed-entry", "unsupported-default-bond", "zero-count"):
+                raise ValueError("Invalid CAB omission")
+        reference = document["reference"]
+        if not isinstance(reference, dict) or set(reference) != {"projectile", "mass_amu", "energy_keV", "phase", "contribution_units"} or type(reference["projectile"]) is not int or reference["projectile"] != 1 or reference["phase"] != "gas" or reference["contribution_units"] != "eV/(1E15 atoms/cm2)":
+            raise ValueError("Invalid CAB reference")
+        quantities.extend(((reference["mass_amu"], True), (reference["energy_keV"], True)))
+        calculation = document["calculation"]
+        if not isinstance(calculation, dict) or set(calculation) != {"method", "version", "precision", "rounding", "path", "intermediate_totals", "calculated_factor"} or not isinstance(calculation["method"], str) or not calculation["method"] or type(calculation["version"]) is not int or calculation["version"] < 1 or type(calculation["precision"]) is not int or calculation["precision"] != 28 or calculation["rounding"] != "ROUND_HALF_EVEN" or calculation["path"] not in ("weighted-sum", "no-effective-bonds") or not isinstance(calculation["intermediate_totals"], dict) or set(calculation["intermediate_totals"]) != {"core", "bond", "bragg"}:
+            raise ValueError("Invalid derived CAB calculation")
+        quantities.extend((value, False) for value in calculation["intermediate_totals"].values())
+        quantities.append((calculation["calculated_factor"], True))
+        for value, positive in quantities:
+            if not isinstance(value, str) or re.fullmatch(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?", value) is None or not Decimal(value).is_finite() or Decimal(value) < 0 or (positive and Decimal(value) == 0):
+                raise ValueError("Invalid CAB decimal quantity")
+        if Decimal(calculation["calculated_factor"]) != Decimal(document["applied_factor"]):
+            raise ValueError("CAB factor mismatch")
+        return
+    if document_type == "resolved" and document["schema_version"] == 2:
+        if set(document) != {"schema_version", "parameters", "sources", "resources", "cab", "defaults", "target_provenance", "dependencies"} or not isinstance(document["parameters"], dict) or not isinstance(document["sources"], list) or not isinstance(document["resources"], dict) or not {"atomdata", "electronic", "nuclear"} <= set(document["resources"]) or set(document["resources"]) - {"atomdata", "electronic", "nuclear", "core", "bond", "compound"}:
+            raise ValueError("Invalid version-two resolved schema")
+        for role, selection in document["resources"].items():
+            _validate_document(selection, "resolved-role")
+            category = "material" if role in ("atomdata", "compound") else "engine" if role in ("electronic", "nuclear") else "cab"
+            for field in ("reference", "base", "published"):
+                value = selection[field]
+                if value is not None and (value["category"] != category or value["name"] != role):
+                    raise ValueError("Resolved resource role mismatch")
+        legacy = {"schema_version": 1, "parameters": {}, "sources": document["sources"], "resources": [], "cab": None}
+        _validate_document(legacy, "resolved")
+        _validate_document(document["defaults"], "recorded-generation")
+        _validate_document(document["cab"], "cab-v2")
+        target = document["target_provenance"]
+        if not isinstance(target, dict) or set(target) != {"source", "record_index", "original_record_index", "record_name", "composition_basis", "original_elements", "atomic_composition", "masses", "record_sha256", "mapping"} or target["source"] not in ("direct", "compound") or target["composition_basis"] not in ("atomic", "mass") or not isinstance(document["dependencies"], list):
+            raise ValueError("Invalid target/dependency provenance")
+        for dependency in document["dependencies"]:
+            if not isinstance(dependency, dict) or set(dependency) not in ({"simulation_id", "result", "raw"}, {"manifest", "correction", "inputs", "stdout", "stderr"}):
+                raise ValueError("Invalid dependency evidence shape")
+        return
     if document_type == "reference":
         if set(document) != {"category", "name", "version", "sha256", "size_bytes"}:
             raise ValueError("Invalid resource reference fields")
@@ -209,7 +345,16 @@ def _validate_document(document: JSONObject, document_type: str) -> None:
             if document["cab"] is not None:
                 _validate_document(document["cab"], "cab")
     elif document_type == "metadata":
-        if set(document) != {"schema_version", "id", "engine", "resources", "status", "created_at", "started_at", "finished_at", "continuation", "inputs", "outputs", "failure"}:
+        expected = {"schema_version", "id", "engine", "resources", "status", "created_at", "started_at", "finished_at", "continuation", "inputs", "outputs", "failure"}
+        if document["schema_version"] == 2:
+            expected |= {"entry_references", "defaults_generation"}
+            if not isinstance(document.get("entry_references"), list):
+                raise ValueError("Metadata entry references must be a list")
+            for entry_reference in document["entry_references"]:
+                _validate_document(entry_reference, "entry-reference")
+            if document.get("defaults_generation") is not None:
+                _validate_document(document["defaults_generation"], "recorded-generation")
+        if set(document) != expected:
             raise ValueError("Invalid metadata fields")
         _validate_delete_request(DeleteRequest("srim", document["id"]))
         _validate_document(document["engine"], "engine")
@@ -217,6 +362,11 @@ def _validate_document(document: JSONObject, document_type: str) -> None:
             raise ValueError("Metadata resources must be a list")
         for reference in document["resources"]:
             _validate_document(reference, "reference")
+        if document["schema_version"] == 2:
+            for key in ("resources", "entry_references"):
+                identities = [json.dumps(item, sort_keys=True) for item in document[key]]
+                if identities != sorted(set(identities)):
+                    raise ValueError("Version-two references must be sorted and unique")
         if document["status"] not in ("created", "running", "succeeded", "failed"):
             raise ValueError("Invalid simulation status")
         for key in ("created_at", "started_at", "finished_at"):
@@ -348,11 +498,70 @@ def _write_input_file(path: Path, contents: bytes) -> None:
         raise
 
 
-def initialize_simulation(paths: ProjectPaths, created: CreatedDirectory, engine: JSONObject, request: JSONObject, resolved: JSONObject, continuation: JSONObject | None = None, *, engine_inputs: Mapping[str, bytes] | None = None) -> JSONObject:
+def _validate_input_files(input_files: Mapping[str, bytes] | None) -> dict[str, bytes]:
+    """Return copied safe nested input_files bytes, or an empty map for None, without I/O.
+
+    Accept resources/cab descendants and effective-request.json/selections.json.
+    Reject reserved, unsafe, duplicate, overlapping or nonbyte entries with ValueError.
+    """
+    if input_files is None:
+        return {}
+    if not isinstance(input_files, Mapping):
+        raise ValueError("Input files must be a mapping")
+    result = dict(input_files)
+    seen: set[str] = set()
+    for name, contents in result.items():
+        if not isinstance(name, str) or not name or not isinstance(contents, bytes):
+            raise ValueError("Input evidence requires string names and byte contents")
+        parts = name.split("/")
+        if name not in ("effective-request.json", "selections.json") and (len(parts) < 2 or parts[0] not in ("resources", "cab")):
+            raise ValueError("Unknown input evidence root")
+        for part in parts:
+            if not part or part in (".", "..") or part.endswith((".", " ")) or os.path.isreserved(part) or any(ord(char) < 32 or char in '<>:"\\|?*' for char in part):
+                raise ValueError("Unsafe input evidence path")
+        folded = name.casefold()
+        if folded in seen or any(folded.startswith(existing + "/") or existing.startswith(folded + "/") for existing in seen):
+            raise ValueError("Input evidence paths collide")
+        seen.add(folded)
+    return result
+
+
+def _collect_resource_references(resolved: JSONObject) -> list[JSONObject]:
+    """Return validated resolved ordinary references deterministically without I/O or mutation.
+
+    Preserve legacy ordering; collect version-two roles, bases, outputs, pinned
+    defaults and calculated datasets with deterministic deduplication. Raise
+    ValueError for invalid reference/document structure.
+    """
+    _validate_document(resolved, "resolved")
+    if resolved["schema_version"] == 1:
+        references = [selection["reference"] for selection in resolved["resources"]]
+        references.extend(selection["transformation"]["original"] for selection in resolved["resources"] if "transformation" in selection)
+        if resolved["cab"] is not None and resolved["cab"]["mode"] == "derived":
+            references.extend((resolved["cab"]["core_dataset"], resolved["cab"]["bond_dataset"]))
+        return json.loads(json.dumps(references))
+    pending: list[JSONValue] = [resolved]
+    references_by_identity: dict[str, JSONObject] = {}
+    while pending:
+        item = pending.pop()
+        if isinstance(item, dict):
+            if set(item) == {"category", "name", "version", "sha256", "size_bytes"}:
+                _validate_document(item, "reference")
+                identity = json.dumps(item, sort_keys=True)
+                references_by_identity[identity] = item
+            else:
+                pending.extend(item.values())
+        elif isinstance(item, list):
+            pending.extend(item)
+    return json.loads(json.dumps([references_by_identity[key] for key in sorted(references_by_identity)]))
+
+
+def initialize_simulation(paths: ProjectPaths, created: CreatedDirectory, engine: JSONObject, request: JSONObject, resolved: JSONObject, continuation: JSONObject | None = None, *, engine_inputs: Mapping[str, bytes] | None = None, input_files: Mapping[str, bytes] | None = None) -> JSONObject:
     """Initialize created's empty simulation under paths with engine/request/resolved and optional TRIM continuation.
 
     engine_inputs optionally maps safe flat filenames to exact bytes, defaulting
     to no prepared files. Write these under input/engine before inventorying inputs.
+    input_files supplies validated nested resource/CAB and effective intent evidence.
     Return independent stored metadata. Validate all inputs and shared resources
     before creating the layout under the simulation-parent lock. Raise ValueError
     on schema/identity conflicts or OSError on file/lock failure. Keep partial
@@ -362,6 +571,7 @@ def initialize_simulation(paths: ProjectPaths, created: CreatedDirectory, engine
     _validate_document(request, "request")
     _validate_document(resolved, "resolved")
     prepared_inputs = _validate_engine_inputs(engine_inputs)
+    evidence_inputs = _validate_input_files(input_files)
     if created.kind != "srim" or created.timestamp is None or created.timestamp.utcoffset() is None or type(created.suffix) is not int or created.suffix < 1:
         raise ValueError("Expected an allocated simulation with aware timestamp")
     instant = created.timestamp
@@ -369,11 +579,25 @@ def initialize_simulation(paths: ProjectPaths, created: CreatedDirectory, engine
     if created.path != paths.simulation_memory / expected:
         raise ValueError("Allocated simulation path does not match its timestamp and suffix")
     record = _simulation_path(paths, expected)
-    references = [selection["reference"] for selection in resolved["resources"]]
-    references.extend(selection["transformation"]["original"] for selection in resolved["resources"] if "transformation" in selection)
-    if resolved["cab"] is not None and resolved["cab"]["mode"] == "derived":
-        references.extend((resolved["cab"]["core_dataset"], resolved["cab"]["bond_dataset"]))
-    metadata: JSONObject = {"schema_version": 1, "id": expected, "engine": engine, "resources": references, "status": "created", "created_at": instant.isoformat(), "started_at": None, "finished_at": None, "continuation": continuation, "inputs": [], "outputs": [], "failure": None}
+    references = _collect_resource_references(resolved)
+    metadata: JSONObject = {"schema_version": resolved["schema_version"], "id": expected, "engine": engine, "resources": references, "status": "created", "created_at": instant.isoformat(), "started_at": None, "finished_at": None, "continuation": continuation, "inputs": [], "outputs": [], "failure": None}
+    if resolved["schema_version"] == 2:
+        from src.srim.cab_cache import CABEntryReference, load_cab_entry
+        found: dict[str, JSONObject] = {}
+        pending: list[JSONValue] = [resolved["cab"]]
+        while pending:
+            item = pending.pop()
+            if isinstance(item, dict):
+                if set(item) == {"dataset", "dependency_key", "entry_id", "sha256", "size_bytes"}:
+                    _validate_document(item, "entry-reference")
+                    load_cab_entry(paths, CABEntryReference(ResourceReference(**item["dataset"]), item["dependency_key"], item["entry_id"], item["sha256"], item["size_bytes"]))
+                    found[json.dumps(item, sort_keys=True)] = item
+                else:
+                    pending.extend(item.values())
+            elif isinstance(item, list):
+                pending.extend(item)
+        metadata["entry_references"] = [found[key] for key in sorted(found)]
+        metadata["defaults_generation"] = resolved["defaults"]
     _validate_document(metadata, "metadata")
     completed: list[Path] = []
     try:
@@ -394,6 +618,14 @@ def initialize_simulation(paths: ProjectPaths, created: CreatedDirectory, engine
             for filename in sorted(prepared_inputs):
                 target = record / "input" / "engine" / filename
                 _write_input_file(target, prepared_inputs[filename])
+                completed.append(target)
+            for filename in sorted(evidence_inputs):
+                target = record / "input" / filename
+                for parent in reversed(target.parent.relative_to(record / "input").parents):
+                    if str(parent) != ".":
+                        (record / "input" / parent).mkdir(exist_ok=True)
+                target.parent.mkdir(exist_ok=True)
+                _write_input_file(target, evidence_inputs[filename])
                 completed.append(target)
             metadata["inputs"] = _inventory(record / "input", record)
             _write_json(record / "metadata.json", metadata)
@@ -427,9 +659,11 @@ def start_simulation(paths: ProjectPaths, config: Config, simulation_id: str) ->
         _validate_document(request, "request")
         _validate_document(resolved, "resolved")
         current = _inventory(record / "input", record)
+        if metadata["schema_version"] == 2 and current != metadata["inputs"]:
+            raise ValueError("Initialized version-two inputs were changed")
         documents = {item["path"]: item for item in current}
         for original in metadata["inputs"]:
-            if original["path"] in ("input/request.json", "input/resolved.json") and documents.get(original["path"]) != original:
+            if (metadata["schema_version"] == 2 or original["path"] in ("input/request.json", "input/resolved.json")) and documents.get(original["path"]) != original:
                 raise ValueError("Initialized input documents were changed")
         if not _inventory(record / "input" / "engine", record):
             raise ValueError("At least one engine-input file is required")

@@ -21,9 +21,9 @@ from src.backend.records import CreateRequest, _lock_parent, create_directories
 from src.backend.resources import register_resource, verify_resource
 from src.srim.inputs import render_sr_input
 from src.srim.execution import run_sr_simulation, verify_sr_runtime
-from src.srim.metadata import JSONObject, _inventory, _write_json, read_simulation, start_simulation
+from src.srim.metadata import JSONObject, ResolvedSRInputs, _inventory, _write_json, read_simulation, start_simulation
 from src.srim.outputs import STOPPING_LABELS, _matches_printed, _parse_number, parse_sr_output
-from src.srim.runtime import _read_selected_resource, prepare_sr_simulation
+from src.srim.runtime import _prepare_sr_runtime, _read_selected_resource
 
 
 class TestSRRuntime(unittest.TestCase):
@@ -50,8 +50,8 @@ class TestSRRuntime(unittest.TestCase):
         data = self.config.srim_root / "Data"
         data.mkdir()
         (data / "VERSION").write_bytes(b"SRIM-2013.00\r\n")
-        self.electronic_reference = register_resource(self.paths, self.config, "engine", "electronic", "default", b"electronic coefficients\x00\xff\r\n")
-        self.nuclear_reference = register_resource(self.paths, self.config, "engine", "nuclear", "default", b"nuclear coefficients\r\n")
+        self.electronic_reference = register_resource(self.paths, self.config, "engine", "electronic", "v1", b"electronic coefficients\x00\xff\r\n")
+        self.nuclear_reference = register_resource(self.paths, self.config, "engine", "nuclear", "v1", b"nuclear coefficients\r\n")
         self.electronic: JSONObject = {
             "reference": asdict(self.electronic_reference),
             "source": {"description": "Explicit electronic source", "version": "user-e1", "citation": "electronic citation"},
@@ -79,6 +79,11 @@ class TestSRRuntime(unittest.TestCase):
                 "energy": {"mode": "range", "minimum_keV": "10", "maximum_keV": "10000"},
             },
         }
+        self.pinned_sources = [
+            {"id": "sr-module-executable", "name": "SRModule.exe", "version": "SRIM-2012.01", "sha256": hashlib.sha256((self.module / "SRModule.exe").read_bytes()).hexdigest(), "citation": None},
+            {"id": "sr-module-version", "name": "VERSION", "version": "SRIM-2012.01", "sha256": hashlib.sha256((self.module / "VERSION").read_bytes()).hexdigest(), "citation": None},
+        ]
+        self.pinned_engine = {"SRModule.exe": (self.module / "SRModule.exe").read_bytes(), "VERSION": (self.module / "VERSION").read_bytes()}
         self.engine_output = (Path(__file__).parent / "fixtures" / "sr-range.txt").read_bytes()
         self.process_returncode = 0
         self.process_error: BaseException | None = None
@@ -133,7 +138,7 @@ class TestSRRuntime(unittest.TestCase):
         original_electronic = deepcopy(self.electronic)
         source_paths = (self.module / "SRModule.exe", self.module / "VERSION", verify_resource(self.paths, self.electronic_reference), verify_resource(self.paths, self.nuclear_reference))
         original_bytes = {path: path.read_bytes() for path in source_paths}
-        runtime = prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, self.electronic, self.nuclear)
+        runtime = _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         self.assertEqual(runtime, self.worker.path / "sr" / self.created.path.name)
         self.assertEqual({path.name for path in runtime.iterdir()}, {"SRModule.exe", "SR.IN", "VERSION", "SCOEF03.dat", "SNUC03.dat"})
         self.assertEqual((runtime / "SR.IN").read_bytes(), render_sr_input(original_request))
@@ -187,7 +192,7 @@ class TestSRRuntime(unittest.TestCase):
         original = payload.read_bytes()
         payload.write_bytes(b"corrupt")
         with self.assertRaises(ValueError):
-            prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, self.electronic, self.nuclear)
+            _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         self.assertEqual(list((self.worker.path / "sr").iterdir()), [])
         payload.write_bytes(original)
         with patch("src.srim.runtime._read_regular_bytes", return_value=b"changed after verification"):
@@ -195,16 +200,16 @@ class TestSRRuntime(unittest.TestCase):
                 _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat")
         for selection in (self.electronic | {"runtime_filename": "scoef03.dat"}, self.nuclear):
             with self.assertRaises(ValueError):
-                prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, selection, self.nuclear)
-        transformed = register_resource(self.paths, self.config, "engine", "electronic", "v1", b"transformed coefficients")
+                _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [selection, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, selection, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
+        transformed = register_resource(self.paths, self.config, "engine", "electronic", "v2", b"transformed coefficients")
         selection = deepcopy(self.electronic)
         selection["reference"] = asdict(transformed)
         selection["transformation"] = {"original": asdict(self.electronic_reference), "method": "explicit-test-transform", "version": "v1", "parameters": {"fields": 95}}
         payload.write_bytes(b"corrupt original")
         with self.assertRaises(ValueError):
-            prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, selection, self.nuclear)
+            _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [selection, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, selection, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         payload.write_bytes(original)
-        runtime = prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, selection, self.nuclear)
+        runtime = _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [selection, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, selection, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         self.assertEqual((runtime / "SCOEF03.dat").read_bytes(), b"transformed coefficients")
         metadata = read_simulation(self.paths, self.created.path.name)
         self.assertIn(asdict(self.electronic_reference), metadata["resources"])
@@ -215,33 +220,33 @@ class TestSRRuntime(unittest.TestCase):
         """Check self's invalid requests, allocations, versions, missing assets, and existing destinations preserve data; return None or assertion failures."""
         for created in (replace(self.created, suffix=True), replace(self.created, timestamp=None), replace(self.created, path=self.created.path.parent / "wrong")):
             with self.assertRaises(ValueError):
-                prepare_sr_simulation(self.paths, self.config, created, self.worker, self.request, self.electronic, self.nuclear)
+                _prepare_sr_runtime(self.paths, self.config, created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         for worker in (replace(self.worker, suffix=True), replace(self.worker, kind="srim"), replace(self.worker, path=self.worker.path.parent / "wrong")):
             with self.assertRaises(ValueError):
-                prepare_sr_simulation(self.paths, self.config, self.created, worker, self.request, self.electronic, self.nuclear)
+                _prepare_sr_runtime(self.paths, self.config, self.created, worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         with self.assertRaises(ValueError):
-            prepare_sr_simulation(self.paths, Config("UTC", Path("relative")), self.created, self.worker, self.request, self.electronic, self.nuclear)
+            _prepare_sr_runtime(self.paths, Config("UTC", Path("relative")), self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         with self.assertRaises(ValueError):
-            prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request | {"parameters": {}}, self.electronic, self.nuclear)
+            _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request | {"parameters": {}}), {}, (self.request | {"parameters": {}}), {"schema_version": 1, "parameters": (self.request | {"parameters": {}}).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request | {"parameters": {}}).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         version_path = self.module / "VERSION"
         original_version = version_path.read_bytes()
         for version in (b"", b"\r\nSRIM-2012.01", b" \r\n", b"\xff"):
             version_path.write_bytes(version)
             with self.assertRaises(ValueError):
-                prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, self.electronic, self.nuclear)
+                _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         version_path.unlink()
         with self.assertRaises(FileNotFoundError):
-            prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, self.electronic, self.nuclear)
+            _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         version_path.write_bytes(original_version)
         runtime = self.worker.path / "sr" / self.created.path.name
         runtime.mkdir()
         (runtime / "keep").write_bytes(b"evidence")
         with self.assertRaises(FileExistsError):
-            prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, self.electronic, self.nuclear)
+            _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         self.assertEqual((runtime / "keep").read_bytes(), b"evidence")
         (self.created.path / "keep").write_bytes(b"record evidence")
         with self.assertRaises(ValueError):
-            prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, self.electronic, self.nuclear)
+            _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         self.assertEqual((self.created.path / "keep").read_bytes(), b"record evidence")
 
     def test_links_and_contention(self: TestSRRuntime) -> None:
@@ -250,15 +255,15 @@ class TestSRRuntime(unittest.TestCase):
             for target in (self.worker.path, self.worker.path / "sr", self.module / "SRModule.exe", self.module / "VERSION"):
                 with patch.object(Path, method, autospec=True, side_effect=partial(eq, target)):
                     with self.assertRaises(OSError):
-                        prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, self.electronic, self.nuclear)
+                        _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         for parent in (self.paths.workers, self.paths.resources):
             with _lock_parent(parent):
                 with self.assertRaises(OSError):
-                    prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, self.electronic, self.nuclear)
+                    _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
             self.assertEqual(list((self.worker.path / "sr").iterdir()), [])
         with _lock_parent(self.paths.simulation_memory):
             with self.assertRaises(OSError) as caught:
-                prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, self.electronic, self.nuclear)
+                _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         runtime = self.worker.path / "sr" / self.created.path.name
         self.assertTrue(runtime.is_dir())
         self.assertFalse((self.created.path / "metadata.json").exists())
@@ -268,7 +273,7 @@ class TestSRRuntime(unittest.TestCase):
         """Check self's staged write/rename and record-initialization failures retain evidence without premature metadata; return None or assertion failures."""
         with patch("src.srim.metadata.os.fsync", side_effect=PermissionError("sync blocked")):
             with self.assertRaises(PermissionError) as caught:
-                prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, self.electronic, self.nuclear)
+                _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         staging = list((self.worker.path / "sr").glob(".staging-*"))
         self.assertEqual(len(staging), 1)
         self.assertEqual((staging[0] / "SCOEF03.dat").read_bytes(), verify_resource(self.paths, self.electronic_reference).read_bytes())
@@ -277,14 +282,14 @@ class TestSRRuntime(unittest.TestCase):
         second = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
         with patch.object(Path, "rename", side_effect=PermissionError("rename blocked")):
             with self.assertRaises(PermissionError):
-                prepare_sr_simulation(self.paths, self.config, second, self.worker, self.request, self.electronic, self.nuclear)
+                _prepare_sr_runtime(self.paths, self.config, second, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         complete_staging = [path for path in (self.worker.path / "sr").glob(".staging-*") if len(list(path.iterdir())) == 5]
         self.assertEqual(len(complete_staging), 1)
         self.assertFalse((second.path / "metadata.json").exists())
         third = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
         with patch("src.srim.metadata._write_json", side_effect=PermissionError("record write blocked")):
             with self.assertRaises(PermissionError) as caught:
-                prepare_sr_simulation(self.paths, self.config, third, self.worker, self.request, self.electronic, self.nuclear)
+                _prepare_sr_runtime(self.paths, self.config, third, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         runtime = self.worker.path / "sr" / third.path.name
         self.assertEqual(len(list(runtime.iterdir())), 5)
         self.assertFalse((third.path / "metadata.json").exists())
@@ -293,12 +298,12 @@ class TestSRRuntime(unittest.TestCase):
     def test_independent_runtime_directories(self: TestSRRuntime) -> None:
         """Check self's two requests and workers preserve independent inputs, resources, trim data, and prior runtimes; return None or assertion failures."""
         (self.worker.path / "trim" / "keep").write_bytes(b"trim data")
-        first = prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, self.electronic, self.nuclear)
+        first = _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         first_bytes = {path.name: path.read_bytes() for path in first.iterdir()}
         second_created = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
         self.request["parameters"]["energy"] = {"mode": "list", "values_keV": ["3.98", "1.02", "3.98"]}
         self.request["parameters"]["correction"] = {"mode": "supplied", "applied_factor": "1.05", "source": "measurement", "reason": "fit"}
-        second = prepare_sr_simulation(self.paths, self.config, second_created, self.worker, self.request, self.electronic, self.nuclear)
+        second = _prepare_sr_runtime(self.paths, self.config, second_created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         self.assertNotEqual(first, second)
         self.assertTrue((second / "SR.IN").read_bytes().endswith(b"0 0\r\n3.98\r\n1.02\r\n3.98\r\n0\r\n"))
         self.assertEqual({path.name: path.read_bytes() for path in first.iterdir()}, first_bytes)
@@ -306,7 +311,7 @@ class TestSRRuntime(unittest.TestCase):
         resolved = json.loads((second_created.path / "input" / "resolved.json").read_bytes())
         self.assertEqual(resolved["cab"], self.request["parameters"]["correction"])
         third_created, other_worker = create_directories(self.paths, self.config, [CreateRequest("srim"), CreateRequest("worker")]).completed
-        third = prepare_sr_simulation(self.paths, self.config, third_created, other_worker, self.request, self.electronic, self.nuclear)
+        third = _prepare_sr_runtime(self.paths, self.config, third_created, other_worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         self.assertEqual(third.parent, other_worker.path / "sr")
         self.assertEqual((third / "SCOEF03.dat").read_bytes(), (first / "SCOEF03.dat").read_bytes())
 
@@ -397,7 +402,7 @@ class TestSRRuntime(unittest.TestCase):
 
     def test_verify_sr_runtime(self: TestSRRuntime) -> None:
         """Check self's verified request, all runtime files, record inputs, resource provenance, and links; return None or assertions, restoring temporary edits."""
-        runtime = prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, self.electronic, self.nuclear)
+        runtime = _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         self.assertEqual(verify_sr_runtime(self.paths, self.created.path.name, runtime), self.request)
         for name in ("SRModule.exe", "VERSION", "SCOEF03.dat", "SNUC03.dat", "SR.IN"):
             path = runtime / name
@@ -426,13 +431,13 @@ class TestSRRuntime(unittest.TestCase):
         with self.assertRaises(ValueError):
             verify_sr_runtime(self.paths, self.created.path.name, runtime)
         payload.write_bytes(original)
-        transformed_reference = register_resource(self.paths, self.config, "engine", "electronic", "changed", b"transformed coefficients")
+        transformed_reference = register_resource(self.paths, self.config, "engine", "electronic", "v2", b"transformed coefficients")
         transformed = deepcopy(self.electronic)
         transformed["reference"] = asdict(transformed_reference)
         transformed["transformation"] = {"original": asdict(self.electronic_reference), "method": "test", "version": "v1", "parameters": {}}
         for selection in (transformed, self.electronic | {"transformation": {"original": asdict(self.electronic_reference), "method": "identity", "version": "v1", "parameters": {}}}):
             created = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
-            other_runtime = prepare_sr_simulation(self.paths, self.config, created, self.worker, self.request, selection, self.nuclear)
+            other_runtime = _prepare_sr_runtime(self.paths, self.config, created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [selection, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, selection, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
             self.assertEqual(verify_sr_runtime(self.paths, created.path.name, other_runtime), self.request)
         metadata = read_simulation(self.paths, self.created.path.name)
         valid_manifest = json.loads(manifest.read_bytes())
@@ -459,7 +464,7 @@ class TestSRRuntime(unittest.TestCase):
             if mode == "list":
                 self.request["parameters"]["energy"] = {"mode": "list", "values_keV": ["3.98", "1.02", "3.98", "10000"]}
                 self.engine_output = (Path(__file__).parent / "fixtures" / "sr-list.txt").read_bytes()
-            runtime = prepare_sr_simulation(self.paths, self.config, created, self.worker, self.request, self.electronic, self.nuclear)
+            runtime = _prepare_sr_runtime(self.paths, self.config, created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
             before = {entry.name: entry.read_bytes() for entry in runtime.iterdir()}
             with patch("src.srim.execution.subprocess.run", side_effect=self._fake_sr_run) as launched:
                 result = run_sr_simulation(self.paths, self.config, created.path.name, runtime)
@@ -486,7 +491,7 @@ class TestSRRuntime(unittest.TestCase):
         """Check self's preflight corruption and stale runtime output fail before launch with created-state timestamps; return None or assertions using mocks."""
         for name in ("SRModule.exe", "SR.IN", "VERSION", "SCOEF03.dat", "SNUC03.dat", "stopping.txt"):
             created = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
-            runtime = prepare_sr_simulation(self.paths, self.config, created, self.worker, self.request, self.electronic, self.nuclear)
+            runtime = _prepare_sr_runtime(self.paths, self.config, created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
             (runtime / name).write_bytes(b"changed or stale")
             with patch("src.srim.execution.subprocess.run") as launched:
                 result = run_sr_simulation(self.paths, self.config, created.path.name, runtime)
@@ -500,7 +505,7 @@ class TestSRRuntime(unittest.TestCase):
         """Check self's launch, timeout, and nonzero exit cases preserve diagnostics/output and failed metadata; return None or assertions using configured mocks."""
         for stage in ("launch", "timeout", "exit"):
             created = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
-            runtime = prepare_sr_simulation(self.paths, self.config, created, self.worker, self.request, self.electronic, self.nuclear)
+            runtime = _prepare_sr_runtime(self.paths, self.config, created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
             self.process_error = subprocess.TimeoutExpired("SRModule.exe", 0.25) if stage == "timeout" else None
             self.process_returncode = 7 if stage == "exit" else 0
             self.mutate_runtime = stage == "exit"
@@ -522,7 +527,7 @@ class TestSRRuntime(unittest.TestCase):
         """Check self's missing, malformed, changed-runtime and changed-sealed-input outcomes retain evidence and fail; return None or assertions using mocks."""
         for stage in ("missing", "parse", "integrity", "sealed"):
             created = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
-            runtime = prepare_sr_simulation(self.paths, self.config, created, self.worker, self.request, self.electronic, self.nuclear)
+            runtime = _prepare_sr_runtime(self.paths, self.config, created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
             self.produce_output = stage != "missing"
             self.engine_output = b"partial malformed output" if stage == "parse" else (Path(__file__).parent / "fixtures" / "sr-range.txt").read_bytes()
             self.mutate_runtime = stage == "integrity"
@@ -539,7 +544,7 @@ class TestSRRuntime(unittest.TestCase):
         """Check self's copy/JSON/finalization failures preserve evidence, report secondary errors, and avoid false completion; return None or assertions using mocks."""
         for operation in ("copy", "json", "finish"):
             created = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
-            runtime = prepare_sr_simulation(self.paths, self.config, created, self.worker, self.request, self.electronic, self.nuclear)
+            runtime = _prepare_sr_runtime(self.paths, self.config, created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
             target = {"copy": "src.srim.execution._write_input_file", "json": "src.srim.execution._write_json", "finish": "src.srim.execution.finish_simulation"}[operation]
             with patch("src.srim.execution.subprocess.run", side_effect=self._fake_sr_run), patch(target, side_effect=PermissionError("publication blocked")), self.assertRaises(PermissionError) as caught:
                 run_sr_simulation(self.paths, self.config, created.path.name, runtime)
@@ -553,7 +558,7 @@ class TestSRRuntime(unittest.TestCase):
 
     def test_run_sr_state_and_contention(self: TestSRRuntime) -> None:
         """Check self's invalid arguments/configuration, collisions, links, and locks leave created state without launching; return None or assertions using mocks."""
-        runtime = prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, self.electronic, self.nuclear)
+        runtime = _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         for timeout in (0, -1, True, "60", None, float("nan"), float("inf"), 10 ** 1000):
             with self.subTest(timeout=repr(timeout)), self.assertRaises(ValueError):
                 run_sr_simulation(self.paths, self.config, self.created.path.name, runtime, timeout_seconds=timeout)
@@ -575,7 +580,7 @@ class TestSRRuntime(unittest.TestCase):
 
     def test_run_sr_interruption(self: TestSRRuntime) -> None:
         """Check self's interrupted child preserves output, records failed status, and reraises interruption; return None or assertions using mocks."""
-        runtime = prepare_sr_simulation(self.paths, self.config, self.created, self.worker, self.request, self.electronic, self.nuclear)
+        runtime = _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
         self.process_error = KeyboardInterrupt()
         with patch("src.srim.execution.subprocess.run", side_effect=self._fake_sr_run), self.assertRaises(KeyboardInterrupt):
             run_sr_simulation(self.paths, self.config, self.created.path.name, runtime)

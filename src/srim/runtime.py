@@ -1,10 +1,11 @@
 """Prepare isolated SRModule runtimes and initialize complete simulation provenance."""
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime
 import errno
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import stat
@@ -14,8 +15,9 @@ from src.backend.config import Config
 from src.backend.paths import ProjectPaths
 from src.backend.records import CreatedDirectory, _lock_parent, _validate_paths
 from src.backend.resources import ResourceReference, verify_resource
+from src.srim.compatibility import read_module_version
 from src.srim.inputs import render_sr_input
-from src.srim.metadata import JSONObject, _simulation_path, _validate_document, _write_input_file, initialize_simulation
+from src.srim.metadata import JSONObject, ResolvedSRInputs, _validate_input_files, _simulation_path, _validate_document, _write_input_file, initialize_simulation
 
 
 def _read_regular_bytes(path: Path) -> bytes:
@@ -77,39 +79,39 @@ def prepare_sr_simulation(
     created: CreatedDirectory,
     worker: CreatedDirectory,
     request: JSONObject,
-    electronic: JSONObject,
-    nuclear: JSONObject,
+    selections: JSONObject,
+    *,
+    capture_timeout_seconds: float = 30.0,
+    dependency_timeout_seconds: float = 60.0,
+    progress: Callable[[JSONObject], None] | None = None,
 ) -> Path:
-    """Prepare created's SRModule simulation in worker using paths/config and explicit inputs.
+    """Resolve request/selections under paths/config and stage created's main runtime in worker.
 
-    request supplies all physical parameters. electronic and nuclear are existing
-    resource-selection documents naming engine/electronic and engine/nuclear with
-    SCOEF03.dat and SNUC03.dat runtime filenames and caller source attribution.
-    Snapshot caller documents, verify resource bytes, and read SRModule.exe and
-    VERSION from config.srim_root/SR Module. Use VERSION's trimmed first line as
-    engine identity and retain its complete ASCII bytes.
+    capture_timeout_seconds/dependency_timeout_seconds bound owned dependency runs;
+    progress receives completed dependency updates and propagates callback failures.
+    Validate allocations before effects, resolve dependencies outside the main lock
+    and return a prepared Path with created status. Never run the main simulation.
+    Raise ValueError for invalid input; preserve evidence on dependency/filesystem
+    failures and propagate interruption after owned cleanup.
+    """
+    _validate_preparation_allocations(paths, created, worker)
+    for timeout in (capture_timeout_seconds, dependency_timeout_seconds):
+        if type(timeout) not in (int, float) or timeout <= 0 or not math.isfinite(timeout):
+            raise ValueError("Operation timeouts must be positive and finite")
+    if progress is not None and not callable(progress):
+        raise ValueError("progress must be callable or None")
+    from src.srim.resolution import resolve_sr_inputs
+    inputs = resolve_sr_inputs(paths, config, worker, request, selections, capture_timeout_seconds=capture_timeout_seconds, dependency_timeout_seconds=dependency_timeout_seconds, progress=progress)
+    return _prepare_sr_runtime(paths, config, created, worker, inputs)
 
-    Require base setup, an empty allocated simulation, and an allocated worker.
-    Under the worker-parent lock, publish five synchronized runtime files through
-    a staging-directory rename, then initialize all simulation inputs and metadata.
-    Return worker/sr/simulation_id with simulation status created. Preserve other
-    runtimes and trim contents; run no executable and register no resources.
 
-    Raise ValueError for request, identity, version, selection, or integrity errors.
-    Propagate OSError for links, missing files, collisions, locks, and write errors.
-    Retain partial artifacts and identify their paths in exception notes. Do not
-    retry, clean up, overwrite existing destinations, or mark simulations failed.
+def _validate_preparation_allocations(paths: ProjectPaths, created: CreatedDirectory, worker: CreatedDirectory) -> str:
+    """Validate paths/created/worker allocations without writes and return the simulation ID.
+
+    Require an empty correctly identified main record and allocated link-free worker
+    with sr/trim directories. Raise ValueError/OSError for invalid layout or identity.
     """
     _validate_paths(paths)
-    _validate_document(request, "request")
-    _validate_document(electronic, "selection")
-    _validate_document(nuclear, "selection")
-    request_snapshot: JSONObject = json.loads(json.dumps(request, allow_nan=False))
-    electronic_snapshot: JSONObject = json.loads(json.dumps(electronic, allow_nan=False))
-    nuclear_snapshot: JSONObject = json.loads(json.dumps(nuclear, allow_nan=False))
-    input_bytes = render_sr_input(request_snapshot)
-    if not isinstance(config.srim_root, Path) or not config.srim_root.is_absolute():
-        raise ValueError("SRIM root must be an absolute Path")
     if not isinstance(created, CreatedDirectory) or created.kind != "srim" or not isinstance(created.timestamp, datetime) or created.timestamp.utcoffset() is None or type(created.suffix) is not int or created.suffix < 1:
         raise ValueError("Expected an allocated simulation with aware timestamp")
     instant = created.timestamp
@@ -118,6 +120,55 @@ def prepare_sr_simulation(
         raise ValueError("Simulation allocation does not match its identity")
     if not isinstance(worker, CreatedDirectory) or worker.kind != "worker" or worker.timestamp is not None or type(worker.suffix) is not int or worker.suffix < 1 or worker.path != paths.workers / f"worker_{worker.suffix}":
         raise ValueError("Expected an allocated worker")
+    record = _simulation_path(paths, simulation_id)
+    if any(record.iterdir()):
+        raise ValueError("Simulation preparation requires an empty record")
+    for directory in (worker.path, worker.path / "sr", worker.path / "trim"):
+        if directory.is_symlink() or directory.is_junction():
+            raise OSError(errno.ELOOP, "Worker path contains a link", str(directory))
+        if not directory.is_dir():
+            raise FileNotFoundError(str(directory))
+    return simulation_id
+
+
+def _prepare_sr_runtime(paths: ProjectPaths, config: Config, created: CreatedDirectory, worker: CreatedDirectory, inputs: ResolvedSRInputs) -> Path:
+    """Stage pinned inputs for created in worker under paths/config and return runtime Path.
+
+    inputs carries original/effective JSON, snapshots and exact engine bytes. Validate
+    allocation and bundle, recheck live engine identity, then initialize immutable
+    record evidence under the worker lock. Resolve no aliases/dependencies and run
+    no engine. Raise ValueError for inconsistent bundles, propagate I/O/lock failures
+    with retained paths, and leave successfully prepared main status created.
+    """
+    simulation_id = _validate_preparation_allocations(paths, created, worker)
+    if not isinstance(inputs, ResolvedSRInputs):
+        raise ValueError("Expected ResolvedSRInputs")
+    request_snapshot = json.loads(json.dumps(inputs.request, allow_nan=False))
+    resolved_snapshot = json.loads(json.dumps(inputs.resolved, allow_nan=False))
+    _validate_document(request_snapshot, "request")
+    _validate_document(resolved_snapshot, "resolved")
+    effective = json.loads(json.dumps(inputs.effective_request, allow_nan=False))
+    input_bytes = render_sr_input(effective)
+    engine_files = dict(inputs.engine_files)
+    if len(engine_files) != len(inputs.engine_files) or set(engine_files) != {"SRModule.exe", "VERSION", "SCOEF03.dat", "SNUC03.dat"} or any(not isinstance(value, bytes) for value in engine_files.values()):
+        raise ValueError("Expected four pinned engine files")
+    snapshots = _validate_input_files(dict(inputs.snapshots))
+    if len(snapshots) != len(inputs.snapshots):
+        raise ValueError("Duplicate snapshot names")
+    if resolved_snapshot["schema_version"] == 1:
+        if request_snapshot != effective or resolved_snapshot["parameters"] != effective["parameters"] or resolved_snapshot["cab"] != effective["parameters"]["correction"] or len(resolved_snapshot["resources"]) != 2:
+            raise ValueError("Inconsistent legacy runtime bundle")
+        for selection, role, filename in zip(resolved_snapshot["resources"], ("electronic", "nuclear"), ("SCOEF03.dat", "SNUC03.dat"), strict=True):
+            if _read_selected_resource(paths, selection, role, filename) != engine_files[filename]:
+                raise ValueError("Pinned coefficient bytes differ from selected resources")
+    else:
+        from src.srim.resolution import verify_sr_resolution
+        if verify_sr_resolution(paths, request_snapshot, inputs.selections, resolved_snapshot, snapshots) != effective:
+            raise ValueError("Effective runtime input differs from verified resolution")
+        snapshots["selections.json"] = (json.dumps(inputs.selections, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False) + "\n").encode("utf-8")
+        snapshots["effective-request.json"] = (json.dumps(effective, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False) + "\n").encode("utf-8")
+    if not isinstance(config.srim_root, Path) or not config.srim_root.is_absolute():
+        raise ValueError("SRIM root must be an absolute Path")
     runtime = worker.path / "sr" / simulation_id
     artifacts: list[Path] = []
     try:
@@ -134,8 +185,10 @@ def prepare_sr_simulation(
             if os.path.lexists(runtime):
                 raise FileExistsError(errno.EEXIST, "Runtime destination already exists", str(runtime))
             module = config.srim_root / "SR Module"
-            executable_bytes = _read_regular_bytes(module / "SRModule.exe")
-            version_bytes = _read_regular_bytes(module / "VERSION")
+            executable_bytes = engine_files["SRModule.exe"]
+            version_bytes = engine_files["VERSION"]
+            if _read_regular_bytes(module / "SRModule.exe") != executable_bytes or read_module_version(config.srim_root)[1] != version_bytes:
+                raise ValueError("Pinned engine no longer matches the installation")
             try:
                 version_lines = version_bytes.decode("ascii").splitlines()
             except UnicodeError as error:
@@ -147,8 +200,8 @@ def prepare_sr_simulation(
                 "SRModule.exe": executable_bytes,
                 "SR.IN": input_bytes,
                 "VERSION": version_bytes,
-                "SCOEF03.dat": _read_selected_resource(paths, electronic_snapshot, "electronic", "SCOEF03.dat"),
-                "SNUC03.dat": _read_selected_resource(paths, nuclear_snapshot, "nuclear", "SNUC03.dat"),
+                "SCOEF03.dat": engine_files["SCOEF03.dat"],
+                "SNUC03.dat": engine_files["SNUC03.dat"],
             }
             manifest = _make_runtime_manifest(files)
             engine: JSONObject = {
@@ -156,16 +209,13 @@ def prepare_sr_simulation(
                 "version": version,
                 "executable": {"name": "SRModule.exe", "sha256": hashlib.sha256(executable_bytes).hexdigest()},
             }
-            resolved: JSONObject = {
-                "schema_version": 1,
-                "parameters": request_snapshot["parameters"],
-                "sources": [
-                    {"id": "sr-module-executable", "name": "SRModule.exe", "version": version, "sha256": hashlib.sha256(executable_bytes).hexdigest(), "citation": None},
-                    {"id": "sr-module-version", "name": "VERSION", "version": version, "sha256": hashlib.sha256(version_bytes).hexdigest(), "citation": None},
-                ],
-                "resources": [electronic_snapshot, nuclear_snapshot],
-                "cab": request_snapshot["parameters"]["correction"],
-            }
+            resolved = resolved_snapshot
+            expected_sources = [
+                {"id": "sr-module-executable", "name": "SRModule.exe", "version": version, "sha256": hashlib.sha256(executable_bytes).hexdigest(), "citation": None},
+                {"id": "sr-module-version", "name": "VERSION", "version": version, "sha256": hashlib.sha256(version_bytes).hexdigest(), "citation": None},
+            ]
+            if resolved["sources"] != expected_sources:
+                raise ValueError("Pinned executable source evidence mismatch")
             _validate_document(engine, "engine")
             _validate_document(resolved, "resolved")
             manifest_bytes = (json.dumps(manifest, indent=2, ensure_ascii=False, allow_nan=False) + "\n").encode("utf-8")
@@ -182,6 +232,7 @@ def prepare_sr_simulation(
                 request_snapshot,
                 resolved,
                 engine_inputs={"SR.IN": input_bytes, "VERSION": version_bytes, "runtime.json": manifest_bytes},
+                input_files=snapshots,
             )
             return runtime
     except (OSError, ValueError) as error:

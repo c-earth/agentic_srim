@@ -1,25 +1,13 @@
 """Register raw nuclear stopping defaults and immutable user variants."""
 
 from collections.abc import Mapping
+from dataclasses import asdict
 import hashlib
 from pathlib import Path
 
 from src.backend.config import Config
 from src.backend.paths import ProjectPaths
-from src.backend.resources import ResourceReference, register_resource, resolve_resource, verify_resource
-
-
-def register_nuclear_default(paths: ProjectPaths, config: Config) -> ResourceReference:
-    """Copy config.srim_root/Data/SNUC03.dat to paths' nuclear default.
-
-    Return its immutable reference, preserving exact bytes and existing identical
-    registrations. Raise ValueError for invalid configuration or conflicts and
-    OSError for missing setup, source files, links, contention, or access failures.
-    Writes only resource registration artifacts; never modifies the installation.
-    """
-    if not isinstance(config.srim_root, Path) or not config.srim_root.is_absolute():
-        raise ValueError("SRIM root must be an absolute Path")
-    return register_resource(paths, config, "engine", "nuclear", "default", config.srim_root / "Data" / "SNUC03.dat")
+from src.backend.resources import ResourceReference, _hash_file, register_resource, resolve_resource, verify_resource
 
 
 def create_nuclear_variant(
@@ -39,17 +27,45 @@ def create_nuclear_variant(
     Write only new resource artifacts. Raise ValueError for mode, row, reference,
     or integrity errors, and OSError for missing files, links, or contention.
     """
+    base: ResourceReference | None = None
     if source is not None:
         if base_version is not None or replacements is not None:
             raise ValueError("Source and row replacement modes are mutually exclusive")
-        return register_resource(paths, config, "engine", "nuclear", None, source)
-    if base_version is None or not isinstance(replacements, Mapping) or not replacements:
-        raise ValueError("Provide a source or a base version and nonempty replacements")
-    reference = resolve_resource(paths, "engine", "nuclear", base_version)
-    payload = verify_resource(paths, reference).read_bytes()
-    if (hashlib.sha256(payload).hexdigest(), len(payload)) != (reference.sha256, reference.size_bytes):
-        raise ValueError("Base payload changed while reading")
-    return register_resource(paths, config, "engine", "nuclear", None, _replace_rows(payload, replacements))
+        if isinstance(source, Path):
+            expected = _hash_file(source)
+            payload = source.read_bytes()
+            if (hashlib.sha256(payload).hexdigest(), len(payload)) != expected:
+                raise ValueError("Source changed while reading")
+            origin, source_kind = str(source.absolute()), "file"
+        elif isinstance(source, str):
+            try:
+                payload = source.encode("ascii")
+            except UnicodeError as error:
+                raise ValueError("Coefficient text must be ASCII") from error
+            origin, source_kind = "inline", "inline"
+        elif isinstance(source, bytes):
+            payload = source
+            origin, source_kind = "inline", "inline"
+        else:
+            raise ValueError("Source must be a Path, ASCII str or bytes")
+        effective = payload
+        changes: list[dict[str, object]] = []
+    else:
+        if base_version is None or not isinstance(replacements, Mapping) or not replacements:
+            raise ValueError("Provide a source or a base version and nonempty replacements")
+        if base_version == "default":
+            from src.srim.defaults import read_sr_defaults
+            base = ResourceReference(**read_sr_defaults(paths)["resources"]["nuclear"])
+        else:
+            base = resolve_resource(paths, "engine", "nuclear", base_version)
+        payload = verify_resource(paths, base).read_bytes()
+        if (hashlib.sha256(payload).hexdigest(), len(payload)) != (base.sha256, base.size_bytes):
+            raise ValueError("Base payload changed while reading")
+        effective = _replace_rows(payload, replacements)
+        origin, source_kind = asdict(base), "version"
+        changes = [{"operation": "set", "key": list(key) if isinstance(key, tuple) else key, "value": value.decode("ascii") if isinstance(value, bytes) else value} for key, value in replacements.items()]
+    provenance = {"origin": "user", "source": {"kind": source_kind, "origin": origin, "sha256": hashlib.sha256(payload).hexdigest(), "size_bytes": len(payload)}, "base": asdict(base) if base is not None else None, "changes": changes, "copied_entries": [], "baseline_id": None, "procedure": None}
+    return register_resource(paths, config, "engine", "nuclear", None, effective, provenance=provenance)
 
 
 def _replace_rows(payload: bytes, replacements: Mapping[tuple[int, int], str | bytes]) -> bytes:

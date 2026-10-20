@@ -4,7 +4,7 @@ from decimal import Decimal, DecimalException
 import hashlib
 import re
 
-from src.srim.inputs import validate_sr_request
+from src.srim.inputs import validate_sr_engine_request
 from src.srim.metadata import JSONObject
 
 
@@ -134,7 +134,7 @@ def parse_sr_output(contents: bytes, request: JSONObject) -> JSONObject:
     byte count. Raise ValueError for invalid types, encoding, format, units, or
     values. Perform no filesystem operations and mutate neither input.
     """
-    validate_sr_request(request)
+    validate_sr_engine_request(request)
     if not isinstance(contents, bytes):
         raise ValueError("SR output must be bytes")
     try:

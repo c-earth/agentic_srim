@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
+from collections.abc import Mapping
 from dataclasses import dataclass
 from io import BytesIO
 from datetime import datetime
@@ -93,7 +94,7 @@ def _read_json(path: Path) -> dict[str, object]:
         if entry.is_symlink() or entry.is_junction():
             raise OSError(errno.ELOOP, "JSON path contains a link or junction", str(entry))
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object)
         json.dumps(data, allow_nan=False)
     except (UnicodeError, ValueError) as error:
         raise ValueError(f"Invalid JSON: {path}") from error
@@ -105,7 +106,7 @@ def _read_json(path: Path) -> dict[str, object]:
 def _write_json(path: Path, document: dict[str, object]) -> None:
     """Persist document atomically at link-free path as synchronized UTF-8 JSON; return None, reporting temporary artifacts on errors."""
     path = path.absolute()
-    contents = json.dumps(document, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+    contents = json.dumps(document, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False) + "\n"
     temporary: Path | None = None
     try:
         for entry in (*reversed(path.parents), path):
@@ -123,7 +124,116 @@ def _write_json(path: Path, document: dict[str, object]) -> None:
         raise
 
 
-def register_resource(paths: ProjectPaths, config: Config, category: str, name: str, version: str | None, source: Path | str | bytes) -> ResourceReference:
+def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Return a fresh dictionary from JSON pairs, rejecting duplicate keys with ValueError; perform no I/O."""
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"Duplicate JSON field: {key}")
+        result[key] = value
+    return result
+
+
+def _validate_registration_provenance(provenance: Mapping[str, object] | None) -> dict[str, object] | None:
+    """Copy and validate provenance's exact origin/source/base/change/entry/baseline/procedure schema.
+
+    Return an independent JSON object or None without I/O. Raise ValueError for
+    unsupported fields, non-JSON values, invalid identities or malformed references.
+    """
+    if provenance is None:
+        return None
+    if not isinstance(provenance, Mapping):
+        raise ValueError("Registration provenance must be a mapping")
+    try:
+        document = json.loads(json.dumps(dict(provenance), allow_nan=False), object_pairs_hook=_unique_object)
+    except (TypeError, ValueError) as error:
+        raise ValueError("Registration provenance must contain JSON values") from error
+    if set(document) != {"origin", "source", "base", "changes", "copied_entries", "baseline_id", "procedure"} or document["origin"] not in ("installation", "user", "calculated"):
+        raise ValueError("Invalid registration provenance schema")
+    source = document["source"]
+    if not isinstance(source, dict) or set(source) != {"kind", "origin", "sha256", "size_bytes"} or source["kind"] not in ("file", "inline", "version", "recipe"):
+        raise ValueError("Invalid provenance source")
+    _validate_reference(ResourceReference("source", "source", "v1", source["sha256"], source["size_bytes"]))
+    references = [document["base"]] if document["base"] is not None else []
+    if source["kind"] == "version":
+        references.append(source["origin"])
+    elif not isinstance(source["origin"], str) or not source["origin"] or (source["kind"] == "file" and not Path(source["origin"]).is_absolute()):
+        raise ValueError("Invalid provenance source origin")
+    if source["kind"] in ("inline", "recipe") and source["origin"] != ("inline" if source["kind"] == "inline" else "generated"):
+        raise ValueError("Invalid inline/recipe provenance marker")
+    if not isinstance(document["changes"], list) or any(not isinstance(change, dict) for change in document["changes"]):
+        raise ValueError("Provenance changes must be an operation list")
+    for change in document["changes"]:
+        operation = change.get("operation")
+        if operation not in ("set", "remove", "append"):
+            raise ValueError("Invalid provenance change operation")
+        expected = {"operation", "value"} if operation == "append" else {"operation", "key", "value"} if operation == "set" else {"operation", "key"}
+        if set(change) != expected:
+            raise ValueError("Invalid provenance change fields")
+        if operation != "append":
+            key = change["key"]
+            if isinstance(key, list):
+                if len(key) not in (2, 3) or any(type(part) not in (int, str) or (type(part) is int and part < 1) or (isinstance(part, str) and not part) for part in key):
+                    raise ValueError("Invalid composite provenance change key")
+            elif type(key) not in (int, str) or (type(key) is int and key < 1) or (isinstance(key, str) and not key):
+                raise ValueError("Invalid provenance change key")
+    if not isinstance(document["copied_entries"], list):
+        raise ValueError("Provenance copied_entries must be a list")
+    seen: set[tuple[str, str, str, str, str]] = set()
+    for entry in document["copied_entries"]:
+        if not isinstance(entry, dict) or set(entry) != {"dataset", "dependency_key", "entry_id", "sha256", "size_bytes"}:
+            raise ValueError("Invalid copied entry reference")
+        _validate_reference(ResourceReference("entry", "entry", "v1", entry["sha256"], entry["size_bytes"]))
+        if not isinstance(entry["dependency_key"], str) or re.fullmatch(r"[0-9a-f]{64}", entry["dependency_key"]) is None or not isinstance(entry["entry_id"], str) or re.fullmatch(r"z[0-9]{3}(?:-z[0-9]{3}-[sdt])?", entry["entry_id"]) is None:
+            raise ValueError("Invalid copied entry identity")
+        references.append(entry["dataset"])
+        dataset = entry["dataset"]
+        if not isinstance(dataset, dict) or set(dataset) != {"category", "name", "version", "sha256", "size_bytes"}:
+            raise ValueError("Invalid copied dataset reference")
+        identity = (dataset["category"], dataset["name"], dataset["version"], entry["dependency_key"], entry["entry_id"])
+        if identity in seen:
+            raise ValueError("Duplicate copied entry reference")
+        seen.add(identity)
+    for reference in references:
+        if not isinstance(reference, dict) or set(reference) != {"category", "name", "version", "sha256", "size_bytes"}:
+            raise ValueError("Invalid provenance resource reference")
+        _validate_reference(ResourceReference(**reference))
+        if re.fullmatch(r"v[1-9][0-9]*", reference["version"]) is None:
+            raise ValueError("Provenance references must use concrete numbered versions")
+    baseline = document["baseline_id"]
+    if baseline is not None and (not isinstance(baseline, str) or re.fullmatch(r"[0-9a-f]{64}", baseline) is None):
+        raise ValueError("Invalid provenance baseline")
+    procedure = document["procedure"]
+    if procedure is not None and (not isinstance(procedure, dict) or set(procedure) != {"method", "version"} or not isinstance(procedure["method"], str) or not procedure["method"] or type(procedure["version"]) is not int or procedure["version"] < 1):
+        raise ValueError("Invalid provenance procedure")
+    return document
+
+
+def _validate_resource_manifest(document: dict[str, object]) -> None:
+    """Validate document's exact legacy/new manifest schema and identities; return None or raise ValueError without I/O."""
+    if not isinstance(document, dict) or type(document.get("schema_version")) is not int or document["schema_version"] not in (1, 2):
+        raise ValueError("Invalid resource manifest version")
+    keys = {"schema_version", "sha256", "size_bytes", "registered_at"}
+    if document["schema_version"] == 2:
+        keys |= {"provenance", "reuse_key"}
+    if set(document) != keys:
+        raise ValueError("Invalid resource manifest fields")
+    _validate_reference(ResourceReference("manifest", "manifest", "v1", document["sha256"], document["size_bytes"]))
+    if not isinstance(document["registered_at"], str):
+        raise ValueError("Invalid registration timestamp")
+    try:
+        if datetime.fromisoformat(document["registered_at"]).utcoffset() is None:
+            raise ValueError("Registration timestamp requires an offset")
+    except (ValueError, OverflowError) as error:
+        raise ValueError("Invalid registration timestamp") from error
+    if document["schema_version"] == 2:
+        _validate_registration_provenance(document["provenance"])
+        key = document["reuse_key"]
+        if key is not None and (not isinstance(key, str) or re.fullmatch(r"[0-9a-f]{64}", key) is None):
+            raise ValueError("Invalid registration reuse key")
+
+
+def register_resource(paths: ProjectPaths, config: Config, category: str, name: str, version: str | None, source: Path | str | bytes, *, provenance: Mapping[str, object] | None = None, reuse_key: str | None = None) -> ResourceReference:
     """Register source Path, ASCII str, or bytes under paths/category/name using config time.
 
     Inputs paths, category, and name identify storage; config supplies time.
@@ -132,6 +242,8 @@ def register_resource(paths: ProjectPaths, config: Config, category: str, name: 
     Source paths must be regular and link-free; byte inputs are preserved exactly.
     Strings are payload content encoded as ASCII, never filesystem paths.
     Non-ASCII strings raise ValueError before any filesystem writes.
+    provenance supplies validated independent registration evidence. reuse_key
+    atomically reuses matching bytes for a SHA-256 recipe and requires version None.
 
     Return an immutable reference, copying and synchronizing source bytes before
     publication under the resource-root lock. Existing labels cannot change.
@@ -142,6 +254,11 @@ def register_resource(paths: ProjectPaths, config: Config, category: str, name: 
     directory = _resource_directory(paths, category, name)
     if version is not None:
         _validate_identifier(version)
+        if re.fullmatch(r"v[1-9][0-9]*", version) is None:
+            raise ValueError("New resource versions must be numbered vN labels")
+    provenance = _validate_registration_provenance(provenance)
+    if reuse_key is not None and (version is not None or not isinstance(reuse_key, str) or re.fullmatch(r"[0-9a-f]{64}", reuse_key) is None):
+        raise ValueError("Reuse requires a SHA-256 key and automatic version allocation")
     if isinstance(source, str):
         try:
             source = source.encode("ascii")
@@ -158,9 +275,11 @@ def register_resource(paths: ProjectPaths, config: Config, category: str, name: 
         if not stat.S_ISREG(source.stat().st_mode):
             raise OSError(errno.EINVAL, "Source must be a regular file", str(source))
     artifacts: list[Path] = []
+    source_identity = _hash_file(source) if isinstance(source, Path) else (hashlib.sha256(source).hexdigest(), len(source))
     try:
         with _lock_parent(paths.resources):
             directory = _resource_directory(paths, category, name)
+            reused: ResourceReference | None = None
             if version is None:
                 highest = 0
                 if directory.exists():
@@ -169,6 +288,21 @@ def register_resource(paths: ProjectPaths, config: Config, category: str, name: 
                             if entry.is_symlink() or entry.is_junction() or not entry.is_dir():
                                 raise OSError(errno.EINVAL, "Numeric version must be a link-free directory", str(entry))
                             highest = max(highest, int(entry.name[1:]))
+                            if reuse_key is not None:
+                                candidate = _read_json(entry / "manifest.json")
+                                _validate_resource_manifest(candidate)
+                                if candidate.get("reuse_key") == reuse_key:
+                                    if reused is not None:
+                                        raise ValueError("Multiple registrations share one reuse key")
+                                    reused = ResourceReference(category, name, entry.name, candidate["sha256"], candidate["size_bytes"])
+                                    if _hash_file(entry / "payload") != (reused.sha256, reused.size_bytes):
+                                        raise ValueError("Matching reusable resource is corrupt")
+                                    if source_identity != (reused.sha256, reused.size_bytes):
+                                        raise ValueError("Reuse key already identifies different contents")
+                if reused is not None:
+                    if isinstance(source, Path) and _hash_file(source) != source_identity:
+                        raise ValueError("Resource source changed during registration")
+                    return reused
                 version = f"v{highest + 1}"
                 _validate_identifier(version)
             destination = directory / version
@@ -188,11 +322,12 @@ def register_resource(paths: ProjectPaths, config: Config, category: str, name: 
                 outgoing.flush()
                 os.fsync(outgoing.fileno())
             checksum = digest.hexdigest()
+            if (checksum, size) != source_identity or (isinstance(source, Path) and _hash_file(source) != source_identity):
+                raise ValueError("Resource source changed during registration")
             reference = ResourceReference(category, name, version, checksum, size)
             if os.path.lexists(destination):
                 manifest = _read_json(destination / "manifest.json")
-                if set(manifest) != {"schema_version", "sha256", "size_bytes", "registered_at"} or type(manifest["schema_version"]) is not int or manifest["schema_version"] != 1 or not isinstance(manifest["registered_at"], str) or datetime.fromisoformat(manifest["registered_at"]).utcoffset() is None:
-                    raise ValueError("Invalid existing resource manifest")
+                _validate_resource_manifest(manifest)
                 existing = ResourceReference(category, name, version, manifest["sha256"], manifest["size_bytes"])
                 _validate_reference(existing)
                 if _hash_file(destination / "payload") != (existing.sha256, existing.size_bytes):
@@ -202,7 +337,7 @@ def register_resource(paths: ProjectPaths, config: Config, category: str, name: 
                 (staging / "payload").unlink()
                 staging.rmdir()
             else:
-                _write_json(staging / "manifest.json", {"schema_version": 1, "sha256": checksum, "size_bytes": size, "registered_at": timestamp})
+                _write_json(staging / "manifest.json", {"schema_version": 2, "sha256": checksum, "size_bytes": size, "registered_at": timestamp, "provenance": provenance, "reuse_key": reuse_key})
                 staging.rename(destination)
                 artifacts.append(destination)
             return reference
@@ -222,8 +357,7 @@ def resolve_resource(paths: ProjectPaths, category: str, name: str, version: str
         if not os.path.lexists(destination):
             raise ValueError(f"Unknown resource version: {version}")
         manifest = _read_json(destination / "manifest.json")
-        if set(manifest) != {"schema_version", "sha256", "size_bytes", "registered_at"} or type(manifest["schema_version"]) is not int or manifest["schema_version"] != 1 or not isinstance(manifest["registered_at"], str) or datetime.fromisoformat(manifest["registered_at"]).utcoffset() is None:
-            raise ValueError("Invalid resource manifest")
+        _validate_resource_manifest(manifest)
         reference = ResourceReference(category, name, version, manifest["sha256"], manifest["size_bytes"])
         _validate_reference(reference)
         return reference

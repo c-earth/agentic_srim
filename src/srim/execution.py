@@ -13,7 +13,7 @@ from src.backend.paths import ProjectPaths
 from src.backend.records import _lock_parent, _record_time
 from src.backend.resources import ResourceReference, verify_resource
 from src.srim.inputs import render_sr_input
-from src.srim.metadata import JSONObject, _inventory, _read_json, _simulation_path, _validate_document, _write_input_file, _write_json, finish_simulation, read_simulation, start_simulation
+from src.srim.metadata import JSONObject, _collect_resource_references, _inventory, _read_json, _simulation_path, _validate_document, _write_input_file, _write_json, finish_simulation, read_simulation, start_simulation
 from src.srim.outputs import parse_sr_output
 from src.srim.runtime import _make_runtime_manifest, _read_regular_bytes, _read_selected_resource
 
@@ -37,11 +37,37 @@ def verify_sr_runtime(paths: ProjectPaths, simulation_id: str, runtime: Path) ->
     if _inventory(record / "input", record) != metadata["inputs"]:
         raise ValueError("Initialized simulation inputs were changed")
     request = _read_json(record / "input" / "request.json")
-    expected_input = render_sr_input(request)
     resolved = _read_json(record / "input" / "resolved.json")
     _validate_document(resolved, "resolved")
-    if resolved["parameters"] != request["parameters"] or resolved["cab"] != request["parameters"]["correction"] or len(resolved["resources"]) != 2:
-        raise ValueError("Resolved SR inputs differ from request or selections")
+    if resolved["schema_version"] == 1:
+        if resolved["parameters"] != request["parameters"] or resolved["cab"] != request["parameters"]["correction"] or len(resolved["resources"]) != 2:
+            raise ValueError("Resolved SR inputs differ from request or selections")
+    else:
+        from src.srim.resolution import verify_sr_resolution
+        selections = _read_json(record / "input" / "selections.json")
+        snapshots = {item["path"][6:]: _read_regular_bytes(record / item["path"]) for item in metadata["inputs"] if item["path"].startswith(("input/resources/", "input/cab/"))}
+        request = verify_sr_resolution(paths, request, selections, resolved, snapshots)
+        if request != _read_json(record / "input" / "effective-request.json") or metadata["defaults_generation"] != resolved["defaults"]:
+            raise ValueError("Saved effective request/defaults differ from resolution")
+        from dataclasses import asdict
+        from src.srim.cab_cache import CABEntryReference, load_cab_entry
+        found: dict[str, JSONObject] = {}
+        import json
+        pending: list[object] = [resolved["cab"]]
+        while pending:
+            item = pending.pop()
+            if isinstance(item, dict):
+                if set(item) == {"dataset", "dependency_key", "entry_id", "sha256", "size_bytes"}:
+                    reference = CABEntryReference(ResourceReference(**item["dataset"]), item["dependency_key"], item["entry_id"], item["sha256"], item["size_bytes"])
+                    load_cab_entry(paths, reference)
+                    found[json.dumps(item, sort_keys=True)] = asdict(reference)
+                else:
+                    pending.extend(item.values())
+            elif isinstance(item, list):
+                pending.extend(item)
+        if metadata["entry_references"] != [found[key] for key in sorted(found)]:
+            raise ValueError("Metadata entry references differ from resolution")
+    expected_input = render_sr_input(request)
     for entry in (*reversed(runtime.parents), runtime):
         if entry.is_symlink() or entry.is_junction():
             raise OSError(errno.ELOOP, "Runtime path contains a link or junction", str(entry))
@@ -75,11 +101,16 @@ def verify_sr_runtime(paths: ProjectPaths, simulation_id: str, runtime: Path) ->
     ]
     if resolved["sources"] != expected_sources:
         raise ValueError("Runtime source provenance differs from prepared sources")
-    for selection, name, filename in zip(resolved["resources"], ("electronic", "nuclear"), ("SCOEF03.dat", "SNUC03.dat"), strict=True):
-        if _read_selected_resource(paths, selection, name, filename) != files[filename]:
-            raise ValueError("Runtime coefficients differ from selected resources")
-    references = [selection["reference"] for selection in resolved["resources"]]
-    references.extend(selection["transformation"]["original"] for selection in resolved["resources"] if "transformation" in selection)
+    if resolved["schema_version"] == 1:
+        for selection, name, filename in zip(resolved["resources"], ("electronic", "nuclear"), ("SCOEF03.dat", "SNUC03.dat"), strict=True):
+            if _read_selected_resource(paths, selection, name, filename) != files[filename]:
+                raise ValueError("Runtime coefficients differ from selected resources")
+    else:
+        for role, filename in (("electronic", "SCOEF03.dat"), ("nuclear", "SNUC03.dat")):
+            evidence = resolved["resources"][role]["effective"]
+            if _read_regular_bytes(record / evidence["path"]) != files[filename]:
+                raise ValueError("Runtime coefficients differ from effective snapshots")
+    references = _collect_resource_references(resolved)
     if references != metadata["resources"]:
         raise ValueError("Metadata resource references differ from selections")
     for reference in metadata["resources"]:

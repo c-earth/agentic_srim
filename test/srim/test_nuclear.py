@@ -10,34 +10,32 @@ from unittest.mock import patch
 from src.backend.config import Config
 from src.backend.paths import create_base_directories, get_project_paths
 from src.backend.records import _lock_parent
-from src.backend.resources import verify_resource
-from src.srim.nuclear import create_nuclear_variant, register_nuclear_default
+from src.backend.resources import ResourceReference, verify_resource
+from src.srim.defaults import read_sr_defaults, switch_sr_defaults
+from _fixtures import make_test_project
+from src.srim.nuclear import create_nuclear_variant
 
 
 class TestNuclear(unittest.TestCase):
     """Use unittest construction and temporary fixtures to exercise nuclear resources."""
 
     def test_default_registration(self: TestNuclear) -> None:
-        """Verify self's configured source, exact imports, repeat behavior, and conflicts; return None and clean fixtures."""
+        """Verify self's coordinated concrete default, immutable source and idempotent switching; return None."""
         with TemporaryDirectory(dir=Path(__file__).parent) as directory:
-            paths = get_project_paths(Path(directory).absolute())
-            create_base_directories(paths)
-            config = Config("UTC", paths.root / "installation")
-            data = config.srim_root / "Data"
-            data.mkdir(parents=True)
-            source = data / "SNUC03.dat"
-            source.write_bytes(b"opaque raw file\r\n")
-            reference = register_nuclear_default(paths, config)
-            self.assertEqual((reference.category, reference.name, reference.version), ("engine", "nuclear", "default"))
+            paths, config, worker = make_test_project(Path(directory).absolute())
+            first = read_sr_defaults(paths)
+            reference = ResourceReference(**first["resources"]["nuclear"])
+            self.assertEqual((reference.category, reference.name, reference.version), ("engine", "nuclear", "v1"))
             payload = verify_resource(paths, reference)
+            source = config.srim_root / "Data" / "SNUC03.dat"
             self.assertEqual(payload.read_bytes(), source.read_bytes())
             manifest = (payload.parent / "manifest.json").read_bytes()
-            self.assertEqual(register_nuclear_default(paths, config), reference)
+            self.assertEqual(switch_sr_defaults(paths, config), first)
             self.assertEqual((payload.parent / "manifest.json").read_bytes(), manifest)
-            source.write_bytes(b"changed")
+            source.write_bytes(b"invalid changed source")
             with self.assertRaises(ValueError):
-                register_nuclear_default(paths, config)
-            self.assertEqual(payload.read_bytes(), b"opaque raw file\r\n")
+                switch_sr_defaults(paths, config)
+            self.assertEqual(read_sr_defaults(paths), first)
 
     def test_file_and_byte_variants(self: TestNuclear) -> None:
         """Verify self's file/byte/text inputs allocate versions without default; return None and clean fixtures."""
@@ -76,20 +74,20 @@ class TestNuclear(unittest.TestCase):
             lines[-1] = lines[-1].removesuffix(b"\n")
             original = b"".join(lines)
             (paths.root / "Data" / "SNUC03.dat").write_bytes(original)
-            default = register_nuclear_default(paths, config)
+            default = create_nuclear_variant(paths, config, source=original)
             row1 = b" 1 1 1 2 3 4"
             row8 = b" 1 8 5 6 7 8"
-            first = create_nuclear_variant(paths, config, base_version="default", replacements={(1, 1): row1, (1, 8): row8.decode("ascii")})
+            first = create_nuclear_variant(paths, config, base_version="v1", replacements={(1, 1): row1, (1, 8): row8.decode("ascii")})
             expected = list(lines)
             expected[0] = row1 + b"\r\n"
             expected[7] = row8 + b"\n"
             self.assertEqual(verify_resource(paths, first).read_bytes(), b"".join(expected))
             last = b" 92 92 9 10 11 12"
-            second = create_nuclear_variant(paths, config, base_version="v1", replacements={(92, 92): last})
+            second = create_nuclear_variant(paths, config, base_version="v2", replacements={(92, 92): last})
             expected[-1] = last
             self.assertEqual(verify_resource(paths, second).read_bytes(), b"".join(expected))
-            third = create_nuclear_variant(paths, config, base_version="v2", replacements={(92, 92): last})
-            self.assertEqual(third.version, "v3")
+            third = create_nuclear_variant(paths, config, base_version="v3", replacements={(92, 92): last})
+            self.assertEqual(third.version, "v4")
             self.assertEqual(third.sha256, second.sha256)
             self.assertEqual(verify_resource(paths, default).read_bytes(), original)
 
@@ -121,9 +119,9 @@ class TestNuclear(unittest.TestCase):
                 create_nuclear_variant(paths, config, source=b"x")
             create_base_directories(paths)
             with self.assertRaises(FileNotFoundError):
-                register_nuclear_default(paths, config)
+                switch_sr_defaults(paths, config)
             with self.assertRaises(ValueError):
-                register_nuclear_default(paths, Config("UTC", Path("relative")))
+                switch_sr_defaults(paths, Config("UTC", Path("relative")))
             with self.assertRaises(ValueError):
                 create_nuclear_variant(paths, config, base_version="missing", replacements={(1, 1): b"x"})
             reference = create_nuclear_variant(paths, config, source=b"original")

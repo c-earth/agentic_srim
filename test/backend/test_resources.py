@@ -27,36 +27,36 @@ class TestResources(unittest.TestCase):
             config = Config("UTC", paths.root)
             source = paths.root / "source.dat"
             source.write_bytes(b"original coefficients\r\n")
-            first = register_resource(paths, config, "engine", "srim-coefficients", "standard", source)
+            first = register_resource(paths, config, "engine", "srim-coefficients", "v1", source)
             self.assertEqual(first.sha256, hashlib.sha256(source.read_bytes()).hexdigest())
             self.assertEqual(resolve_resource(paths, first.category, first.name, first.version), first)
             payload = verify_resource(paths, first)
-            self.assertEqual(payload, paths.resources / "engine" / "srim-coefficients" / "standard" / "payload")
+            self.assertEqual(payload, paths.resources / "engine" / "srim-coefficients" / "v1" / "payload")
             manifest = payload.parent / "manifest.json"
             original_manifest = manifest.read_bytes()
-            self.assertEqual(set(json.loads(original_manifest)), {"schema_version", "sha256", "size_bytes", "registered_at"})
+            self.assertEqual(set(json.loads(original_manifest)), {"schema_version", "sha256", "size_bytes", "registered_at", "provenance", "reuse_key"})
             self.assertEqual(register_resource(paths, config, first.category, first.name, first.version, source), first)
             self.assertEqual(manifest.read_bytes(), original_manifest)
-            alias_version = register_resource(paths, config, first.category, first.name, "same-content", source)
+            alias_version = register_resource(paths, config, first.category, first.name, "v2", source)
             alias_payload = verify_resource(paths, alias_version)
             self.assertNotEqual(payload, alias_payload)
             self.assertEqual(payload.read_bytes(), alias_payload.read_bytes())
             self.assertEqual(first.sha256, alias_version.sha256)
             self.assertEqual(set(item.name for item in payload.parent.iterdir()), {"manifest.json", "payload"})
-            self.assertEqual(set(item.name for item in payload.parent.parent.iterdir()), {"standard", "same-content"})
+            self.assertEqual(set(item.name for item in payload.parent.parent.iterdir()), {"v1", "v2"})
             for category, name in (("cab", "core"), ("cab", "bond"), ("future-family", "dataset")):
                 reference = register_resource(paths, config, category, name, "v1", source)
                 self.assertEqual(verify_resource(paths, reference).read_bytes(), source.read_bytes())
             source.write_bytes(b"new coefficients")
-            second = register_resource(paths, config, first.category, first.name, "custom", source)
+            second = register_resource(paths, config, first.category, first.name, "v3", source)
             self.assertNotEqual(first.sha256, second.sha256)
             self.assertEqual(verify_resource(paths, first).read_bytes(), b"original coefficients\r\n")
             with self.assertRaises(ValueError):
                 register_resource(paths, config, first.category, first.name, first.version, source)
             self.assertEqual(resolve_resource(paths, first.category, first.name, first.version), first)
-            byte_reference = register_resource(paths, config, first.category, first.name, "byte-copy", source.read_bytes())
+            byte_reference = register_resource(paths, config, first.category, first.name, "v4", source.read_bytes())
             self.assertEqual(verify_resource(paths, byte_reference).read_bytes(), source.read_bytes())
-            text_reference = register_resource(paths, config, "engine", "text-input", "default", "raw\r\ntext\n")
+            text_reference = register_resource(paths, config, "engine", "text-input", "v1", "raw\r\ntext\n")
             self.assertEqual(verify_resource(paths, text_reference).read_bytes(), b"raw\r\ntext\n")
             text_directory = paths.resources / "engine" / "text-input"
             before = set(text_directory.iterdir())
@@ -65,10 +65,25 @@ class TestResources(unittest.TestCase):
             self.assertEqual(set(text_directory.iterdir()), before)
             with self.assertRaises(ValueError):
                 register_resource(paths, config, "engine", "text-input", None, 123)
-            self.assertEqual(register_resource(paths, config, "engine", "text-input", None, "").version, "v1")
+            self.assertEqual(register_resource(paths, config, "engine", "text-input", None, "").version, "v2")
             for label in ("default", "dafault", "v01", "variant"):
-                register_resource(paths, config, "engine", "allocation", label, b"opaque")
+                with self.assertRaises(ValueError):
+                    register_resource(paths, config, "engine", "allocation", label, b"opaque")
             self.assertEqual(register_resource(paths, config, "engine", "allocation", None, b"opaque").version, "v1")
+            recipe = hashlib.sha256(b"recipe").hexdigest()
+            reusable = register_resource(paths, config, "cab", "bragg", None, b"descriptor", reuse_key=recipe)
+            self.assertEqual(register_resource(paths, config, "cab", "bragg", None, b"descriptor", reuse_key=recipe), reusable)
+            self.assertEqual(len(list((paths.resources / "cab" / "bragg").glob("v*"))), 1)
+            with self.assertRaises(ValueError):
+                register_resource(paths, config, "cab", "bragg", None, b"changed", reuse_key=recipe)
+            with self.assertRaises(ValueError):
+                register_resource(paths, config, "cab", "bragg", "v5", b"descriptor", reuse_key=recipe)
+            legacy = json.loads(original_manifest)
+            legacy["schema_version"] = 1
+            del legacy["provenance"], legacy["reuse_key"]
+            manifest.write_text(json.dumps(legacy), encoding="utf-8")
+            self.assertEqual(resolve_resource(paths, first.category, first.name, first.version), first)
+            manifest.write_bytes(original_manifest)
             for boundary in (9, 99, 100):
                 register_resource(paths, config, "engine", "allocation", f"v{boundary}", b"opaque")
                 self.assertEqual(register_resource(paths, config, "engine", "allocation", None, b"opaque").version, f"v{boundary + 1}")

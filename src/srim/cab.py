@@ -1,38 +1,30 @@
 """Normalize, store, load, and update sparse versioned CAB strength dictionaries."""
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
+from dataclasses import asdict
+from decimal import Decimal, InvalidOperation
 import hashlib
 import json
-import math
 from pathlib import Path
 import re
 from typing import Literal
 
 from src.backend.config import Config
 from src.backend.paths import ProjectPaths
-from src.backend.resources import ResourceReference, _hash_file, register_resource, resolve_resource, verify_resource
+from src.backend.resources import ResourceReference, _hash_file, _unique_object, register_resource, resolve_resource, verify_resource
+from src.srim.cab_constants import CAB_UNITS
+from src.srim.metadata import JSONObject
 
 
 type CABKind = Literal["core", "bond"]
 type ElementKey = int | str
 type BondKey = str | tuple[ElementKey, ElementKey, str]
-type CABDictionary = Mapping[ElementKey | BondKey, int | float]
+type CABValue = int | float | str | Decimal
+type CABDictionary = Mapping[ElementKey | BondKey, CABValue]
 type CABSource = Path | str | bytes | CABDictionary
-type CABData = dict[int, float] | dict[tuple[int, int, str], float]
+type CABData = dict[int, str] | dict[tuple[int, int, str], str]
 
 _SYMBOLS = tuple("H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca Sc Ti V Cr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I Xe Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn Fr Ra Ac Th Pa U Np Pu Am Cm Bk Cf Es Fm Md No Lr Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og".split())
-
-
-def register_cab_default(paths: ProjectPaths, config: Config, kind: CABKind, source: CABSource) -> ResourceReference:
-    """Normalize source and register paths' cab/kind/default using config time.
-
-    Source is a JSON Path, UTF-8 JSON str/bytes, or Python dictionary. Return
-    the immutable reference; equivalent normalized defaults succeed repeatedly.
-    Write resource artifacts only. Raise ValueError for invalid data/conflicts
-    and OSError for filesystem failures, links, missing setup, or contention.
-    """
-    data = _read_source(kind, source)
-    return register_resource(paths, config, "cab", kind, "default", _encode_payload(kind, data))
 
 
 def create_cab_variant(
@@ -42,43 +34,105 @@ def create_cab_variant(
     *,
     source: CABSource | None = None,
     base_version: str | None = None,
-    updates: CABDictionary | None = None,
+    overrides: Sequence[JSONObject] = (),
 ) -> ResourceReference:
-    """Create paths' next cab/kind vN using config time and exactly one mode.
+    """Publish a frozen user kind dataset in paths using config time and source or base_version.
 
-    Supply source as JSON Path/str/bytes or a dictionary, or both base_version
-    and nonempty updates. Updates add or replace entries without deletion or
-    cross-dataset checks. Return an immutable reference, including for no-op
-    updates. Write only new resource artifacts. Raise ValueError for invalid
-    modes/data/integrity and OSError for filesystem failures or contention.
+    source supplies local JSON bytes/text/Path or a strength mapping; base_version
+    selects an existing dataset, with default pinned once. overrides applies ordered
+    set/remove operations. Return a new immutable reference without changing defaults
+    or recovering missing entries. Preserve copied entry provenance. Raise ValueError
+    for invalid data/operations and propagate filesystem failures with retained artifacts.
     """
-    if source is not None:
-        if base_version is not None or updates is not None:
-            raise ValueError("Source and update modes are mutually exclusive")
-        data = _read_source(kind, source)
+    if (source is None) == (base_version is None):
+        raise ValueError("Provide exactly one source or base_version")
+    base: ResourceReference | None = None
+    copied: list[JSONObject] = []
+    if base_version is not None:
+        if base_version == "default":
+            from src.srim.defaults import read_sr_defaults
+            base = ResourceReference(**read_sr_defaults(paths)["resources"][kind])
+        else:
+            base = resolve_resource(paths, "cab", kind, base_version)
+        data = load_cab(paths, kind, base.version)
+        payload = verify_resource(paths, base).read_bytes()
+        if json.loads(payload, object_pairs_hook=_unique_object).get("origin") == "installation":
+            from src.srim.cab_cache import CABEntryReference, load_cab_entry
+            data = {}
+            for entry_path in sorted(verify_resource(paths, base).parent.glob("entries/*/*.json")):
+                checksum, size = _hash_file(entry_path)
+                entry_reference = CABEntryReference(base, entry_path.parent.name, entry_path.stem, checksum, size)
+                entry = load_cab_entry(paths, entry_reference)
+                identifier = entry["entry_id"]
+                if kind == "core":
+                    key = int(identifier[1:])
+                else:
+                    left, right, order = identifier.split("-")
+                    key = (int(left[1:]), int(right[1:]), {"s": "-", "d": "=", "t": "#"}[order])
+                if key in data:
+                    raise ValueError("Duplicate available default strength identity")
+                data[key] = entry["value"]
+                copied.append(asdict(entry_reference))
+        origin: object = asdict(base)
+        source_kind = "version"
     else:
-        if base_version is None or not isinstance(updates, Mapping) or not updates:
-            raise ValueError("Provide source or base_version and nonempty updates")
-        normalized = _normalize_entries(kind, updates)
-        data = load_cab(paths, kind, base_version)
-        data.update(normalized)
-    return register_resource(paths, config, "cab", kind, None, _encode_payload(kind, data))
+        data = _read_source(kind, source)
+        if isinstance(source, Path):
+            expected = _hash_file(source)
+            payload = source.read_bytes()
+            if (hashlib.sha256(payload).hexdigest(), len(payload)) != expected:
+                raise ValueError("CAB source changed while snapshotting")
+            data = _decode_payload(kind, payload)
+            origin = str(source.absolute())
+            source_kind = "file"
+        else:
+            payload = source.encode("utf-8") if isinstance(source, str) else source if isinstance(source, bytes) else _encode_payload(kind, data)
+            origin = "inline"
+            source_kind = "inline"
+    effective, removed = _apply_cab_overrides(kind, data, overrides)
+    provenance = {
+        "origin": "user",
+        "source": {"kind": source_kind, "origin": origin, "sha256": hashlib.sha256(payload).hexdigest(), "size_bytes": len(payload)},
+        "base": asdict(base) if base is not None else None,
+        "changes": list(overrides), "copied_entries": copied, "baseline_id": None, "procedure": None,
+    }
+    return register_resource(paths, config, "cab", kind, None, _encode_payload(kind, effective), provenance=provenance)
 
 
 def load_cab(paths: ProjectPaths, kind: CABKind, version: str) -> CABData:
-    """Load paths' cab/kind/version as a fresh normalized Python dictionary.
+    """Return paths' verified kind/version available strengths as a fresh decimal-string mapping.
 
-    Validate kind, resolve and verify the resource, and check read bytes against
-    its reference before decoding. Core keys are integers; bond keys are sorted
-    integer endpoint tuples plus a bond character. No resource data is written.
-    Raise ValueError for invalid data or integrity and propagate filesystem and
-    lock errors as OSError; unknown versions raise ValueError.
+    Pin default once, verify frozen payload or all published calculated entries and
+    perform no recovery or data writes. Raise ValueError for malformed/corrupt data
+    and propagate filesystem/lock failures. Future lazy entries do not modify this result.
     """
     _normalize_entries(kind, {})
-    reference = resolve_resource(paths, "cab", kind, version)
-    payload = verify_resource(paths, reference).read_bytes()
+    if version == "default":
+        from src.srim.defaults import read_sr_defaults
+        reference = ResourceReference(**read_sr_defaults(paths)["resources"][kind])
+    else:
+        reference = resolve_resource(paths, "cab", kind, version)
+    payload_path = verify_resource(paths, reference)
+    payload = payload_path.read_bytes()
     if (hashlib.sha256(payload).hexdigest(), len(payload)) != (reference.sha256, reference.size_bytes):
         raise ValueError("CAB payload changed while reading")
+    document = json.loads(payload, object_pairs_hook=_unique_object)
+    if isinstance(document, dict) and document.get("origin") == "installation":
+        from src.srim.cab_cache import CABEntryReference, load_cab_entry
+        result: CABData = {}
+        for entry_path in sorted(payload_path.parent.glob("entries/*/*.json")):
+            checksum, size = _hash_file(entry_path)
+            entry = load_cab_entry(paths, CABEntryReference(reference, entry_path.parent.name, entry_path.stem, checksum, size))
+            identifier = entry["entry_id"]
+            if kind == "core":
+                key = int(identifier[1:])
+            else:
+                left, right, order = identifier.split("-")
+                key = (int(left[1:]), int(right[1:]), {"s": "-", "d": "=", "t": "#"}[order])
+            if key in result:
+                raise ValueError("Multiple calculated entries identify one CAB strength")
+            result.update(_normalize_entries(kind, {key: entry["value"]}))
+        return result
     return _decode_payload(kind, payload)
 
 
@@ -100,8 +154,8 @@ def _normalize_entries(kind: CABKind, entries: CABDictionary) -> CABData:
     """Return fresh normalized entries for kind core or bond, without writes.
 
     Core keys are elements; bond keys are symbol strings or endpoint/type tuples.
-    Sort bond endpoints, reject equivalent duplicates, and convert nonnegative
-    finite int/float values to floats, excluding bool. Empty mappings are valid.
+    Sort bond endpoints, reject equivalent duplicates, and preserve nonnegative
+    finite decimal values as strings, excluding bool. Empty mappings are valid.
     Raise ValueError for invalid kind, entries, keys, or values.
     """
     if kind not in ("core", "bond") or not isinstance(entries, Mapping):
@@ -126,47 +180,51 @@ def _normalize_entries(kind: CABKind, entries: CABDictionary) -> CABData:
             canonical = (left, right, bond)
         if canonical in result:
             raise ValueError("Duplicate equivalent CAB key")
-        if type(value) not in (int, float):
-            raise ValueError("CAB strengths must be finite nonnegative numbers")
+        if type(value) not in (int, float, str, Decimal):
+            raise ValueError("CAB strengths must be finite nonnegative decimals")
+        spelling = value if isinstance(value, str) else str(value)
+        if re.fullmatch(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?", spelling) is None:
+            raise ValueError("Invalid CAB decimal spelling")
         try:
-            number = float(value)
-        except (ValueError, OverflowError) as error:
-            raise ValueError("CAB strength cannot be represented as a float") from error
-        if not math.isfinite(number) or number < 0:
+            number = Decimal(spelling)
+        except InvalidOperation as error:
+            raise ValueError("Invalid CAB decimal") from error
+        if not number.is_finite() or number < 0:
             raise ValueError("CAB strengths must be finite and nonnegative")
-        result[canonical] = number
+        result[canonical] = spelling
     return result
 
 
 def _decode_payload(kind: CABKind, payload: bytes) -> CABData:
-    """Decode UTF-8 JSON payload into normalized kind-specific data, without writes.
+    """Return normalized kind strengths from strict legacy numeric or new string payload bytes.
 
-    Require exact schema_version/entries fields and version one. Core entries
-    have integer element/value fields; bond entries have two integer elements,
-    bond, and value fields. Normalize reversed pairs. Reject duplicate object
-    fields and equivalent entries, malformed structures, and invalid values
-    with ValueError. Empty entry arrays are valid.
+    Require exact schemas, units, identities and unique entries. Parse legacy
+    numeric tokens directly as Decimal without binary-float conversion. Perform no
+    I/O; raise ValueError for malformed encoding, duplicate fields or invalid values.
     """
     _normalize_entries(kind, {})
     if not isinstance(payload, bytes):
         raise ValueError("Expected UTF-8 JSON bytes")
     try:
-        document = json.loads(payload.decode("utf-8"), object_pairs_hook=tuple)
+        fields = json.loads(payload.decode("utf-8"), object_pairs_hook=_unique_object, parse_float=Decimal)
     except (UnicodeError, ValueError) as error:
         raise ValueError("Invalid CAB JSON") from error
-    if not isinstance(document, tuple):
-        raise ValueError("Expected CAB JSON object")
-    fields = dict(document)
-    if len(fields) != len(document) or set(fields) != {"schema_version", "entries"} or type(fields["schema_version"]) is not int or fields["schema_version"] != 1 or not isinstance(fields["entries"], list):
+    if not isinstance(fields, dict) or type(fields.get("schema_version")) is not int or fields["schema_version"] not in (1, 2):
         raise ValueError("Invalid CAB schema")
+    expected = {"schema_version", "entries"} if fields["schema_version"] == 1 else {"schema_version", "kind", "units", "entries"}
+    if set(fields) != expected or not isinstance(fields["entries"], list):
+        raise ValueError("Invalid CAB fields")
+    if fields["schema_version"] == 2 and (fields["kind"] != kind or fields["units"] != CAB_UNITS):
+        raise ValueError("CAB kind or units mismatch")
     result: CABData = {}
-    for entry in fields["entries"]:
-        if not isinstance(entry, tuple):
-            raise ValueError("Expected CAB entry object")
-        item = dict(entry)
+    for item in fields["entries"]:
         expected = {"element", "value"} if kind == "core" else {"elements", "bond", "value"}
-        if len(item) != len(entry) or set(item) != expected:
-            raise ValueError("Invalid or duplicate CAB entry fields")
+        if not isinstance(item, dict) or set(item) != expected:
+            raise ValueError("Invalid CAB entry fields")
+        if fields["schema_version"] == 2 and not isinstance(item["value"], str):
+            raise ValueError("New CAB strengths require decimal strings")
+        if fields["schema_version"] == 1 and type(item["value"]) not in (int, Decimal):
+            raise ValueError("Legacy CAB strengths require numeric values")
         if kind == "core":
             key = item["element"]
             if type(key) is not int:
@@ -176,7 +234,7 @@ def _decode_payload(kind: CABKind, payload: bytes) -> CABData:
             if not isinstance(elements, list) or len(elements) != 2 or any(type(element) is not int for element in elements):
                 raise ValueError("JSON bond elements must be two integers")
             if not isinstance(item["bond"], str):
-                raise ValueError("JSON bond type must be a string")
+                raise ValueError("JSON bond order must be a string")
             key = (elements[0], elements[1], item["bond"])
         normalized = _normalize_entries(kind, {key: item["value"]})
         if result.keys() & normalized.keys():
@@ -217,7 +275,7 @@ def _encode_payload(kind: CABKind, data: CABData) -> bytes:
     """Return canonical UTF-8 JSON bytes for normalized kind data, without writes.
 
     Validate data, sort core keys numerically or bonds by endpoints and character,
-    and emit version-one entries with two-space indentation and final newline.
+    and emit version-two decimal-string entries with two-space indentation and final newline.
     Raise ValueError for invalid kind, keys, or values.
     """
     normalized = _normalize_entries(kind, data)
@@ -225,4 +283,43 @@ def _encode_payload(kind: CABKind, data: CABData) -> bytes:
         entries = [{"element": key, "value": value} for key, value in sorted(normalized.items())]
     else:
         entries = [{"elements": [key[0], key[1]], "bond": key[2], "value": value} for key, value in sorted(normalized.items())]
-    return (json.dumps({"schema_version": 1, "entries": entries}, indent=2, ensure_ascii=False, allow_nan=False) + "\n").encode("utf-8")
+    return (json.dumps({"schema_version": 2, "kind": kind, "units": CAB_UNITS, "entries": entries}, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False) + "\n").encode("utf-8")
+
+
+def _apply_cab_overrides(kind: CABKind, data: CABData, overrides: Sequence[JSONObject]) -> tuple[CABData, list[str]]:
+    """Copy kind/data, apply overrides and return effective strengths plus removed canonical IDs.
+
+    overrides contains one set/remove per normalized key. Reject malformed or
+    duplicate operations and removing absent entries with ValueError. Perform no I/O
+    and preserve explicit removals even when their calculation fallback is zero.
+    """
+    result = _normalize_entries(kind, data)
+    if not isinstance(overrides, (list, tuple)):
+        raise ValueError("CAB overrides must be an operation sequence")
+    seen: set[int | tuple[int, int, str]] = set()
+    removed: list[str] = []
+    for operation in overrides:
+        if not isinstance(operation, dict) or operation.get("operation") not in ("set", "remove"):
+            raise ValueError("Invalid CAB override operation")
+        expected = {"operation", "key", "value"} if operation["operation"] == "set" else {"operation", "key"}
+        if set(operation) != expected:
+            raise ValueError("Invalid CAB override fields")
+        value = operation.get("value", "0")
+        if not isinstance(value, str):
+            raise ValueError("Override strength must be a decimal string")
+        key_input = operation["key"]
+        if not isinstance(key_input, (int, str, tuple)) or (isinstance(key_input, tuple) and any(not isinstance(part, (int, str)) for part in key_input)):
+            raise ValueError("Invalid CAB override key")
+        normalized = _normalize_entries(kind, {key_input: value})
+        key = next(iter(normalized))
+        if key in seen:
+            raise ValueError("Duplicate normalized CAB override")
+        seen.add(key)
+        if operation["operation"] == "set":
+            result.update(normalized)
+        else:
+            if key not in result:
+                raise ValueError("Cannot remove an absent CAB entry")
+            del result[key]
+            removed.append(f"z{key:03d}" if kind == "core" else f"z{key[0]:03d}-z{key[1]:03d}-" + {"-": "s", "=": "d", "#": "t"}[key[2]])
+    return result, removed

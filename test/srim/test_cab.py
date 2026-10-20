@@ -12,28 +12,22 @@ from src.backend.config import Config
 from src.backend.paths import create_base_directories, get_project_paths
 from src.backend.records import _lock_parent
 from src.backend.resources import register_resource, resolve_resource, verify_resource
-from src.srim.cab import _decode_payload, _normalize_entries, create_cab_variant, load_cab, register_cab_default
+from src.srim.cab import _decode_payload, _normalize_entries, create_cab_variant, load_cab
 
 
 class TestCAB(unittest.TestCase):
     """Use unittest construction and temporary fixtures for independent CAB datasets."""
 
     def test_default_registration(self: TestCAB) -> None:
-        """Verify self's normalized baselines and immutable conflicts; return None and clean fixtures."""
+        """Verify self's coordinated default references and convention without supplied-default APIs; return None."""
+        from _fixtures import make_test_project
+        from src.srim.defaults import read_sr_defaults
         with TemporaryDirectory(dir=Path(__file__).parent) as directory:
-            paths = get_project_paths(Path(directory).absolute())
-            create_base_directories(paths)
-            config = Config("UTC", paths.root)
-            for kind, source, equivalent, changed in (("core", {"C": 12.5, "H": 0}, {1: 0.0, 6: 12.5}, {6: 13}), ("bond", {"C-H": 10, "C=C": 20}, {(6, 6, "="): 20.0, (1, 6, "-"): 10.0}, {"H-C": 11})):
-                reference = register_cab_default(paths, config, kind, source)
-                payload = verify_resource(paths, reference)
-                manifest = (payload.parent / "manifest.json").read_bytes()
-                self.assertEqual(register_cab_default(paths, config, kind, equivalent), reference)
-                self.assertEqual(load_cab(paths, kind, "default"), equivalent)
-                self.assertEqual((payload.parent / "manifest.json").read_bytes(), manifest)
-                with self.assertRaises(ValueError):
-                    register_cab_default(paths, config, kind, changed)
-                self.assertTrue(payload.read_bytes().endswith(b"\n"))
+            paths, config, worker = make_test_project(Path(directory).absolute())
+            defaults = read_sr_defaults(paths)
+            self.assertEqual(load_cab(paths, "core", "default"), {1: "0"})
+            self.assertEqual(load_cab(paths, "bond", "default"), {})
+            self.assertEqual(defaults["resources"]["core"]["version"], "v1")
 
     def test_source_forms(self: TestCAB) -> None:
         """Verify self's JSON paths/strings/bytes and mappings, including empty data; return None and clean fixtures."""
@@ -51,12 +45,12 @@ class TestCAB(unittest.TestCase):
                     self.assertEqual(load_cab(paths, kind, reference.version), _normalize_entries(kind, mapping))
                 reference = create_cab_variant(paths, config, kind, source={})
                 self.assertEqual(load_cab(paths, kind, reference.version), {})
-                self.assertEqual(json.loads(verify_resource(paths, reference).read_bytes()), {"schema_version": 1, "entries": []})
+                self.assertEqual(json.loads(verify_resource(paths, reference).read_bytes()), {"schema_version": 2, "kind": kind, "units": "eV/(1E15 atoms/cm2)", "entries": []})
 
     def test_normalization_and_duplicates(self: TestCAB) -> None:
         """Verify self's canonical keys, deterministic ordering, and duplicate rejection; return None without persistent writes."""
-        self.assertEqual(_normalize_entries("core", {"H": 0, "C": 12, "Og": 3}), {1: 0.0, 6: 12.0, 118: 3.0})
-        self.assertEqual(_normalize_entries("bond", {"Cl#C": 4, ("O", 1, "="): 5}), {(6, 17, "#"): 4.0, (1, 8, "="): 5.0})
+        self.assertEqual(_normalize_entries("core", {"H": 0, "C": 12, "Og": 3}), {1: "0", 6: "12", 118: "3"})
+        self.assertEqual(_normalize_entries("bond", {"Cl#C": 4, ("O", 1, "="): 5}), {(6, 17, "#"): "4", (1, 8, "="): "5"})
         for kind, mapping in (("core", {"C": 1, 6: 1}), ("bond", {"C-H": 1, "H-C": 1}), ("bond", {(1, 6, "-"): 1, (6, 1, "-"): 1})):
             with self.assertRaises(ValueError):
                 _normalize_entries(kind, mapping)
@@ -77,24 +71,28 @@ class TestCAB(unittest.TestCase):
             paths = get_project_paths(Path(directory).absolute())
             create_base_directories(paths)
             config = Config("UTC", paths.root)
-            for kind, baseline, updates, expected in (("core", {1: 0, 6: 1}, {"C": 2, "O": 3}, {1: 0.0, 6: 2.0, 8: 3.0}), ("bond", {"H-C": 1, "C=C": 2}, {(6, 1, "-"): 3, "Cl#C": 4}, {(1, 6, "-"): 3.0, (6, 6, "="): 2.0, (6, 17, "#"): 4.0})):
-                register_cab_default(paths, config, kind, baseline)
-                first = create_cab_variant(paths, config, kind, base_version="default", updates=updates)
-                second = create_cab_variant(paths, config, kind, base_version="v1", updates=updates)
-                self.assertEqual((first.version, second.version), ("v1", "v2"))
+            for kind, baseline, updates, expected in (("core", {1: 0, 6: 1}, {"C": 2, "O": 3}, {1: "0", 6: "2", 8: "3"}), ("bond", {"H-C": 1, "C=C": 2}, {(6, 1, "-"): 3, "Cl#C": 4}, {(1, 6, "-"): "3", (6, 6, "="): "2", (6, 17, "#"): "4"})):
+                create_cab_variant(paths, config, kind, source=baseline)
+                first = create_cab_variant(paths, config, kind, base_version="v1", overrides=[{"operation": "set", "key": key, "value": str(value)} for key, value in updates.items()])
+                second = create_cab_variant(paths, config, kind, base_version="v2", overrides=[{"operation": "set", "key": key, "value": str(value)} for key, value in updates.items()])
+                self.assertEqual((first.version, second.version), ("v2", "v3"))
                 self.assertEqual(first.sha256, second.sha256)
-                self.assertEqual(load_cab(paths, kind, "v2"), expected)
-                self.assertEqual(load_cab(paths, kind, "default"), _normalize_entries(kind, baseline))
+                self.assertEqual(load_cab(paths, kind, "v3"), _normalize_entries(kind, expected))
+                self.assertEqual(load_cab(paths, kind, "v1"), _normalize_entries(kind, baseline))
                 duplicates = {"C": 0, 6: 1} if kind == "core" else {"H-C": 0, "C-H": 1}
                 with self.assertRaises(ValueError):
-                    create_cab_variant(paths, config, kind, base_version="v2", updates=duplicates)
+                    create_cab_variant(paths, config, kind, base_version="v2", overrides=[{"operation": "set", "key": key, "value": str(value)} for key, value in duplicates.items()])
+
+            removed = create_cab_variant(paths, config, "core", base_version="v1", overrides=[{"operation": "remove", "key": "C"}])
+            self.assertEqual(load_cab(paths, "core", removed.version), {1: "0"})
+            self.assertEqual(_decode_payload("core", b'{"schema_version":1,"entries":[{"element":6,"value":0.12345678901234567890123456789}]}'), {6: "0.12345678901234567890123456789"})
 
     def test_invalid_inputs(self: TestCAB) -> None:
         """Verify self's invalid schemas, keys, strengths, and input modes; return None and clean fixtures."""
         for kind, mapping in (("other", {}), ("core", {True: 0}), ("core", {0: 0}), ("core", {119: 0}), ("core", {"c": 0}), ("core", {"6": 0}), ("bond", {"H~C": 0}), ("bond", {("H", "C", "x"): 0}), ("bond", {("H",): 0}), ("bond", {("Xx", "C", "-"): 0})):
             with self.assertRaises(ValueError):
                 _normalize_entries(kind, mapping)
-        for value in (-1, float("nan"), float("inf"), True, "1", None, 10 ** 1000):
+        for value in (-1, float("nan"), float("inf"), True, " 1", "NaN", "Infinity", None):
             with self.assertRaises(ValueError):
                 _normalize_entries("core", {1: value})
         for raw in (b"not json", b"\xff", b"[]", b"{}", b'{"schema_version":true,"entries":[]}', b'{"schema_version":2,"entries":[]}', b'{"schema_version":1,"entries":{}}', b'{"schema_version":1,"entries":[[]]}', b'{"schema_version":1,"entries":[{"element":"C","value":0}]}', b'{"schema_version":1,"entries":[{"element":1,"value":NaN}]}', b'{"schema_version":1,"entries":[],"extra":0}'):
@@ -107,7 +105,7 @@ class TestCAB(unittest.TestCase):
             paths = get_project_paths(Path(directory).absolute())
             create_base_directories(paths)
             config = Config("UTC", paths.root)
-            for options in ({}, {"source": {}, "base_version": "default"}, {"source": {}, "updates": {1: 0}}, {"base_version": "default", "updates": {}}, {"updates": {1: 0}}, {"source": 123}, {"source": "\ud800"}):
+            for options in ({}, {"source": {}, "base_version": "default"}, {"source": {}, "overrides": [{"operation": "remove", "key": 1}]}, {"base_version": "missing"}, {"overrides": []}, {"source": 123}, {"source": "\ud800"}):
                 with self.assertRaises(ValueError):
                     create_cab_variant(paths, config, "core", **options)
 
@@ -117,11 +115,11 @@ class TestCAB(unittest.TestCase):
             paths = get_project_paths(Path(directory).absolute())
             create_base_directories(paths)
             config = Config("UTC", paths.root)
-            register_cab_default(paths, config, "core", {})
+            create_cab_variant(paths, config, "core", source={})
             reference = create_cab_variant(paths, config, "bond", source={"Cl#C": 1})
             loaded = load_cab(paths, "bond", "v1")
             loaded.clear()
-            self.assertEqual(load_cab(paths, "bond", "v1"), {(6, 17, "#"): 1.0})
+            self.assertEqual(load_cab(paths, "bond", "v1"), {(6, 17, "#"): "1"})
             payload = verify_resource(paths, reference)
             original = payload.read_bytes()
             payload.write_bytes(b"corrupt")
@@ -131,9 +129,9 @@ class TestCAB(unittest.TestCase):
             with patch("src.srim.cab.verify_resource", return_value=payload), patch.object(Path, "read_bytes", return_value=b"changed"):
                 with self.assertRaises(ValueError):
                     load_cab(paths, "bond", "v1")
-            register_resource(paths, config, "cab", "core", "invalid", b"invalid JSON")
+            register_resource(paths, config, "cab", "core", "v2", b"invalid JSON")
             with self.assertRaises(ValueError):
-                load_cab(paths, "core", "invalid")
+                load_cab(paths, "core", "v2")
 
     def test_files_contention_and_publication(self: TestCAB) -> None:
         """Verify self's missing sources/setup, links, contention, and retry; return None and clean fixtures."""
@@ -141,19 +139,19 @@ class TestCAB(unittest.TestCase):
             paths = get_project_paths(Path(directory).absolute())
             config = Config("UTC", paths.root)
             with self.assertRaises(FileNotFoundError):
-                register_cab_default(paths, config, "core", {})
+                create_cab_variant(paths, config, "core", source={})
             create_base_directories(paths)
             with self.assertRaises(FileNotFoundError):
-                register_cab_default(paths, config, "core", paths.root / "missing")
+                create_cab_variant(paths, config, "core", source=paths.root / "missing")
             source = paths.root / "source.json"
             source.write_bytes(b'{"schema_version":1,"entries":[]}')
             for method in ("is_symlink", "is_junction"):
                 with patch.object(Path, method, return_value=True):
                     with self.assertRaises(OSError):
-                        register_cab_default(paths, config, "core", source)
+                        create_cab_variant(paths, config, "core", source=source)
             with patch.object(Path, "read_bytes", return_value=b"changed"):
                 with self.assertRaises(ValueError):
-                    register_cab_default(paths, config, "core", source)
+                    create_cab_variant(paths, config, "core", source=source)
             with _lock_parent(paths.resources):
                 with self.assertRaises(OSError):
                     create_cab_variant(paths, config, "core", source={1: 0})

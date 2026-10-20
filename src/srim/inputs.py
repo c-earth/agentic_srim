@@ -1,6 +1,8 @@
 """Validate explicit SRModule requests and serialize deterministic ASCII SR.IN files."""
 
+from copy import deepcopy
 from decimal import Decimal
+import json
 import re
 
 from src.srim.metadata import JSONObject, JSONValue, _validate_document
@@ -15,19 +17,63 @@ def _positive_decimal(value: JSONValue, field: str) -> Decimal:
     if not isinstance(value, str) or re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", value) is None:
         raise ValueError(f"{field} must be a positive decimal string")
     number = Decimal(value)
-    if number <= 0:
+    if not number.is_finite() or number <= 0:
         raise ValueError(f"{field} must be positive")
     return number
 
 
 def validate_sr_request(request: JSONObject) -> None:
-    """Validate request's exact version-one SRModule schema; return None without effects.
+    """Validate request as legacy explicit input or version-two unresolved intent without I/O.
+
+    New intent has a complete direct atomic target or indexed compound source and
+    none/supplied/derived correction. Require bonds for direct derivation; validate
+    optional supplied bonds too. Reject caller-supplied derived factors and unknown
+    fields with ValueError. Leave all source resolution and calculations to preparation.
+    """
+    _validate_document(request, "request")
+    if request["schema_version"] == 1:
+        validate_sr_engine_request(request)
+        return
+    parameters = request["parameters"]
+    if set(parameters) != {"projectile", "target", "correction", "stopping_units", "energy"}:
+        raise ValueError("Invalid unresolved SR parameters")
+    correction = parameters["correction"]
+    if not isinstance(correction, dict) or correction.get("mode") not in ("none", "supplied", "derived"):
+        raise ValueError("Invalid unresolved correction")
+    derived = correction["mode"] == "derived"
+    if derived and set(correction) != {"mode"}:
+        raise ValueError("Unresolved derived correction cannot supply a factor")
+    target = parameters["target"]
+    if not isinstance(target, dict) or target.get("phase") not in ("solid", "gas"):
+        raise ValueError("Unresolved target requires explicit phase")
+    numeric = deepcopy(request)
+    if target.get("source") == "compound":
+        if set(target) != {"source", "record_index", "phase"} or type(target["record_index"]) is not int or target["record_index"] < 1:
+            raise ValueError("Invalid compound target selector")
+        numeric["parameters"]["target"] = {"phase": target["phase"], "density_g_cm3": "1", "elements": [{"atomic_number": 1, "name": "H", "stoichiometry": "1", "mass_amu": "1"}]}
+    elif target.get("source") == "direct":
+        required = {"source", "phase", "density_g_cm3", "elements"} | ({"bonds"} if derived else set())
+        if not required <= set(target) or set(target) - (required | {"bonds"}):
+            raise ValueError("Direct target requires complete composition and derived bonds")
+        from src.srim.material import _parse_json_compounds
+        record = {"name": "Direct", "composition_basis": "atomic", "density_g_cm3": target["density_g_cm3"], "elements": target["elements"], "bonds": target.get("bonds", {})}
+        _parse_json_compounds(json.dumps({"schema_version": 1, "records": [record]}, allow_nan=False).encode("utf-8"))
+        numeric["parameters"]["target"] = {"phase": target["phase"], "density_g_cm3": target["density_g_cm3"], "elements": [{**element, "name": "Element", "mass_amu": "1"} for element in target["elements"]]}
+    else:
+        raise ValueError("Target source must be direct or compound")
+    if derived:
+        numeric["parameters"]["correction"] = {"mode": "none", "applied_factor": "1.0"}
+    validate_sr_engine_request(numeric)
+
+
+def validate_sr_engine_request(request: JSONObject) -> None:
+    """Validate request's complete numeric SRModule schema; return None without effects.
 
     request supplies projectile, target, correction, stopping_units, and energy
     parameters. Require explicit positive decimal strings, atomic numbers 1--92,
     1--100 distinct number/mass target rows, and either a strict energy range or
     1--1,000 listed energies. Names contain 1--13 printable ASCII characters
-    excluding quotes. Correction is none or supplied; no CAB calculation occurs.
+    excluding quotes. Correction is none, supplied or effective derived; no CAB calculation occurs.
     Raise ValueError for envelope, field, type, syntax, or consistency failures.
     """
     _validate_document(request, "request")
@@ -66,9 +112,13 @@ def validate_sr_request(request: JSONObject) -> None:
             raise ValueError("Duplicate target atomic number and mass")
         identities.add(identity)
     correction = parameters["correction"]
-    if not isinstance(correction, dict) or correction.get("mode") not in ("none", "supplied"):
-        raise ValueError("Correction must use none or supplied mode")
-    _validate_document(correction, "cab")
+    if not isinstance(correction, dict) or correction.get("mode") not in ("none", "supplied", "derived"):
+        raise ValueError("Correction must use none, supplied or effective derived mode")
+    if correction["mode"] == "derived":
+        if request["schema_version"] != 2 or set(correction) != {"mode", "applied_factor"}:
+            raise ValueError("Effective derived correction requires only mode and applied_factor")
+    else:
+        _validate_document(correction, "cab")
     _positive_decimal(correction["applied_factor"], "correction.applied_factor")
     if type(parameters["stopping_units"]) is not int or not 1 <= parameters["stopping_units"] <= 8:
         raise ValueError("Stopping units must be an integer from 1 through 8")
@@ -101,7 +151,7 @@ def render_sr_input(request: JSONObject) -> bytes:
     CRLF endings, and fixed output name stopping.txt. List mode emits 0 0,
     individual energies, and a terminating 0. Raise ValueError for invalid request.
     """
-    validate_sr_request(request)
+    validate_sr_engine_request(request)
     parameters = request["parameters"]
     projectile = parameters["projectile"]
     target = parameters["target"]
