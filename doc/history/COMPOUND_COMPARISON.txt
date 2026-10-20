@@ -1,5 +1,12 @@
 COMPOUND CORRECTION COMPARISON - 2026-10-19
 
+HISTORICAL RECORD
+This comparison is retained for provenance, including its SR/TIN overlap.
+Its original .cache/ evidence was deleted by the user on 2026-10-20.
+The observations below are historical summaries, not a claim that those files
+remain available. Current SR usage: ../README.md and ../guides/getting-started.md.
+Current native validation qualifications: ../CAB_HANDOFF.md.
+
 RESULT: all 30 SR/TIN pairs match exactly at full UI field precision.
 Tested 2008, 2013 Standard and 2013 Pro independently: 10 compounds per installation.
 Every captured correction is positive and differs from 1.

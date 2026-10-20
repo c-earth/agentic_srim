@@ -1,5 +1,7 @@
 # CAB research evidence before integration
 
+Historical investigation, not a current API guide. See the [documentation index](../README.md), [CAB status/evidence](../CAB_HANDOFF.md) and [later review](../reviews/non-trim-review.md). Installation-specific observations are not universal numerical guarantees. Source/cache paths below are relative to the repository root.
+
 Historical observations and local artifact inventory; current implementation status is in CAB_HANDOFF.md. The approved proposal/API catalog supersede historical algorithm suggestions.
 
 ## Empirical model and qualifications
@@ -29,7 +31,7 @@ This historical investigation tested detailed parameter recovery with 2013 Stand
 
 ## Evidence inventory (local, ignored by Git)
 
-All paths below are relative to the repository. These remain local ignored artifacts, not portable contents of this commit. Preserve them before moving machines or cleaning caches. No new consolidated experiment dataset was created.
+All paths below are relative to the repository. The user cleared these historical ignored artifacts on 2026-10-20; they are no longer present locally or portable contents of the repository. The recorded observations remain historical summaries. Later fresh verification artifacts are listed separately in the CAB status page and were not part of this investigation. No consolidated experiment dataset was created.
 
 - `.cache/compound-all-20261019/`: `capture_all_compounds.py`, `fit_cab.py`, `compare_elemental_stopping.py`, `results.json`/CSV (345 original 2008 + 357 original 2013 Standard captures), per-version captures, fit variants and website parameters. Original dictionary hashes still match every captured record's source hash.
 - `.cache/compound-all-20261019/website-elemental-comparison/`: elemental-stopping.json/CSV (92 elements x two phases x 125/126 = 368 values), 184 isolated runs, source provenance, raw inputs/outputs. Projectile H mass 1.008, correction one, units eV/(1E15 atoms/cm2), target natural masses and phase-specific densities from ATOMDATA.

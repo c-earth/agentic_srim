@@ -66,16 +66,21 @@ def make_test_selections() -> JSONObject:
     return {**{role: {"version": "default", "overrides": [], "create_version": False} for role in ("atomdata", "electronic", "nuclear", "core", "bond")}, "compound": None}
 
 
-def fake_bragg_run(args: Sequence[str], *, cwd: Path, stdin: int, stdout: BinaryIO, stderr: BinaryIO, timeout: float, check: bool, creationflags: int) -> subprocess.CompletedProcess[bytes]:
+def fake_bragg_run(args: Sequence[str], *, cwd: Path, stdin: int, stdout: BinaryIO, stderr: BinaryIO, timeout: float, check: bool, creationflags: int, startupinfo: subprocess.STARTUPINFO | None) -> subprocess.CompletedProcess[bytes]:
     """Validate controlled args/cwd/handles/timeout and write a fixed successful one-row output.
 
     stdin/check/creationflags describe the expected owned subprocess invocation.
+    startupinfo is None for normal display or requests hidden GUI startup.
     Write only stopping.txt and diagnostic handles in the temporary runtime;
     return a successful CompletedProcess or raise AssertionError on wrong inputs.
     """
     assert len(args) == 1 and Path(args[0]).name == "SRModule.exe"
     assert stdin == subprocess.DEVNULL and timeout > 0 and check is False
     assert creationflags == subprocess.CREATE_NO_WINDOW
+    if startupinfo is not None:
+        assert isinstance(startupinfo, subprocess.STARTUPINFO)
+        assert startupinfo.dwFlags & subprocess.STARTF_USESHOWWINDOW
+        assert startupinfo.wShowWindow == subprocess.SW_HIDE
     assert (cwd / "SR.IN").is_file()
     (cwd / "stopping.txt").write_bytes(b"Ion = Hydrogen, Mass = 1.008\r\nTgt = C (Gas), Density = .001 g/cm3\r\nStopping Units = eV/(1E15 atoms/cm2)\r\nEnergy(keV)  S(Elec)    S(Nuc)\r\n1.260E+02   2.500E+01  1.000E-03\r\n")
     stdout.write(b"synthetic stdout")

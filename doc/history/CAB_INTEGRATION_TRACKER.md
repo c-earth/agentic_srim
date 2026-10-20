@@ -1,5 +1,7 @@
 # CAB integration tracker
 
+Historical delivery checklist, preserved with its existing completion qualifications. Start with the [documentation index](../README.md) for current use, the [CAB status page](../CAB_HANDOFF.md) for native evidence and the [non-TRIM review](../reviews/non-trim-review.md) for subsequently identified discrepancies. Completed implementation scope does not mean that later review found no defects.
+
 Status: implemented and verified, including the approved import compatibility amendment. User authorized handoff cleanup and local commit on 2026-10-20. No publication requested.
 
 ## Completed
@@ -17,6 +19,6 @@ Status: implemented and verified, including the approved import compatibility am
 - [x] Installed-file integrity, timeout/interruption evidence and static checks.
 - [x] Consolidated handoff; preserved historical research in CAB_RESEARCH_NOTES.md.
 
-Current evidence and limitations are listed once in CAB_HANDOFF.md. Fresh native 2008 GUI cleanup timeout remains unresolved; cached numerical results are verified, but a full fresh recovery after the compatibility amendment did not pass. No full 91-core or general cross-version equivalence is claimed.
+Current native evidence and limitations are listed in [CAB_HANDOFF.md](../CAB_HANDOFF.md). Fresh native 2008 and 2013 Standard recovery now passes: 18 bonds, carbon core, methane simulation and 44 successful capture cleanups per version. The historical cleanup timeout did not reproduce; its cause remains unconfirmed. No full 91-core or general cross-version equivalence is claimed.
 
 Contracts: CAB_INTEGRATION_PROPOSAL.md and CAB_API_CATALOG.md, including final compatibility amendment. No further implementation remains within the approved scope.

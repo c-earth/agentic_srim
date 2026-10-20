@@ -48,6 +48,28 @@ class TestBragg(unittest.TestCase):
         self.assertTrue(result.calculated)
         self.assertEqual(len(entry["simulations"]), 1)
 
+    def test_window_visibility(self: TestBragg) -> None:
+        """Verify self's Bragg launches inherit SR display independently of the TRIM flag.
+
+        Resolve different elements to avoid cache hits while controlling native
+        output in temporary fixtures. Return None; assertion or setup errors
+        propagate. Launch no real executable and retain no fixture after cleanup.
+        """
+        for z, hidden in ((6, True), (8, False)):
+            with self.subTest(hidden=hidden):
+                config = replace(self.config, hide_sr_window=hidden, hide_trim_window=not hidden)
+                with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run) as launched:
+                    result = resolve_bragg(self.paths, config, self.worker, self.inputs, z)
+                self.assertTrue(result.calculated)
+                startupinfo = launched.call_args.kwargs["startupinfo"]
+                if hidden:
+                    self.assertIsInstance(startupinfo, subprocess.STARTUPINFO)
+                    self.assertTrue(startupinfo.dwFlags & subprocess.STARTF_USESHOWWINDOW)
+                    self.assertEqual(startupinfo.wShowWindow, subprocess.SW_HIDE)
+                else:
+                    self.assertIsNone(startupinfo)
+                self.assertEqual(load_cab_entry(self.paths, result.reference)["value"], "2.500E+01")
+
     def test_automatic_versions(self: TestBragg) -> None:
         """Check self's same/changed effective dependencies, local edits and unchanged aliases; return None."""
         before = read_sr_defaults(self.paths)

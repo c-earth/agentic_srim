@@ -1,17 +1,30 @@
-# Project findings and plans
+# Documentation
 
-## Current state and implementation plan
+Start with the [project README](../README.md) for what the project does and its prerequisites. The current user-facing scope is SR stopping/range calculation, material/coefficient resources and core-and-bond (CAB) corrections.
 
-- [CAB handoff](CAB_HANDOFF.md): current implementation, verification evidence and unresolved GUI cleanup timing.
-- [CAB integration tracker](CAB_INTEGRATION_TRACKER.md): completed implementation scope.
-- [CAB integration proposal](CAB_INTEGRATION_PROPOSAL.md): approved design, including the final import compatibility amendment.
-- [CAB API catalog](CAB_API_CATALOG.md): function/type contracts, schemas and verification plan.
+## Choose a task
 
-## Findings supporting the plan
+| Task | Documentation |
+| --- | --- |
+| Configure the project and run a first calculation | [Getting started](guides/getting-started.md) |
+| Search compounds, edit data, create variants or recover CAB entries | [Materials, resources and CAB](guides/resources-and-cab.md) |
+| Find function signatures, return values, side effects and error behavior | [Python API reference](reference/api.md) |
+| Construct request/selection JSON or inspect records and units | [Data formats and layouts](reference/data-formats.md) |
+| Read the code/documentation discrepancy review | [Non-TRIM review](reviews/non-trim-review.md) |
+| Inspect recorded native validation and limitations | [CAB status and evidence](CAB_HANDOFF.md) |
 
-- [CAB research notes](CAB_RESEARCH_NOTES.md): historical observations and experiment inventory.
-- [TIN findings](TIN_FINDINGS.txt): verified menu/input mappings and remaining investigation.
-- [TRIM findings](TRIM_FINDINGS.txt): input/runtime formats, probes and next verification steps.
-- [Compound comparison](COMPOUND_COMPARISON.txt): SR/TIN correction comparisons across installations.
+## Historical design and investigation
 
-Proposal-era approval language is historical; use the handoff and final compatibility amendment for current status. Referenced `.cache/` paths are relative to the repository root. Their contents were deleted at the user's request on 2026-10-20; those references now identify historical evidence, not available local files. This folder contains documentation, not raw experiment artifacts or runtime resources.
+These documents preserve decisions, experiments and delivery history. Proposal-era approval language is historical; use the current guides/reference and review for today's behavior.
+
+- [CAB integration proposal](history/CAB_INTEGRATION_PROPOSAL.md): approved design and superseding compatibility amendment.
+- [CAB API catalog](history/CAB_API_CATALOG.md): original implementation contracts and planned test inventory.
+- [CAB integration tracker](history/CAB_INTEGRATION_TRACKER.md): completed delivery checklist.
+- [CAB research notes](history/CAB_RESEARCH_NOTES.md): historical experimental observations and deleted evidence inventory.
+- [Compound comparison](history/COMPOUND_COMPARISON.txt): narrower historical SR/TIN field-value comparison across installations.
+
+Historical `.cache/` paths are relative to the repository root. Earlier artifacts were deleted at the user's request on 2026-10-20. New evidence generated afterward is explicitly distinguished in the CAB status page; raw artifacts are ignored and not portable repository contents. Documentation files here are not runtime resources.
+
+## Separate investigation outside this review
+
+[TIN findings](TIN_FINDINGS.txt) and [TRIM findings](TRIM_FINDINGS.txt) remain in their existing locations and were not edited or reviewed as transport implementation. Their presence does not indicate that TIN/TRIM execution has been implemented.

@@ -6,3 +6,9 @@ timezone = "UTC"
 # Absolute SRIM installation root.
 # Escape Windows backslashes by doubling them.
 root = "D:\\local\\srim\\srim_2013_std"
+# true: request hidden SRModule windows; false: use normal window display.
+# Also applies to Bragg runs. Defaults to true; CAB capture GUI is unaffected.
+hide_sr_window = true
+# true: request hidden TRIM windows; false: use normal window display.
+# Defaults to true. Reserved for the future TRIM runner; currently has no effect.
+hide_trim_window = true

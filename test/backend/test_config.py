@@ -41,6 +41,44 @@ class TestConfig(unittest.TestCase):
                     path.write_text(prefix + "[srim]\nroot = 'D:\\srim'\n", encoding="utf-8")
                     self.assertEqual(load_config(path).timezone, "UTC")
 
+    def test_window_settings(self: TestConfig) -> None:
+        """Verify self's independent boolean defaults, explicit values, reloads and immutability.
+
+        Write and remove isolated TOML fixtures; return None. Invalid flag values
+        must raise ValueError, and incorrect behavior raises assertion failures.
+        No executable is launched or installation file accessed.
+        """
+        with TemporaryDirectory(dir=Path(__file__).parent) as directory:
+            path = Path(directory) / "settings.toml"
+            prefix = "[srim]\nroot = 'D:\\srim'\n"
+            path.write_text(prefix, encoding="utf-8")
+            default = load_config(path)
+            self.assertTrue(default.hide_sr_window)
+            self.assertTrue(default.hide_trim_window)
+            self.assertEqual(default, Config("UTC", Path(r"D:\srim")))
+            for sr in (False, True):
+                for trim in (False, True):
+                    with self.subTest(sr=sr, trim=trim):
+                        path.write_text(prefix + f"hide_sr_window = {str(sr).lower()}\nhide_trim_window = {str(trim).lower()}\n", encoding="utf-8")
+                        loaded = load_config(path)
+                        self.assertIs(loaded.hide_sr_window, sr)
+                        self.assertIs(loaded.hide_trim_window, trim)
+            for key in ("hide_sr_window", "hide_trim_window"):
+                path.write_text(prefix + f"{key} = false\n", encoding="utf-8")
+                first = load_config(path)
+                self.assertIs(getattr(first, key), False)
+                self.assertIs(getattr(first, "hide_trim_window" if key == "hide_sr_window" else "hide_sr_window"), True)
+                with self.assertRaises(FrozenInstanceError):
+                    setattr(first, key, True)
+                path.write_text(prefix + f"{key} = true\n", encoding="utf-8")
+                self.assertIs(getattr(load_config(path), key), True)
+                self.assertIs(getattr(first, key), False)
+                for invalid in ("0", "1", "'true'", "'false'", "[]", "{}", "1.0"):
+                    with self.subTest(key=key, invalid=invalid):
+                        path.write_text(prefix + f"{key} = {invalid}\n", encoding="utf-8")
+                        with self.assertRaisesRegex(ValueError, rf"srim\.{key}"):
+                            load_config(path)
+
     def test_timezone_validation(self: TestConfig) -> None:
         """Verify timezone syntax, types, and normalization; return None and clean fixtures."""
         with TemporaryDirectory(dir=Path(__file__).parent) as directory:

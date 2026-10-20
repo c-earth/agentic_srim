@@ -1,5 +1,7 @@
 # CAB integration API catalog
 
+Archived implementation contract and planned test inventory. For current signatures and behavior use the [API reference](../reference/api.md), [formats](../reference/data-formats.md) and [review](../reviews/non-trim-review.md). Approval-pending, baseline-test and future-tense statements below are historical. The final compatibility amendment supersedes earlier parser flexibility. Python 3.12 syntax is mentioned historically; the current runtime requires Python 3.13+ APIs. Native validation status is in the [CAB status page](../CAB_HANDOFF.md). Source/cache paths below are repository-root relative.
+
 Current status: this design was explicitly approved and has been implemented and verified. See CAB_INTEGRATION_TRACKER.md for completion evidence. Approval-pending language below records the reviewed proposal, not the current implementation status.
 
 This catalog supplements CAB_INTEGRATION_PROPOSAL.md. It specifies proposed implementation boundaries and test coverage for final review. It does not authorize implementation. Signatures use Python 3.12 type-alias syntax already used by the project; all declared functions/methods will have first-statement docstrings and fully annotated arguments/returns, including self. New implementation helpers are limited to this catalog; a necessary design change must be presented before implementation.

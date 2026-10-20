@@ -150,7 +150,9 @@ def run_sr_simulation(
 
     timeout_seconds defaults to 60 and must be a finite positive int/float,
     excluding bool. Require matching created SR identity and empty output trees.
-    Hold the worker-parent lock through verification, hidden shell-free execution,
+    config.hide_sr_window must be boolean and selects hidden startup or the
+    executable's normal display behavior. The independent TRIM setting is unused.
+    Hold the worker-parent lock through verification, shell-free execution,
     exact binary diagnostics/output preservation, parsing, and terminal metadata.
     subprocess.run kills and waits for the child on timeout or interruption.
 
@@ -161,6 +163,8 @@ def run_sr_simulation(
     finalization, preserving evidence and exception notes. Interruptions are
     re-raised after the same finalization attempt. Never retry or clean up a run.
     """
+    if type(config.hide_sr_window) is not bool:
+        raise ValueError("config.hide_sr_window must be a boolean")
     if type(timeout_seconds) not in (int, float) or timeout_seconds <= 0:
         raise ValueError("timeout_seconds must be a finite positive number")
     try:
@@ -202,7 +206,12 @@ def run_sr_simulation(
                 diagnostic["stage"] = "launch"
                 with (record / "output" / "raw" / "stdout.bin").open("xb") as stdout, (record / "output" / "raw" / "stderr.bin").open("xb") as stderr:
                     try:
-                        completed = subprocess.run([str(runtime / "SRModule.exe")], cwd=runtime, stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr, timeout=timeout, check=False, creationflags=subprocess.CREATE_NO_WINDOW)
+                        startupinfo: subprocess.STARTUPINFO | None = None
+                        if config.hide_sr_window:
+                            startupinfo = subprocess.STARTUPINFO()
+                            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                            startupinfo.wShowWindow = subprocess.SW_HIDE
+                        completed = subprocess.run([str(runtime / "SRModule.exe")], cwd=runtime, stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr, timeout=timeout, check=False, creationflags=subprocess.CREATE_NO_WINDOW, startupinfo=startupinfo)
                         diagnostic["exit_code"] = completed.returncode
                         diagnostic["stage"] = "exit"
                         if completed.returncode != 0:

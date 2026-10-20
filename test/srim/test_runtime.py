@@ -102,11 +102,13 @@ class TestSRRuntime(unittest.TestCase):
         timeout: float,
         check: bool,
         creationflags: int,
+        startupinfo: subprocess.STARTUPINFO | None,
     ) -> subprocess.CompletedProcess[bytes]:
         """Simulate args at cwd for self's process/output fixture configuration.
 
         Assert closed stdin, writable binary stdout/stderr, positive timeout,
-        disabled check, hidden-window creationflags, running metadata, and worker
+        disabled check, console creationflags and config-matched startupinfo,
+        running metadata, and worker
         locking. Write exact diagnostics and optional output or configured input
         mutations. Return configured exit status or raise configured process_error.
         Effects remain in self's temporary project; assertion failures propagate.
@@ -116,6 +118,12 @@ class TestSRRuntime(unittest.TestCase):
         self.assertGreater(timeout, 0)
         self.assertFalse(check)
         self.assertEqual(creationflags, subprocess.CREATE_NO_WINDOW)
+        if self.config.hide_sr_window:
+            self.assertIsInstance(startupinfo, subprocess.STARTUPINFO)
+            self.assertTrue(startupinfo.dwFlags & subprocess.STARTF_USESHOWWINDOW)
+            self.assertEqual(startupinfo.wShowWindow, subprocess.SW_HIDE)
+        else:
+            self.assertIsNone(startupinfo)
         self.assertEqual(read_simulation(self.paths, cwd.name)["status"], "running")
         with self.assertRaises(OSError):
             with _lock_parent(self.paths.workers):
@@ -486,6 +494,31 @@ class TestSRRuntime(unittest.TestCase):
             with patch("src.srim.execution.subprocess.run") as launched, self.assertRaises(ValueError):
                 run_sr_simulation(self.paths, self.config, created.path.name, runtime)
             launched.assert_not_called()
+
+    def test_run_sr_window_visibility(self: TestSRRuntime) -> None:
+        """Check self's hidden/default and visible launches and invalid direct settings.
+
+        Prepare isolated records and simulate engine output through the owned
+        subprocess boundary. Return None or raise assertion failures. Invalid
+        nonboolean settings must raise ValueError before launch or record writes.
+        """
+        for hidden in (True, False):
+            with self.subTest(hidden=hidden):
+                self.config = replace(self.config, hide_sr_window=hidden, hide_trim_window=not hidden)
+                created = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
+                inputs = ResolvedSRInputs(self.request, {}, self.request, {"schema_version": 1, "parameters": self.request["parameters"], "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": self.request["parameters"]["correction"]}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items()))
+                runtime = _prepare_sr_runtime(self.paths, self.config, created, self.worker, inputs)
+                before = {path.relative_to(created.path): path.read_bytes() for path in created.path.rglob("*") if path.is_file()}
+                for invalid in (0, 1, "true", None):
+                    with patch("src.srim.execution.subprocess.run") as launched, self.assertRaisesRegex(ValueError, "hide_sr_window"):
+                        run_sr_simulation(self.paths, replace(self.config, hide_sr_window=invalid), created.path.name, runtime)
+                    launched.assert_not_called()
+                    self.assertEqual({path.relative_to(created.path): path.read_bytes() for path in created.path.rglob("*") if path.is_file()}, before)
+                with patch("src.srim.execution.subprocess.run", side_effect=self._fake_sr_run) as launched:
+                    result = run_sr_simulation(self.paths, self.config, created.path.name, runtime)
+                self.assertEqual(result["status"], "succeeded")
+                self.assertIs(launched.call_args.kwargs["startupinfo"] is None, not hidden)
+                self.assertEqual((created.path / "output" / "raw" / "stopping.txt").read_bytes(), self.engine_output)
 
     def test_run_sr_preflight_failure(self: TestSRRuntime) -> None:
         """Check self's preflight corruption and stale runtime output fail before launch with created-state timestamps; return None or assertions using mocks."""

@@ -8,15 +8,19 @@ from typing import Any
 
 @dataclass(frozen=True)
 class Config:
-    """Store configuration supplied through timezone and srim_root fields.
+    """Store immutable timezone, installation root and independent window preferences.
 
     timezone is a timezone setting string, and srim_root is the SRIM installation
-    path. Both fields are immutable. Direct construction does not validate them;
-    use load_config to construct validated configuration from a file.
+    path. hide_sr_window and hide_trim_window are boolean display preferences,
+    both defaulting to True. Only the SRModule preference currently has a runner;
+    the TRIM preference is reserved for future execution. Direct construction
+    stores inputs without validation or I/O; load_config validates file inputs.
     """
 
     timezone: str
     srim_root: Path
+    hide_sr_window: bool = True
+    hide_trim_window: bool = True
 
 
 def load_config(path: Path) -> Config:
@@ -30,6 +34,8 @@ def load_config(path: Path) -> Config:
         Immutable configuration with a validated timezone and absolute Windows
         SRIM root. A missing time table or timezone defaults to UTC. Signed zero
         timezone offsets are normalized to UTC; system is retained unresolved.
+        Omitted srim.hide_sr_window and srim.hide_trim_window default to True;
+        explicitly supplied values must be actual TOML booleans.
 
     Side effects:
         Opens and reads path afresh without caching, locking, or writing files.
@@ -47,12 +53,12 @@ def load_config(path: Path) -> Config:
         if section not in {"time", "srim"}:
             raise ValueError(f"Unknown configuration section: {section!r}")
 
-    for section, allowed_key in (("time", "timezone"), ("srim", "root")):
+    for section, allowed_keys in (("time", {"timezone"}), ("srim", {"root", "hide_sr_window", "hide_trim_window"})):
         if section in data:
             if not isinstance(data[section], dict):
                 raise ValueError(f"Configuration section {section!r} must be a table")
             for key in data[section]:
-                if key != allowed_key:
+                if key not in allowed_keys:
                     raise ValueError(f"Unknown configuration setting: {section}.{key}")
 
     timezone = data.get("time", {}).get("timezone", "UTC")
@@ -81,4 +87,10 @@ def load_config(path: Path) -> Config:
     if not srim_root.is_absolute():
         raise ValueError("srim.root must be an absolute Windows path")
 
-    return Config(timezone=timezone, srim_root=srim_root)
+    hide_sr_window = data["srim"].get("hide_sr_window", True)
+    hide_trim_window = data["srim"].get("hide_trim_window", True)
+    for key, value in (("hide_sr_window", hide_sr_window), ("hide_trim_window", hide_trim_window)):
+        if type(value) is not bool:
+            raise ValueError(f"srim.{key} must be a boolean")
+
+    return Config(timezone=timezone, srim_root=srim_root, hide_sr_window=hide_sr_window, hide_trim_window=hide_trim_window)

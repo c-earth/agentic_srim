@@ -1,5 +1,7 @@
 # CAB integration proposal
 
+Archived approved design, retained for decision history. Read the [current API reference](../reference/api.md), [user guides](../README.md), [review discrepancies](../reviews/non-trim-review.md) and [native validation status](../CAB_HANDOFF.md) for current use. Statements below such as "No implementation has started" and approval-pending wording describe the proposal stage, not today's code. The final compatibility amendment supersedes the earlier native-parser clarification. Historical `.cache/` evidence paths were deleted on 2026-10-20; later fresh evidence is identified separately in the status page. Source paths and cache paths in this archive are relative to the repository root unless explicitly stated otherwise.
+
 Current status: this design was explicitly approved and has been implemented and verified. See CAB_INTEGRATION_TRACKER.md for completion evidence. Approval-pending language below records the reviewed proposal, not the current implementation status.
 
 Technical proposal for the agreed SRIM CAB integration, paired with [the complete API and test catalog](CAB_API_CATALOG.md). Implementation requires explicit approval of these documents together. Behavioral agreements are recorded in CAB_HANDOFF.md; implementation contracts not previously discussed are proposals for this review. No implementation has started.
