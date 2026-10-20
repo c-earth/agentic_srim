@@ -9,6 +9,7 @@ from pathlib import Path
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
+from threading import Event, Thread, Timer
 import unittest
 from unittest.mock import patch
 
@@ -16,12 +17,68 @@ from src.backend.config import Config
 from src.backend.paths import create_base_directories, get_project_paths
 from src.backend.records import (
     BatchOperationError, CreateRequest, DeleteRequest, _lock_parent,
-    _read_tombstone, _record_time, create_directories, delete_directories,
+    _read_tombstone, _record_time, _lock_worker, create_directories, delete_directories,
 )
 
 
 class TestRecords(unittest.TestCase):
     """Use unittest construction to test record APIs with automatically removed fixtures beneath this module."""
+
+    def _hold_lock(self: TestRecords, parent: Path, ready: Event, release: Event) -> None:
+        """Hold parent until release, signaling ready for self's contention test; return None or propagate lock errors."""
+        with _lock_parent(parent):
+            ready.set()
+            release.wait(timeout=5)
+
+    def test_bounded_lock_waiting(self: TestRecords) -> None:
+        """Check self's cross-thread timeout, release and immediate validation failures; return None and clean fixtures."""
+        with TemporaryDirectory(dir=Path(__file__).parent) as directory:
+            parent = Path(directory).absolute()
+            ready, release = Event(), Event()
+            holder = Thread(target=self._hold_lock, args=(parent, ready, release))
+            holder.start()
+            try:
+                self.assertTrue(ready.wait(timeout=5))
+                with self.assertRaises(OSError):
+                    with _lock_parent(parent, timeout_seconds=0.03):
+                        pass
+                release_timer = Timer(0.03, release.set)
+                release_timer.start()
+                try:
+                    with _lock_parent(parent, timeout_seconds=1.0):
+                        self.assertTrue(release.is_set())
+                finally:
+                    release_timer.join(timeout=5)
+            finally:
+                release.set()
+                holder.join(timeout=5)
+            with _lock_parent(parent, timeout_seconds=1.0):
+                with self.assertRaises(OSError):
+                    with _lock_parent(parent, timeout_seconds=1.0):
+                        pass
+            for invalid in (True, -1, float("inf"), float("nan"), 10 ** 1000):
+                with self.assertRaises(ValueError):
+                    with _lock_parent(parent, timeout_seconds=invalid):
+                        pass
+
+    def test_independent_worker_leases(self: TestRecords) -> None:
+        """Check self's worker leases release the parent, allow other workers and reject active deletion; return None."""
+        with TemporaryDirectory(dir=Path(__file__).parent) as directory:
+            paths = get_project_paths(Path(directory).absolute())
+            create_base_directories(paths)
+            config = Config("UTC", paths.root)
+            first, second = create_directories(paths, config, [CreateRequest("worker"), CreateRequest("worker")]).completed
+            with _lock_worker(paths, first.path):
+                with _lock_parent(paths.workers):
+                    pass
+                with _lock_worker(paths, second.path):
+                    pass
+                with self.assertRaises(BatchOperationError):
+                    delete_directories(paths, config, [DeleteRequest("worker", first.path.name)])
+                delete_directories(paths, config, [DeleteRequest("worker", second.path.name)])
+                self.assertTrue(first.path.exists())
+                self.assertFalse(second.path.exists())
+            delete_directories(paths, config, [DeleteRequest("worker", first.path.name)])
 
     def test_mixed_creation_and_collisions(self: TestRecords) -> None:
         """Check self's mixed names, numeric collisions, worker layout, and independent continuations; return None and remove fixtures."""
@@ -243,10 +300,10 @@ class TestRecords(unittest.TestCase):
             environment = os.environ.copy()
             environment["PYTHONDONTWRITEBYTECODE"] = "1"
             with _lock_parent(paths.workers):
-                blocked = subprocess.run([sys.executable, "-B", "-c", script, str(paths.root)], cwd=Path(__file__).absolute().parents[2], env=environment, capture_output=True, text=True, timeout=20)
+                blocked = subprocess.run([r"D:\projects\agentic_srim\.venv\Scripts\python.exe", "-B", "-c", script, str(paths.root)], cwd=Path(__file__).absolute().parents[2], env=environment, capture_output=True, text=True, timeout=20)
             self.assertEqual(blocked.returncode, 7, blocked.stderr)
             lock_script = '"""Hold a lock until terminated to verify process-exit release."""\nimport sys\nfrom pathlib import Path\nfrom src.backend.records import _lock_parent\nwith _lock_parent(Path(sys.argv[1])):\n    print("locked", flush=True)\n    sys.stdin.read()\n'
-            holder = subprocess.Popen([sys.executable, "-B", "-c", lock_script, str(paths.workers)], cwd=Path(__file__).absolute().parents[2], env=environment, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            holder = subprocess.Popen([r"D:\projects\agentic_srim\.venv\Scripts\python.exe", "-B", "-c", lock_script, str(paths.workers)], cwd=Path(__file__).absolute().parents[2], env=environment, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             try:
                 self.assertEqual(holder.stdout.readline().strip(), "locked")
                 with self.assertRaises(BatchOperationError):
@@ -254,7 +311,7 @@ class TestRecords(unittest.TestCase):
             finally:
                 holder.terminate()
                 holder.communicate(timeout=20)
-            processes = [subprocess.Popen([sys.executable, "-B", "-c", script, str(paths.root)], cwd=Path(__file__).absolute().parents[2], env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) for _ in range(4)]
+            processes = [subprocess.Popen([r"D:\projects\agentic_srim\.venv\Scripts\python.exe", "-B", "-c", script, str(paths.root)], cwd=Path(__file__).absolute().parents[2], env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) for _ in range(4)]
             names: list[str] = []
             for process in processes:
                 stdout, stderr = process.communicate(timeout=20)

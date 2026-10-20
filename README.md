@@ -29,6 +29,8 @@ Window visibility is controlled independently in `settings.toml` under `[srim]`:
 
 Preparation may run missing dependency calculations; the main calculation starts only when `run_sr_simulation` is called. List mode returns stopping values; range mode also returns projected range and straggling. Engine execution returns metadata with `status="succeeded"` or `status="failed"` for expected operational failures, so always inspect the status.
 
+For concurrent execution, prepare simulations across separate workers, then call `run_sr_batch(paths, config, tasks, max_workers=4)` with `PreparedSRTask(simulation_id, runtime)` objects. The in-memory queue preserves order within each worker and returns results in submission order. Each run saves its permanent evidence immediately; after the whole batch finishes, verified runtime folders are cleaned together and empty workers remain available for reuse. CAB GUI captures now have permanent simulation records too. See the [batch example](doc/guides/getting-started.md#queue-prepared-simulations) and [retention rules](doc/guides/resources-and-cab.md#evidence-and-retention).
+
 ## Documentation and verification
 
 | Need | Read |
@@ -48,4 +50,4 @@ Run both test directories explicitly; top-level discovery alone does not discove
 
 The 2026-10-20 review passed 124 existing tests with warnings as errors and found additional contract discrepancies documented in the review. Tests use synthetic installations and controlled subprocesses; they do not establish universal numerical accuracy or installation compatibility. Previously recorded native checks cover representative 2008 and 2013 Standard cases, including all 18 bonds, carbon and methane, not every core or installation.
 
-Preserve `memory/resources`, dependency simulation records and referenced worker capture directories together. Calculated entries verify their linked evidence; deleting that evidence makes reuse fail. See the [retention guidance](doc/guides/resources-and-cab.md#evidence-and-retention) before removing runtime data.
+Preserve `memory/resources`, dependency simulation records and any legacy referenced worker capture directories together. Calculated entries verify their linked evidence; deleting that evidence makes reuse fail. See the [retention guidance](doc/guides/resources-and-cab.md#evidence-and-retention) before removing runtime data.

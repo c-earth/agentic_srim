@@ -3,17 +3,20 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager, nullcontext
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import errno
 import json
+import math
 import msvcrt
 import os
 from pathlib import Path
 import re
 import shutil
 from tempfile import NamedTemporaryFile
+import time
 from typing import Literal
 
 from src.backend.config import Config
@@ -21,6 +24,7 @@ from src.backend.paths import ProjectPaths, get_project_paths
 
 
 RecordKind = Literal["srim", "post", "case", "worker"]
+_HELD_LOCKS: ContextVar[frozenset[str]] = ContextVar("record_locks", default=frozenset())
 
 
 @dataclass(frozen=True)
@@ -137,9 +141,26 @@ def _record_time(config: Config, supplied: datetime | None) -> datetime:
 
 
 @contextmanager
-def _lock_parent(parent: Path) -> Iterator[None]:
-    """Yield exclusive nonblocking Windows access to parent; create persistent lock file and raise OSError on contention/failure."""
+def _lock_parent(parent: Path, *, timeout_seconds: float = 0.0) -> Iterator[None]:
+    """Yield exclusive access to parent, waiting at most timeout_seconds for contention.
+
+    Create a persistent byte-lock file. Zero timeout fails immediately. Reject
+    invalid timeouts with ValueError and recursive acquisition with OSError.
+    Retry only lock contention, propagate other I/O errors, and release on exit.
+    """
+    if type(timeout_seconds) not in (int, float) or timeout_seconds < 0:
+        raise ValueError("Lock timeout must be finite and nonnegative")
+    try:
+        timeout = float(timeout_seconds)
+    except OverflowError as error:
+        raise ValueError("Lock timeout must be finite and nonnegative") from error
+    if not math.isfinite(timeout):
+        raise ValueError("Lock timeout must be finite and nonnegative")
     lock_path = parent / ".records.lock"
+    identity = os.path.normcase(str(lock_path.absolute()))
+    held = _HELD_LOCKS.get()
+    if identity in held:
+        raise OSError(errno.EDEADLK, "Recursive record lock acquisition")
     if lock_path.is_symlink() or lock_path.is_junction():
         raise OSError(errno.ELOOP, "Lock path is a link", str(lock_path))
     with lock_path.open("a+b") as stream:
@@ -147,12 +168,75 @@ def _lock_parent(parent: Path) -> Iterator[None]:
             stream.write(b"\0")
             stream.flush()
         stream.seek(0)
-        msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                break
+            except OSError as error:
+                remaining = deadline - time.monotonic()
+                if error.errno not in (errno.EACCES, errno.EAGAIN, errno.EDEADLK) or remaining <= 0:
+                    raise
+                time.sleep(min(0.01, remaining))
+        _HELD_LOCKS.set(held | {identity})
         try:
             yield
         finally:
-            stream.seek(0)
-            msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            try:
+                stream.seek(0)
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            finally:
+                _HELD_LOCKS.set(_HELD_LOCKS.get() - {identity})
+
+
+def _coordination_directory(paths: ProjectPaths, name: str) -> Path:
+    """Create and return paths' stable lock directory for worker_N or capture.
+
+    Caller must own the worker-parent lock. Reject unsafe names with ValueError
+    and links or invalid project paths with OSError; retain created directories.
+    """
+    _validate_paths(paths)
+    if not isinstance(name, str) or re.fullmatch(r"worker_[1-9][0-9]*|capture", name) is None:
+        raise ValueError("Invalid coordination name")
+    for directory in (paths.workers / ".locks", paths.workers / ".locks" / name):
+        if directory.is_symlink() or directory.is_junction():
+            raise OSError(errno.ELOOP, "Coordination directory is a link", str(directory))
+        directory.mkdir(exist_ok=True)
+    return directory
+
+
+@contextmanager
+def _lock_worker(paths: ProjectPaths, worker_path: Path) -> Iterator[None]:
+    """Yield paths' existing worker_path lease without holding the parent lock.
+
+    Wait up to 30 seconds for parent coordination, but reject a busy worker
+    immediately with OSError. Validate canonical link-free identity before
+    creating persistent coordination files. Release the lease on every exit.
+    """
+    if not isinstance(worker_path, Path) or worker_path.parent != paths.workers or re.fullmatch(r"worker_[1-9][0-9]*", worker_path.name) is None:
+        raise ValueError("Invalid worker path")
+    with ExitStack() as leases:
+        with _lock_parent(paths.workers, timeout_seconds=30.0):
+            _validate_paths(paths)
+            if worker_path.is_symlink() or worker_path.is_junction():
+                raise OSError(errno.ELOOP, "Worker is a link", str(worker_path))
+            if not worker_path.is_dir():
+                raise FileNotFoundError(str(worker_path))
+            leases.enter_context(_lock_parent(_coordination_directory(paths, worker_path.name)))
+        yield
+
+
+@contextmanager
+def _lock_capture(paths: ProjectPaths) -> Iterator[None]:
+    """Yield paths' GUI-capture lease, waiting up to 30 seconds for coordination.
+
+    Create persistent capture lock directories under a short parent lock, then
+    wait without that lock. Propagate validation, filesystem and timeout errors.
+    """
+    with _lock_parent(paths.workers, timeout_seconds=30.0):
+        directory = _coordination_directory(paths, "capture")
+    with _lock_parent(directory, timeout_seconds=30.0):
+        yield
 
 
 def _write_tombstone(path: Path, data: dict[str, str | int | None]) -> None:
@@ -240,7 +324,7 @@ def _delete_one(paths: ProjectPaths, config: Config, request: DeleteRequest) -> 
     tombstone = None if request.kind == "worker" else parent / ".deleted" / f"{request.name}.json"
     artifacts: list[Path] = []
     try:
-        with _lock_parent(parent):
+        with _lock_parent(parent), (_lock_parent(_coordination_directory(paths, request.name)) if request.kind == "worker" else nullcontext()):
             if tombstone is not None:
                 if tombstone.parent.is_symlink() or tombstone.parent.is_junction():
                     raise OSError(errno.ELOOP, "Deletion storage is a link", str(tombstone.parent))

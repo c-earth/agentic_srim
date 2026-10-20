@@ -191,11 +191,13 @@ Range rows have `energy={value,unit}`, electronic/nuclear stopping strings, and 
         selections.json
         effective-request.json
         resolved.json
-        engine/{SR.IN,VERSION,runtime.json}
+        engine/{SRModule.exe,SR.IN,VERSION,SCOEF03.dat,SNUC03.dat,runtime.json}
         resources/<role>/{source,effective}
+        cab/{native/,defaults.json,baseline.json}  # CAB capture records
         continuation/
       output/
         raw/{stopping.txt,stdout.bin,stderr.bin,execution.json}
+        raw/runtime/              # exact final working-directory copy
         parsed/result.json
     post/
     resources/
@@ -210,7 +212,7 @@ Range rows have `energy={value,unit}`, electronic/nuclear stopping strings, and 
   case/
   worker/worker_N/
     sr/<simulation-id>/{SRModule.exe,VERSION,SR.IN,SCOEF03.dat,SNUC03.dat}
-    sr/.capture-*/
+    sr/<capture-simulation-id>/
       SR.exe
       SR.exe.manifest
       SR.IN
@@ -230,6 +232,8 @@ Lifecycle is `created -> running -> succeeded` or `created/running -> failed`. T
 
 Metadata version two has exactly `schema_version`, `id`, `engine`, `resources`, `status`, `created_at`, `started_at`, `finished_at`, `continuation`, `inputs`, `outputs`, `failure`, `entry_references`, `defaults_generation`. SR continuation is null. Timestamps have explicit offsets; absent start/finish timestamps reflect lifecycle state. Failure is null except failed records, where it is `{message,exit_code}`. Input/output inventory entries are `{path,sha256,size_bytes}`.
 
+Worker execution locks live at worker/.locks/worker_N/.records.lock, separate from removable worker directories. GUI captures use worker/.locks/capture/.records.lock. The root worker/.records.lock coordinates allocation/deletion and lease acquisition. CAB GUI records use the same simulation basename and lifecycle with engine name sr-capture; their diagnostic request/resolution use schema version one, with exact native files under input/cab/native and defaults/baseline JSON snapshots under input/cab. Their parsed result is the captured correction document (compound, correction, process_id, recorded_at). New capture evidence uses kind=simulation and paths below output/raw/runtime; historical kind=worker evidence remains readable.
+
 Resolved version-two documents have exactly `schema_version`, `parameters`, `sources`, `resources`, `cab`, `defaults`, `target_provenance`, `dependencies`. `parameters` is effective numeric input, `sources` identifies executable/version, and each role records `reference`, `base`, `source`, `overrides`, `effective`, `published`. Source/effective manifests point into the saved input tree. `defaults` wraps the pinned generation plus its canonical hash/size. Target provenance retains original/effective record identity, composition conversion masses and mapping. Verification reconstructs these layers without re-resolving defaults or running calculations.
 
 ## Resource and calculated-entry evidence
@@ -242,8 +246,8 @@ Calculated descriptor payloads have `schema_version=1`, `kind`, `origin`, `basel
 
 Stable element entry IDs are `z001` through `z092`. Bond IDs combine ordered endpoints and `s`/`d`/`t`, such as `z001-z006-s`. A calculated entry has `schema_version=1`, `kind`, `entry_id`, `value`, `units`, `dependency`, `simulations`, `captures`, `calculation`. Values are nonnegative strings (strictly positive for Bragg); units are always `eV/(1E15 atoms/cm2)`.
 
-Each simulation evidence object has `simulation_id`, `result`, `raw`. Capture evidence has `manifest`, `correction`, `inputs`, `stdout`, `stderr`. Individual file evidence has `kind` (`simulation`/`worker`), `id` (owner), `path` (relative to owner), `sha256`, `size_bytes`. Capture manifests retain before/after input hashes, correction, owned process ID, timestamps, cleanup and error state. H core is the explicit zero convention without a simulated/captured estimate.
+Each simulation evidence object has `simulation_id`, `result`, `raw`. Capture evidence has `manifest`, `correction`, `inputs`, `stdout`, `stderr`. Individual file evidence has `kind` (`simulation` for new records; `worker` remains a legacy format), `id` (owner), `path` (relative to owner), `sha256`, `size_bytes`. Capture manifests retain before/after input hashes, correction, owned process ID, timestamps, cleanup and error state. H core is the explicit zero convention without a simulated/captured estimate.
 
 Stored recovered-default source snapshots contain a pinned available-entry view (`schema_version`, `dataset`, `entries`, `values`); their hash is not the descriptor payload hash. Local recovered-default effective snapshots are overlays (`schema_version`, `dataset`, `overrides`). Frozen user copies materialize available values and retain copied references. Each used calculation pins its exact entry evidence, so later cache growth does not redefine the run.
 
-Generated defaults, descriptors, strength payloads and entries use canonical UTF-8 JSON with two-space indentation, sorted keys and final LF. Native source and engine output bytes retain their own formats. Some diagnostic/runtime JSON writers do not sort keys; integrity always hashes their exact saved bytes rather than assuming universal canonicalization. Preserve linked dependency and capture files with their resources; there is no reference-aware deletion or garbage collection.
+Generated defaults, descriptors, strength payloads and entries use canonical UTF-8 JSON with two-space indentation, sorted keys and final LF. Native source and engine output bytes retain their own formats. Some diagnostic/runtime JSON writers do not sort keys; integrity always hashes their exact saved bytes rather than assuming universal canonicalization. Preserve linked permanent dependency/capture records with their resources. Batch cleanup verifies runtime copies before clearing working files, keeps empty workers for reuse and retains legacy worker references; there is no general garbage collection for permanent records/resources.

@@ -10,7 +10,7 @@ This reference describes the current non-TRIM code. Import from `src.backend.<mo
 
 `paths` is a `ProjectPaths` obtained from `get_project_paths` and initialized by `create_base_directories`. `config` is a validated `Config`. `worker` is an allocated `CreatedDirectory(kind="worker", ...)`; `created` is an empty allocated SRIM directory. Constructing a frozen dataclass stores fields; API entry points perform validation. Frozen fields do not make nested JSON maps immutable.
 
-Filesystem APIs can raise `OSError` subclasses for missing files, links, access failures or nonblocking lock contention. Most domain validation raises `ValueError`; calculation failures may raise `RuntimeError`. No API automatically retries. Successful partial publications are retained; exceptions commonly add notes identifying evidence/staging paths. Resource verification can create persistent lock files even when no application data is written.
+Filesystem APIs can raise `OSError` subclasses for missing files, links, access failures or nonblocking lock contention. Most domain validation raises `ValueError`; calculation failures may raise `RuntimeError`. Native calculations are not automatically retried; shared resource/metadata lock acquisition uses bounded waiting. Successful partial publications are retained; exceptions commonly add notes identifying evidence/staging paths. Resource verification can create persistent lock files even when no application data is written.
 
 ## Configuration and paths
 
@@ -54,7 +54,7 @@ delete_directories(paths: ProjectPaths, config: Config,
 
 `RecordKind = Literal["srim", "post", "case", "worker"]`. Workers reject timestamps and have `timestamp=None`; other records accept an optional aware timestamp converted using configuration. Each successful creation returns its concrete path/suffix. Batch inputs are validated before mutation; an operational failure raises `BatchOperationError` with the ordered successes, zero-based failure/unattempted indices and partial paths, preserving its cause. Empty batches return an empty report.
 
-Deletion recursively removes the named record. Non-worker deletion writes durable pending/deleted tombstones and reserves the deleted identity; retry can finish pending deletion. Workers have no tombstone and their suffixes can be reused. Deletion does not check resource/CAB references. Parent-directory locks serialize allocations/deletions; contention raises. See [retention](../guides/resources-and-cab.md#evidence-and-retention) before deleting records or workers.
+Deletion recursively removes the named record. Non-worker deletion writes durable pending/deleted tombstones and reserves the deleted identity; retry can finish pending deletion. Workers have no tombstone and their suffixes can be reused. Deletion does not check resource/CAB references. Parent-directory locks serialize allocations/deletions; contention raises. Worker deletion also requires its nonblocking execution lease and rejects active use. Resource and simulation metadata operations wait up to 30 seconds for shared locks; same-thread recursive acquisition fails immediately. See [retention](../guides/resources-and-cab.md#evidence-and-retention) before deleting records or workers.
 
 ## Immutable generic resources
 
@@ -203,9 +203,40 @@ run_sr_simulation(paths: ProjectPaths, config: Config, simulation_id: str, runti
 - `verify_sr_resolution` reconstructs the effective request from preserved sources/patches, verifies references/evidence and recalculates arithmetic; it returns the numeric engine request without process execution or rereading mutable aliases/source paths.
 - `prepare_sr_simulation` validates empty main/worker allocations, resolves dependencies, stages exact five-file native inputs and initializes metadata; it returns the runtime `Path` with status `created`. It never launches the main SRModule. Public preparation requires version-two intent; legacy support is at numeric parsing/rendering and low-level record/runtime boundaries.
 - `verify_sr_runtime` requires a created SR record, verifies sealed inputs, runtime location/exact inventory, hashes, coefficients and resolution, then returns the engine request. It does not execute; the caller must separately serialize execution.
-- `run_sr_simulation` owns the project-wide worker lock through preflight, shell-free execution, diagnostics, raw preservation, parsing and terminal metadata. `config.hide_sr_window` must be boolean: true passes Windows `STARTUPINFO` with `STARTF_USESHOWWINDOW`/`SW_HIDE`, false passes no startup override and permits normal display. This applies to Bragg dependencies through the shared launcher; the independent TRIM flag and CAB capture GUI are not used here. Invalid SR flags raise `ValueError` before filesystem mutation/launch. Positive finite timeouts exclude bool. It returns terminal metadata, including `failed` for expected preflight/launch/timeout/nonzero/missing-output/parse failures. Caller/state/collision errors and contention can raise before ownership; filesystem/publication errors propagate after best-effort failure finalization. `KeyboardInterrupt` is re-raised after cleanup/finalization. No retry, overwrite or cleanup is performed.
+- `run_sr_simulation` owns its worker-specific execution lease through preflight, shell-free execution, diagnostics, raw preservation, parsing and terminal metadata. `config.hide_sr_window` must be boolean: true passes Windows `STARTUPINFO` with `STARTF_USESHOWWINDOW`/`SW_HIDE`, false passes no startup override and permits normal display. This applies to Bragg dependencies through the shared launcher; the independent TRIM flag and CAB capture GUI are not used here. Invalid SR flags raise `ValueError` before filesystem mutation/launch. Positive finite timeouts exclude bool. It returns terminal metadata, including `failed` for expected preflight/launch/timeout/nonzero/missing-output/parse failures. Caller/state/collision errors and contention can raise before ownership; filesystem/publication errors propagate after best-effort failure finalization. `KeyboardInterrupt` is re-raised after cleanup/finalization. The exact final runtime is preserved under output/raw/runtime before terminal metadata publication. No retry, overwrite or worker deletion is performed by this single-run API.
 
 Preparation progress currently omits some cached core/bond events and can end below its total; treat it as advisory. Source validation and target construction precede explicit publication, but a later engine-request validation failure can still leave already published variants. There is no all-or-nothing transaction across preparation.
+
+## Prepared batches and permanent runtime storage
+
+Sources: [queue.py](../../src/srim/queue.py), [storage.py](../../src/srim/storage.py), [capture_records.py](../../src/srim/capture_records.py).
+
+```python
+PreparedSRTask(simulation_id: str, runtime: Path)
+SRTaskResult(task: PreparedSRTask, metadata: JSONObject | None,
+             error: Exception | None, elapsed_seconds: float)
+RetainedWorker(worker: Path, reason: str, error: Exception | None)
+BatchCleanupReport(cleaned_workers: tuple[Path, ...],
+                    retained_workers: tuple[RetainedWorker, ...])
+SRBatchResult(task_results: tuple[SRTaskResult, ...],
+               cleanup: BatchCleanupReport, elapsed_seconds: float)
+run_sr_batch(paths: ProjectPaths, config: Config, tasks: Sequence[PreparedSRTask], *,
+               max_workers: int, timeout_seconds: float = 60.0) -> SRBatchResult
+preserve_sr_runtime(paths: ProjectPaths, simulation_id: str, runtime: Path) -> None
+verify_preserved_runtime(paths: ProjectPaths, simulation_id: str, runtime: Path) -> None
+cleanup_sr_batch(paths: ProjectPaths, worker_paths: Sequence[Path]) -> BatchCleanupReport
+initialize_capture_simulation(paths: ProjectPaths, config: Config,
+                                created: CreatedDirectory, runtime: Path,
+                                defaults: JSONObject, request: JSONObject) -> JSONObject
+finish_capture_simulation(paths: ProjectPaths, config: Config, simulation_id: str,
+                            runtime: Path, failure: JSONObject | None = None) -> JSONObject
+```
+
+The dataclasses are frozen containers; construction performs no validation or I/O. Batch validation checks positive integer concurrency (excluding bool), a positive finite native timeout, unique identities, configuration, verified created runtimes and empty output trees before launching anything. An empty sequence returns an empty result. A task keeps its prepared worker. Same-worker tasks preserve submission order, independent workers can overlap, and results return in input order. Ordinary failed metadata and raised Exception instances are retained separately; BaseException stops dispatch, waits for active calls and re-raises without batch cleanup. Queue waiting is excluded from per-task elapsed time; total elapsed time includes validation and cleanup. There is no persistent queue, automatic restart or cross-caller queue merging.
+
+Preservation copies the exact link-free runtime into synchronized staging under output/raw and verifies bytes before publishing output/raw/runtime. An identical existing archive is reusable; a different archive is never overwritten. Verification requires terminal metadata, unchanged permanent input/output inventories and a matching runtime copy. Failures retain source/staging paths. Batch cleanup runs after all task calls finish and checks only submitted workers. Unfinished/unpreserved records, unrelated or TRIM files, unsafe paths, active use and legacy CAB worker references retain that worker with a reason and optional exception. Each eligible worker has its verified runtime folders deleted under its lease and parent coordination; empty worker/sr/trim directories remain for reuse, along with permanent records/resources and stable coordination directories. Other workers can still be cleaned after one retention/error.
+
+Capture initialization validates the eight native files and diagnostic request, then records exact native/default/baseline inputs through the ordinary lifecycle with engine name sr-capture. Capture completion archives the final runtime, preserves an available valid correction JSON as parsed/result.json and finalizes metadata. Successful completion requires a successful GUI cleanup manifest; preservation/publication failures propagate with working evidence retained. New CAB references point to these permanent simulation-owned files. Historical worker-owned references remain supported without automatic migration.
 
 ## Bragg and default recovery
 

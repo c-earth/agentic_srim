@@ -17,7 +17,7 @@ from unittest.mock import patch
 
 from src.backend.config import Config
 from src.backend.paths import create_base_directories, get_project_paths
-from src.backend.records import CreateRequest, _lock_parent, create_directories
+from src.backend.records import CreateRequest, _lock_parent, _lock_worker, create_directories
 from src.backend.resources import register_resource, verify_resource
 from src.srim.inputs import render_sr_input
 from src.srim.execution import run_sr_simulation, verify_sr_runtime
@@ -126,7 +126,7 @@ class TestSRRuntime(unittest.TestCase):
             self.assertIsNone(startupinfo)
         self.assertEqual(read_simulation(self.paths, cwd.name)["status"], "running")
         with self.assertRaises(OSError):
-            with _lock_parent(self.paths.workers):
+            with _lock_worker(self.paths, cwd.parent.parent):
                 pass
         stdout.write(b"engine stdout\x00\xff\r\n")
         stderr.write(b"engine stderr\r\n")
@@ -156,7 +156,7 @@ class TestSRRuntime(unittest.TestCase):
         self.assertEqual((runtime / "SNUC03.dat").read_bytes(), original_bytes[source_paths[3]])
         record = self.created.path
         engine_input = record / "input" / "engine"
-        self.assertEqual({path.name for path in engine_input.iterdir()}, {"SR.IN", "VERSION", "runtime.json"})
+        self.assertEqual({path.name for path in engine_input.iterdir()}, {"SR.IN", "VERSION", "runtime.json", "SRModule.exe", "SCOEF03.dat", "SNUC03.dat"})
         manifest_bytes = (engine_input / "runtime.json").read_bytes()
         manifest = json.loads(manifest_bytes)
         expected_manifest = {
@@ -175,7 +175,7 @@ class TestSRRuntime(unittest.TestCase):
         self.assertEqual(metadata["engine"], {"name": "sr", "version": "SRIM-2012.01", "executable": {"name": "SRModule.exe", "sha256": hashlib.sha256(original_bytes[source_paths[0]]).hexdigest()}})
         self.assertNotIn("worker", metadata)
         self.assertEqual(metadata["resources"], [asdict(self.electronic_reference), asdict(self.nuclear_reference)])
-        self.assertEqual([entry["path"] for entry in metadata["inputs"]], ["input/engine/SR.IN", "input/engine/VERSION", "input/engine/runtime.json", "input/request.json", "input/resolved.json"])
+        self.assertEqual([entry["path"] for entry in metadata["inputs"]], ["input/engine/SCOEF03.dat", "input/engine/SNUC03.dat", "input/engine/SR.IN", "input/engine/SRModule.exe", "input/engine/VERSION", "input/engine/runtime.json", "input/request.json", "input/resolved.json"])
         resolved = json.loads((record / "input" / "resolved.json").read_bytes())
         self.assertEqual(resolved["parameters"], original_request["parameters"])
         self.assertEqual(resolved["resources"], [self.electronic, self.nuclear])

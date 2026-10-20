@@ -319,9 +319,17 @@ def load_cab_entry(paths: ProjectPaths, reference: CABEntryReference) -> JSONObj
             raise ValueError("Bragg evidence differs from sealed simulation outputs")
     for capture in document["captures"]:
         identities = {(item["kind"], item["id"]) for item in [capture[field] for field in ("manifest", "correction", "stdout", "stderr")] + capture["inputs"]}
-        if len(identities) != 1 or next(iter(identities))[0] != "worker":
-            raise ValueError("Capture files must belong to one worker")
-        manifest = _read_json(paths.workers / capture["manifest"]["id"] / capture["manifest"]["path"])
+        if len(identities) != 1:
+            raise ValueError("Capture files must belong to one owner")
+        owner_kind, owner_id = next(iter(identities))
+        owner_root = paths.workers if owner_kind == "worker" else paths.simulation_memory
+        if owner_kind == "simulation":
+            from src.srim.metadata import read_simulation, _inventory
+            owner_metadata = read_simulation(paths, owner_id)
+            owner_record = owner_root / owner_id
+            if owner_metadata["status"] != "succeeded" or owner_metadata["engine"]["name"] != "sr-capture" or _inventory(owner_record / "input", owner_record) != owner_metadata["inputs"] or _inventory(owner_record / "output", owner_record) != owner_metadata["outputs"]:
+                raise ValueError("Capture record is not sealed successful evidence")
+        manifest = _read_json(owner_root / capture["manifest"]["id"] / capture["manifest"]["path"])
         if set(manifest) != {"schema_version", "status", "inputs_before", "inputs_after", "correction", "process_id", "started_at", "finished_at", "cleanup", "error"} or manifest["status"] != "succeeded" or manifest["inputs_before"] != manifest["inputs_after"] or manifest["error"] is not None or manifest["cleanup"] is not True:
             raise ValueError("Capture evidence is incomplete or failed")
         if type(manifest["schema_version"]) is not int or manifest["schema_version"] != 1 or manifest["inputs_before"] != capture["inputs"] or type(manifest["process_id"]) is not int or manifest["process_id"] < 1:
@@ -333,7 +341,7 @@ def load_cab_entry(paths: ProjectPaths, reference: CABEntryReference) -> JSONObj
         runtime = PurePosixPath(capture["manifest"]["path"]).parent
         if any(not PurePosixPath(item["path"]).is_relative_to(runtime) for item in [capture[field] for field in ("correction", "stdout", "stderr")] + capture["inputs"]):
             raise ValueError("Capture evidence must belong to the same isolated runtime")
-        raw = _read_json(paths.workers / capture["correction"]["id"] / capture["correction"]["path"])
+        raw = _read_json(owner_root / capture["correction"]["id"] / capture["correction"]["path"])
         if set(raw) != {"compound", "correction", "process_id", "recorded_at"} or raw["compound"] != "Custom" or raw["correction"] != manifest["correction"] or raw["process_id"] != manifest["process_id"]:
             raise ValueError("Capture reading does not match manifest")
         capture_index = document["captures"].index(capture)
@@ -443,9 +451,17 @@ def publish_cab_entry(paths: ProjectPaths, dataset: ResourceReference, entry: JS
             raise ValueError("Bragg evidence differs from sealed simulation outputs")
     for capture in entry["captures"]:
         identities = {(item["kind"], item["id"]) for item in [capture[field] for field in ("manifest", "correction", "stdout", "stderr")] + capture["inputs"]}
-        if len(identities) != 1 or next(iter(identities))[0] != "worker":
-            raise ValueError("Capture files must belong to one worker")
-        manifest = _read_json(paths.workers / capture["manifest"]["id"] / capture["manifest"]["path"])
+        if len(identities) != 1:
+            raise ValueError("Capture files must belong to one owner")
+        owner_kind, owner_id = next(iter(identities))
+        owner_root = paths.workers if owner_kind == "worker" else paths.simulation_memory
+        if owner_kind == "simulation":
+            from src.srim.metadata import read_simulation, _inventory
+            owner_metadata = read_simulation(paths, owner_id)
+            owner_record = owner_root / owner_id
+            if owner_metadata["status"] != "succeeded" or owner_metadata["engine"]["name"] != "sr-capture" or _inventory(owner_record / "input", owner_record) != owner_metadata["inputs"] or _inventory(owner_record / "output", owner_record) != owner_metadata["outputs"]:
+                raise ValueError("Capture record is not sealed successful evidence")
+        manifest = _read_json(owner_root / capture["manifest"]["id"] / capture["manifest"]["path"])
         if set(manifest) != {"schema_version", "status", "inputs_before", "inputs_after", "correction", "process_id", "started_at", "finished_at", "cleanup", "error"} or manifest["status"] != "succeeded" or manifest["inputs_before"] != manifest["inputs_after"] or manifest["error"] is not None or manifest["cleanup"] is not True:
             raise ValueError("Capture evidence is incomplete or failed")
         if type(manifest["schema_version"]) is not int or manifest["schema_version"] != 1 or manifest["inputs_before"] != capture["inputs"] or type(manifest["process_id"]) is not int or manifest["process_id"] < 1:
@@ -457,7 +473,7 @@ def publish_cab_entry(paths: ProjectPaths, dataset: ResourceReference, entry: JS
         runtime = PurePosixPath(capture["manifest"]["path"]).parent
         if any(not PurePosixPath(item["path"]).is_relative_to(runtime) for item in [capture[field] for field in ("correction", "stdout", "stderr")] + capture["inputs"]):
             raise ValueError("Capture evidence must belong to the same isolated runtime")
-        raw = _read_json(paths.workers / capture["correction"]["id"] / capture["correction"]["path"])
+        raw = _read_json(owner_root / capture["correction"]["id"] / capture["correction"]["path"])
         if set(raw) != {"compound", "correction", "process_id", "recorded_at"} or raw["compound"] != "Custom" or raw["correction"] != manifest["correction"] or raw["process_id"] != manifest["process_id"]:
             raise ValueError("Capture reading does not match manifest")
         capture_index = entry["captures"].index(capture)

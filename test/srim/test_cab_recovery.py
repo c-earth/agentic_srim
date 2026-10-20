@@ -6,6 +6,7 @@ from copy import deepcopy
 import ctypes
 from ctypes import wintypes
 from dataclasses import replace
+from datetime import datetime, timezone
 from decimal import Decimal
 import json
 from pathlib import Path
@@ -15,15 +16,73 @@ import unittest
 from unittest.mock import MagicMock, Mock, patch
 
 from _fixtures import fake_bragg_run, make_test_project
+from src.backend.records import CreateRequest, create_directories
 from src.backend.resources import _hash_file, _write_json
 from src.srim.cab_cache import load_cab_entry
 from src.srim.cab_constants import SR_BONDS
 from src.srim.cab_recovery import _capture_correction, _estimate_bond_count, _prepare_capture_runtime, _recover_core_value, _render_mock_compound, populate_default_cab, resolve_default_bond, resolve_default_core
 from src.srim.defaults import read_sr_defaults
+from src.srim.storage import cleanup_sr_batch
+from src.srim.metadata import read_simulation
 
 
 class TestCABRecovery(unittest.TestCase):
     """Use inherited unittest construction and isolated synthetic capture evidence."""
+
+    def _fake_capture(self: TestCABRecovery, runtime: Path, compound_name: str, output_path: Path, *, timeout_seconds: float) -> str:
+        """Write runtime's controlled correction at output_path for self's storage test.
+
+        Validate compound_name/timeout_seconds and derive the reading from the
+        diagnostic bond count. Return its decimal string, preserving native
+        inputs and using a deterministic owned process identity.
+        """
+        self.assertEqual(compound_name, "Custom")
+        self.assertGreater(timeout_seconds, 0)
+        lines = (runtime / "Data/Compound.dat").read_text(encoding="cp1252").splitlines()
+        position = lines.index("*Custom")
+        count = sum(int(value) for value in lines[position + 2].split())
+        z = int(lines[position + 1].split(",")[3].strip())
+        correction = str(Decimal("0.4") * count) if z == 1 else "0.8"
+        _write_json(output_path, {"compound": compound_name, "correction": correction, "process_id": 123, "recorded_at": datetime.now(timezone.utc).isoformat()})
+        return correction
+
+    def test_permanent_capture_evidence(self: TestCABRecovery) -> None:
+        """Reload self's new bond entry after clearing its worker runtimes, then reject corrupted permanent evidence; return None."""
+        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery._capture_correction", side_effect=self._fake_capture):
+            result = resolve_default_bond(self.paths, self.config, self.worker, self.defaults, SR_BONDS[0])
+        entry = load_cab_entry(self.paths, result.reference)
+        self.assertTrue(entry["captures"])
+        for capture in entry["captures"]:
+            self.assertEqual(capture["manifest"]["kind"], "simulation")
+            self.assertEqual(read_simulation(self.paths, capture["manifest"]["id"])["engine"]["name"], "sr-capture")
+        report = cleanup_sr_batch(self.paths, [self.worker.path])
+        self.assertEqual(report.cleaned_workers, (self.worker.path,))
+        self.assertFalse(report.retained_workers)
+        self.assertEqual(load_cab_entry(self.paths, result.reference), entry)
+        evidence = entry["captures"][0]["correction"]
+        (self.paths.simulation_memory / evidence["id"] / evidence["path"]).write_bytes(b"changed")
+        with self.assertRaises(ValueError):
+            load_cab_entry(self.paths, result.reference)
+
+    def test_failed_capture_record(self: TestCABRecovery) -> None:
+        """Preserve self's failed GUI capture as a terminal record eligible for verified cleanup; return None."""
+        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery._capture_correction", side_effect=RuntimeError("controlled GUI failure")):
+            with self.assertRaises(RuntimeError):
+                resolve_default_bond(self.paths, self.config, self.worker, self.defaults, SR_BONDS[0])
+        captures = [read_simulation(self.paths, runtime.name) for runtime in (self.worker.path / "sr").iterdir() if read_simulation(self.paths, runtime.name)["engine"]["name"] == "sr-capture"]
+        self.assertEqual(len(captures), 1)
+        self.assertEqual(captures[0]["status"], "failed")
+        self.assertFalse(cleanup_sr_batch(self.paths, [self.worker.path]).retained_workers)
+
+    def test_permanent_core_evidence(self: TestCABRecovery) -> None:
+        """Reload self's carbon core and its 18 bond dependencies after worker cleanup; return None."""
+        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery._capture_correction", side_effect=self._fake_capture):
+            result = resolve_default_core(self.paths, self.config, self.worker, self.defaults, 6)
+        entry = load_cab_entry(self.paths, result.reference)
+        self.assertEqual(len(entry["captures"]), 18)
+        self.assertEqual(len(entry["dependency"]["entries"]), 19)
+        self.assertEqual(cleanup_sr_batch(self.paths, [self.worker.path]).cleaned_workers, (self.worker.path,))
+        self.assertEqual(load_cab_entry(self.paths, result.reference), entry)
 
     def setUp(self: TestCABRecovery) -> None:
         """Create self's project and controlled native capture fixtures where needed; return None and register cleanup."""
@@ -38,7 +97,7 @@ class TestCABRecovery(unittest.TestCase):
             if self._testMethodName == "test_core_estimates":
                 cases.extend((6, bond, 1) for bond in bonds)
             for z, bond, count in cases:
-                runtime = _prepare_capture_runtime(self.paths, self.config, self.worker, self.defaults, _render_mock_compound(z, bond, count))
+                runtime = _prepare_capture_runtime(self.paths, self.config, create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0], self.worker, self.defaults, _render_mock_compound(z, bond, count))
                 correction = str(Decimal("0.4") * count) if z == 1 else "0.8"
                 if self._testMethodName == "test_zero_initial_capture":
                     correction = "0"
@@ -109,7 +168,7 @@ class TestCABRecovery(unittest.TestCase):
 
     def test_capture_ownership_cleanup(self: TestCABRecovery) -> None:
         """Mock self's owned Windows processes to verify zero capture, cleanup and interruption; return None."""
-        runtime = _prepare_capture_runtime(self.paths, self.config, self.worker, self.defaults, _render_mock_compound(1, SR_BONDS[0], 1))
+        runtime = _prepare_capture_runtime(self.paths, self.config, create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0], self.worker, self.defaults, _render_mock_compound(1, SR_BONDS[0], 1))
         process = Mock()
         process.pid = 123
         process.poll.side_effect = [None, 0]

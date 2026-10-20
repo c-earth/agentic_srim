@@ -277,7 +277,7 @@ def register_resource(paths: ProjectPaths, config: Config, category: str, name: 
     artifacts: list[Path] = []
     source_identity = _hash_file(source) if isinstance(source, Path) else (hashlib.sha256(source).hexdigest(), len(source))
     try:
-        with _lock_parent(paths.resources):
+        with _lock_parent(paths.resources, timeout_seconds=30.0):
             directory = _resource_directory(paths, category, name)
             reused: ResourceReference | None = None
             if version is None:
@@ -350,7 +350,7 @@ def resolve_resource(paths: ProjectPaths, category: str, name: str, version: str
     """Resolve paths/category/name/version under the resource lock; return reference without hashing payload, raising ValueError for unknown versions or invalid data and OSError for file failures."""
     directory = _resource_directory(paths, category, name)
     _validate_identifier(version)
-    with _lock_parent(paths.resources):
+    with _lock_parent(paths.resources, timeout_seconds=30.0):
         destination = directory / version
         if destination.is_symlink() or destination.is_junction():
             raise OSError(errno.ELOOP, "Version directory is a link", str(destination))
@@ -369,7 +369,7 @@ def verify_resource(paths: ProjectPaths, reference: ResourceReference) -> Path:
     resolved = resolve_resource(paths, reference.category, reference.name, reference.version)
     if resolved != reference:
         raise ValueError("Reference differs from registered version")
-    with _lock_parent(paths.resources):
+    with _lock_parent(paths.resources, timeout_seconds=30.0):
         directory = _resource_directory(paths, reference.category, reference.name)
         payload = directory / reference.version / "payload"
         if _hash_file(payload) != (reference.sha256, reference.size_bytes):

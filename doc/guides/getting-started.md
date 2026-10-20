@@ -128,10 +128,39 @@ Records are saved under `memory/srim/srim_YYYYMMDD_HHMMSS_N`. Important files ar
 - `input/engine/{SR.IN,VERSION,runtime.json}`: generated input, logical version and five-file runtime hashes.
 - `output/raw/{stopping.txt,stdout.bin,stderr.bin,execution.json}`: available exact output and diagnostics.
 - `output/parsed/result.json`: parsed successful output with numeric spelling preserved.
+- `output/raw/runtime/`: verified copy of the final working-directory contents, including native inputs and available generated files.
 - `metadata.json`: lifecycle, input/output inventories and failure details.
 
 Some raw files are absent if preflight or launch failed. Expected execution failures return failed metadata; invalid caller state, contention and filesystem/publication failures may raise exceptions. Interruptions propagate after best-effort finalization. Inspect exception notes for retained records, versions and capture paths. Failed preparation can leave dependencies and an empty/partial main allocation without main metadata; there is no automatic rollback, retry or cleanup.
 
-Worker execution is serialized across the project by a nonblocking lock at `worker/`, even across different workers. Lock contention raises; callers decide whether and when to retry. Separate timeout settings apply to each GUI capture (30 seconds), dependency SR run (60 seconds) and main SR run (60 seconds). GUI cleanup has additional bounded waits, so the capture timeout is not a total wall-clock deadline.
+Worker execution uses a separate nonblocking lease for each worker. Different workers can execute concurrently; direct competing calls on the same worker raise. Metadata/resource locks wait up to 30 seconds for brief shared operations. CAB GUI captures retain a separate project-wide capture lock. Separate timeout settings apply to each GUI capture (30 seconds), dependency SR run (60 seconds) and main SR run (60 seconds). GUI cleanup has additional bounded waits, so the capture timeout is not a total wall-clock deadline.
+
+## Queue prepared simulations
+
+The batch API accepts existing prepared simulations. Allocation, resource selection, dependency recovery and preparation happen before queuing. A simulation keeps the worker where it was prepared; prepare across four different workers to permit four concurrent native runs. Windows schedules the resulting processes without CPU affinity settings.
+
+```python
+"""Execute previously prepared simulations and inspect task and cleanup outcomes."""
+
+from src.srim.queue import PreparedSRTask, run_sr_batch
+
+tasks = [PreparedSRTask(simulation_id, runtime) for simulation_id, runtime in prepared_runs]
+batch = run_sr_batch(paths, config, tasks, max_workers=4)
+for item in batch.task_results:
+    if item.error is not None:
+        print(item.task.simulation_id, item.error)
+    else:
+        print(item.task.simulation_id, item.metadata["status"])
+for retained in batch.cleanup.retained_workers:
+    print("Worker retained:", retained.worker, retained.reason)
+```
+
+`prepared_runs` above is your sequence of `(simulation_id, runtime)` pairs returned by your preparation workflow; the example does not allocate or rerun the earlier completed walkthrough simulation. The complete batch is validated before launch. Tasks on one worker preserve submission order; the earliest task on an available worker starts next. Results return in input order, and individual failures do not stop other tasks. `timeout_seconds=60.0` bounds each native call, excluding queue waiting; `batch.elapsed_seconds` also includes validation and cleanup.
+
+Each run preserves its permanent record immediately. Runtime folders stay until all task calls finish. Then cleanup checks each submitted worker and clears its runtime folders only when every working runtime has matching terminal permanent evidence and no unrelated/TRIM files or legacy CAB dependencies require retention. Failed runs are eligible after verified preservation. A preparation failure or failed archive retains working files. Empty worker, sr and trim directories remain for reuse. Ordinary direct `run_sr_simulation` calls preserve evidence but do not clean runtimes; `cleanup_sr_batch` is available for explicit cleanup after other operations.
+
+The queue lives only in the calling process. Interruption stops new dispatch, cancels work not started, waits for active bounded calls and retains workers before re-raising. Pending work does not automatically resume after a restart. Separate batch callers are not merged into one queue; a worker busy in another caller is reported as a task error.
+
+**Worker scaling: RETEST REQUIRED.** The existing comparison of 16 short SRModule calculations at 1, 2, 4 and 8 workers is preliminary. Performance conclusions are deferred until the same worker-count comparison can be repeated with a representative TRIM workload after TRIM execution is implemented.
 
 The existing preparation progress callback is advisory and can omit cached core/bond events or finish below its reported total. The dedicated bulk APIs report each selected entry. See the [review findings](../reviews/non-trim-review.md) for unresolved behavior discrepancies.

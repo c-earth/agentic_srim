@@ -229,7 +229,7 @@ def _validate_document(document: JSONObject, document_type: str) -> None:
                 raise ValueError("Invalid transformation provenance")
             _validate_document(transformation["original"], "reference")
     elif document_type == "engine":
-        if set(document) != {"name", "version", "executable"} or document["name"] not in ("sr", "trim") or not isinstance(document["version"], str) or not document["version"].strip():
+        if set(document) != {"name", "version", "executable"} or document["name"] not in ("sr", "trim", "sr-capture") or not isinstance(document["version"], str) or not document["version"].strip():
             raise ValueError("Invalid engine identity")
         executable = document["executable"]
         if not isinstance(executable, dict) or set(executable) != {"name", "sha256"} or not isinstance(executable["name"], str) or not executable["name"] or executable["name"] in (".", "..") or any(ord(character) < 32 or character in '<>:"/\\|?*' for character in executable["name"]) or executable["name"].endswith((".", " ")) or os.path.isreserved(executable["name"]) or not isinstance(executable["sha256"], str) or re.fullmatch(r"[a-f0-9]{64}", executable["sha256"]) is None:
@@ -601,7 +601,7 @@ def initialize_simulation(paths: ProjectPaths, created: CreatedDirectory, engine
     _validate_document(metadata, "metadata")
     completed: list[Path] = []
     try:
-        with _lock_parent(paths.simulation_memory):
+        with _lock_parent(paths.simulation_memory, timeout_seconds=30.0):
             _simulation_path(paths, expected)
             if any(record.iterdir()):
                 raise ValueError("Simulation initialization requires an empty directory")
@@ -638,7 +638,7 @@ def initialize_simulation(paths: ProjectPaths, created: CreatedDirectory, engine
 def read_simulation(paths: ProjectPaths, simulation_id: str) -> JSONObject:
     """Read paths' simulation_id without data writes; return validated independent metadata or raise ValueError/OSError, requiring no installed historical resources."""
     record = _simulation_path(paths, simulation_id)
-    with _lock_parent(paths.simulation_memory):
+    with _lock_parent(paths.simulation_memory, timeout_seconds=30.0):
         metadata = _read_json(record / "metadata.json")
         _validate_document(metadata, "metadata")
         if metadata["id"] != simulation_id:
@@ -649,7 +649,7 @@ def read_simulation(paths: ProjectPaths, simulation_id: str) -> JSONObject:
 def start_simulation(paths: ProjectPaths, config: Config, simulation_id: str) -> JSONObject:
     """Start paths' created simulation_id using config time; verify resources/inputs, seal manifests, and return updated metadata or raise ValueError/OSError."""
     record = _simulation_path(paths, simulation_id)
-    with _lock_parent(paths.simulation_memory):
+    with _lock_parent(paths.simulation_memory, timeout_seconds=30.0):
         metadata = _read_json(record / "metadata.json")
         _validate_document(metadata, "metadata")
         if metadata["id"] != simulation_id or metadata["status"] != "created":
@@ -693,7 +693,7 @@ def finish_simulation(paths: ProjectPaths, config: Config, simulation_id: str, f
     if failure is not None:
         _validate_document(failure, "failure")
     record = _simulation_path(paths, simulation_id)
-    with _lock_parent(paths.simulation_memory):
+    with _lock_parent(paths.simulation_memory, timeout_seconds=30.0):
         metadata = _read_json(record / "metadata.json")
         _validate_document(metadata, "metadata")
         if metadata["id"] != simulation_id or metadata["status"] not in ("created", "running") or (failure is None and metadata["status"] != "running"):

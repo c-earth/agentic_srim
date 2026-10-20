@@ -10,11 +10,12 @@ import subprocess
 
 from src.backend.config import Config
 from src.backend.paths import ProjectPaths
-from src.backend.records import _lock_parent, _record_time
+from src.backend.records import _lock_worker, _record_time
 from src.backend.resources import ResourceReference, verify_resource
 from src.srim.inputs import render_sr_input
 from src.srim.metadata import JSONObject, _collect_resource_references, _inventory, _read_json, _simulation_path, _validate_document, _write_input_file, _write_json, finish_simulation, read_simulation, start_simulation
 from src.srim.outputs import parse_sr_output
+from src.srim.storage import preserve_sr_runtime
 from src.srim.runtime import _make_runtime_manifest, _read_regular_bytes, _read_selected_resource
 
 
@@ -152,7 +153,7 @@ def run_sr_simulation(
     excluding bool. Require matching created SR identity and empty output trees.
     config.hide_sr_window must be boolean and selects hidden startup or the
     executable's normal display behavior. The independent TRIM setting is unused.
-    Hold the worker-parent lock through verification, shell-free execution,
+    Hold the worker-specific execution lease through verification, shell-free execution,
     exact binary diagnostics/output preservation, parsing, and terminal metadata.
     subprocess.run kills and waits for the child on timeout or interruption.
 
@@ -161,7 +162,8 @@ def run_sr_simulation(
     Invalid caller/state/collision checks and worker contention raise before
     ownership. Propagate filesystem/publication errors after best-effort failed
     finalization, preserving evidence and exception notes. Interruptions are
-    re-raised after the same finalization attempt. Never retry or clean up a run.
+    re-raised after the same finalization attempt. Preserve the exact runtime
+    before terminal publication. Never retry or delete a worker here.
     """
     if type(config.hide_sr_window) is not bool:
         raise ValueError("config.hide_sr_window must be a boolean")
@@ -177,7 +179,7 @@ def run_sr_simulation(
     record = _simulation_path(paths, simulation_id)
     if not isinstance(runtime, Path) or not runtime.is_absolute() or runtime.name != simulation_id or runtime.parent.name != "sr" or runtime.parent.parent.parent != paths.workers or re.fullmatch(r"worker_[1-9][0-9]*", runtime.parent.parent.name) is None:
         raise ValueError("Runtime does not match the allocated worker and simulation")
-    with _lock_parent(paths.workers):
+    with _lock_worker(paths, runtime.parent.parent):
         metadata = read_simulation(paths, simulation_id)
         if metadata["status"] != "created" or metadata["engine"]["name"] != "sr":
             raise ValueError("Only a created SR simulation can execute")
@@ -265,6 +267,7 @@ def run_sr_simulation(
                 raise FileExistsError(str(execution_path))
             _write_json(execution_path, diagnostic)
             failure = None if diagnostic["message"] is None else {"message": f'{diagnostic["stage"]}: {diagnostic["message"]}', "exit_code": diagnostic["exit_code"]}
+            preserve_sr_runtime(paths, simulation_id, runtime)
             return finish_simulation(paths, config, simulation_id, failure)
         except (OSError, ValueError, KeyboardInterrupt) as error:
             if isinstance(error, OSError) and diagnostic["stage"] == "preflight" and error.errno in (errno.EACCES, errno.EAGAIN, errno.EDEADLK) and error.filename is None:
@@ -283,6 +286,7 @@ def run_sr_simulation(
             except (OSError, ValueError) as diagnostic_error:
                 error.add_note(f"Execution diagnostics also failed: {diagnostic_error}")
             try:
+                preserve_sr_runtime(paths, simulation_id, runtime)
                 finish_simulation(paths, config, simulation_id, {"message": f'{diagnostic["stage"]}: {diagnostic["message"]}', "exit_code": diagnostic["exit_code"]})
             except (OSError, ValueError) as finalization_error:
                 error.add_note(f"Failed finalization also failed: {finalization_error}")

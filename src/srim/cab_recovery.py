@@ -20,7 +20,7 @@ import time
 
 from src.backend.config import Config
 from src.backend.paths import ProjectPaths
-from src.backend.records import CreatedDirectory, _lock_parent, _validate_paths
+from src.backend.records import CreateRequest, CreatedDirectory, _lock_capture, _lock_worker, _validate_paths, create_directories
 from src.backend.resources import ResourceReference, _hash_file, _read_json, _write_json, verify_resource
 from src.srim.bragg import resolve_bragg
 from src.srim.cab import BondKey, CABKind, ElementKey, _SYMBOLS, _atomic_number, _normalize_entries
@@ -30,8 +30,9 @@ from src.srim.defaults import read_sr_defaults, verify_sr_baseline
 from src.srim.compatibility import read_module_version
 from src.srim.inputs import render_sr_input
 from src.srim.material import parse_atomdata
-from src.srim.metadata import JSONObject
-from src.srim.runtime import _read_regular_bytes
+from src.srim.metadata import JSONObject, start_simulation
+from src.srim.capture_records import initialize_capture_simulation, finish_capture_simulation
+from src.srim.runtime import _read_regular_bytes, _validate_preparation_allocations
 
 
 def _capture_correction(
@@ -429,15 +430,33 @@ def _recover_core_value(captures: Sequence[JSONObject], elemental_stopping: str,
         raise ValueError("CAB arithmetic exceeds supported decimal limits") from error
 
 
-def _prepare_capture_runtime(paths: ProjectPaths, config: Config, worker: CreatedDirectory, defaults: JSONObject, compound: bytes) -> Path:
-    """Stage pinned defaults and generated compound bytes in worker under paths/config.
+def _make_capture_request(atomdata: JSONObject, atomic_number: int) -> JSONObject:
+    """Return the diagnostic request for atomdata/atomic_number without I/O.
+
+    Require SR atomic number 1..92 and valid native atomic rows. Preserve the
+    existing fixed hydrogen energy, solid target and correction-none settings;
+    raise ValueError for invalid element identity and propagate invalid row data.
+    """
+    if type(atomic_number) is not int or not 1 <= atomic_number <= 92:
+        raise ValueError("Invalid capture atomic number")
+    atoms, z = atomdata, atomic_number
+    hydrogen = atoms["rows"][0]["isotope_mass_amu"]
+    with localcontext() as context:
+        context.prec, context.rounding = CAB_PRECISION, CAB_ROUNDING
+        energy = format(125 * Decimal(hydrogen), "f")
+    request = {"schema_version": 1, "parameters": {"projectile": {"atomic_number": 1, "mass_amu": format(Decimal(hydrogen), "f")}, "target": {"phase": "solid", "density_g_cm3": "1.0", "elements": [{"atomic_number": z, "name": atoms["rows"][z - 1]["name"], "stoichiometry": "1", "mass_amu": format(Decimal(atoms["rows"][z - 1]["natural_mass_amu"]), "f")}]}, "correction": {"mode": "none", "applied_factor": "1.0"}, "stopping_units": 7, "energy": {"mode": "list", "values_keV": [energy]}}}
+    return request
+
+
+def _prepare_capture_runtime(paths: ProjectPaths, config: Config, created: CreatedDirectory, worker: CreatedDirectory, defaults: JSONObject, compound: bytes) -> Path:
+    """Stage pinned defaults/compound for created in worker under paths/config.
 
     Verify the numerical baseline, create exactly the sufficient eight-file native
     runtime with generated manifest and correction-none initialization, and return
     its owned Path. Never touch installed files. Raise ValueError for invalid input
     or baseline drift; propagate I/O errors with surviving directory evidence.
     """
-    _validate_paths(paths)
+    _validate_preparation_allocations(paths, created, worker)
     if not isinstance(worker, CreatedDirectory) or worker.kind != "worker" or worker.path != paths.workers / f"worker_{worker.suffix}" or not isinstance(compound, bytes):
         raise ValueError("Capture requires allocated worker and compound bytes")
     from src.srim.material import parse_compounds
@@ -455,17 +474,16 @@ def _prepare_capture_runtime(paths: ProjectPaths, config: Config, worker: Create
         files["Data/" + filename] = contents
     atoms = parse_atomdata(files["Data/ATOMDATA"])
     z = parsed["records"][0]["elements"][0]["atomic_number"]
-    hydrogen = atoms["rows"][0]["isotope_mass_amu"]
-    with localcontext() as context:
-        context.prec, context.rounding = CAB_PRECISION, CAB_ROUNDING
-        energy = format(125 * Decimal(hydrogen), "f")
-    request = {"schema_version": 1, "parameters": {"projectile": {"atomic_number": 1, "mass_amu": format(Decimal(hydrogen), "f")}, "target": {"phase": "solid", "density_g_cm3": "1.0", "elements": [{"atomic_number": z, "name": atoms["rows"][z - 1]["name"], "stoichiometry": "1", "mass_amu": format(Decimal(atoms["rows"][z - 1]["natural_mass_amu"]), "f")}]}, "correction": {"mode": "none", "applied_factor": "1.0"}, "stopping_units": 7, "energy": {"mode": "list", "values_keV": [energy]}}}
+    request = _make_capture_request(atoms, z)
     files["SR.IN"] = render_sr_input(request)
     parent = worker.path / "sr"
     for entry in (*reversed(parent.parents), parent):
         if entry.is_symlink() or entry.is_junction():
             raise OSError("Capture parent contains a link or junction")
-    runtime = Path(mkdtemp(prefix=".capture-", dir=parent))
+    if created.kind != "srim" or created.path.parent != paths.simulation_memory or not created.path.is_dir():
+        raise ValueError("Capture requires an allocated simulation")
+    runtime = parent / created.path.name
+    runtime.mkdir()
     try:
         (runtime / "Data").mkdir()
         for name, contents in sorted(files.items()):
@@ -483,21 +501,26 @@ def _prepare_capture_runtime(paths: ProjectPaths, config: Config, worker: Create
 def _capture_mock(paths: ProjectPaths, config: Config, worker: CreatedDirectory, defaults: JSONObject, atomic_number: int, bond: BondKey, count: int, *, timeout_seconds: float) -> JSONObject:
     """Capture one mock atomic_number/bond/count under paths/config/worker and pinned defaults.
 
-    timeout_seconds bounds the owned GUI operation. Hold only the worker execution
-    lock, retain raw text/diagnostics/input hashes and successful/failed manifest,
+    timeout_seconds bounds the owned GUI operation. Hold the worker lease and
+    dedicated capture lock; preserve inputs/diagnostics and capture manifest in
+    an allocated permanent simulation record before returning evidence,
     then return correction plus exact file evidence. No nested engine calculation.
     On errors/interruption retain diagnostics, perform owned cleanup and re-raise.
     """
     compound = _render_mock_compound(atomic_number, bond, count)
     if type(timeout_seconds) not in (int, float) or timeout_seconds <= 0 or not math.isfinite(timeout_seconds):
         raise ValueError("Capture timeout must be positive and finite")
-    with _lock_parent(paths.workers):
-        runtime = _prepare_capture_runtime(paths, config, worker, defaults, compound)
+    with _lock_worker(paths, worker.path), _lock_capture(paths):
+        created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
+        runtime = _prepare_capture_runtime(paths, config, created, worker, defaults, compound)
+        request = _make_capture_request(parse_atomdata((runtime / "Data/ATOMDATA").read_bytes()), atomic_number)
+        initialize_capture_simulation(paths, config, created, runtime, defaults, request)
+        start_simulation(paths, config, created.path.name)
         names = ("SR.exe", "SR.exe.manifest", "SR.IN", "Data/ATOMDATA", "Data/Compound.dat", "Data/SCOEF03.dat", "Data/SNUC03.dat", "Data/VERSION")
         inputs: list[JSONObject] = []
         for name in sorted(names):
             checksum, size = _hash_file(runtime / name)
-            inputs.append({"kind": "worker", "id": worker.path.name, "path": (runtime / name).relative_to(worker.path).as_posix(), "sha256": checksum, "size_bytes": size})
+            inputs.append({"kind": "simulation", "id": created.path.name, "path": "output/raw/runtime/" + name, "sha256": checksum, "size_bytes": size})
         for name in ("stdout.bin", "stderr.bin"):
             with (runtime / name).open("xb") as stream:
                 stream.flush()
@@ -511,7 +534,7 @@ def _capture_mock(paths: ProjectPaths, config: Config, worker: CreatedDirectory,
             after = []
             for name in sorted(names):
                 checksum, size = _hash_file(runtime / name)
-                after.append({"kind": "worker", "id": worker.path.name, "path": (runtime / name).relative_to(worker.path).as_posix(), "sha256": checksum, "size_bytes": size})
+                after.append({"kind": "simulation", "id": created.path.name, "path": "output/raw/runtime/" + name, "sha256": checksum, "size_bytes": size})
             manifest["inputs_after"] = after
             if inputs != after:
                 raise ValueError("Capture runtime inputs changed during GUI execution")
@@ -522,7 +545,8 @@ def _capture_mock(paths: ProjectPaths, config: Config, worker: CreatedDirectory,
             evidence: JSONObject = {"inputs": inputs}
             for role, name in (("manifest", "manifest.json"), ("correction", "correction.json"), ("stdout", "stdout.bin"), ("stderr", "stderr.bin")):
                 checksum, size = _hash_file(runtime / name)
-                evidence[role] = {"kind": "worker", "id": worker.path.name, "path": (runtime / name).relative_to(worker.path).as_posix(), "sha256": checksum, "size_bytes": size}
+                evidence[role] = {"kind": "simulation", "id": created.path.name, "path": "output/raw/runtime/" + name, "sha256": checksum, "size_bytes": size}
+            finish_capture_simulation(paths, config, created.path.name, runtime)
             return {"correction": correction, "evidence": evidence}
         except BaseException as error:
             manifest.update({"status": "failed", "finished_at": datetime.now(timezone.utc).isoformat(), "error": str(error) or type(error).__name__})
@@ -537,7 +561,11 @@ def _capture_mock(paths: ProjectPaths, config: Config, worker: CreatedDirectory,
                 _write_json(runtime / "manifest.json", manifest)
             except BaseException as secondary:
                 error.add_note(f"Capture evidence publication also failed: {secondary}")
-            error.add_note(f"Capture evidence retained: {runtime}")
+            try:
+                finish_capture_simulation(paths, config, created.path.name, runtime, {"message": str(error) or type(error).__name__, "exit_code": None})
+            except BaseException as secondary:
+                error.add_note(f"Capture preservation also failed: {secondary}")
+            error.add_note(f"Capture evidence retained: {runtime}; record: {created.path}")
             raise
 
 

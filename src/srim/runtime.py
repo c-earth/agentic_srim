@@ -13,7 +13,7 @@ from tempfile import mkdtemp
 
 from src.backend.config import Config
 from src.backend.paths import ProjectPaths
-from src.backend.records import CreatedDirectory, _lock_parent, _validate_paths
+from src.backend.records import CreatedDirectory, _lock_worker, _validate_paths
 from src.backend.resources import ResourceReference, verify_resource
 from src.srim.compatibility import read_module_version
 from src.srim.inputs import render_sr_input
@@ -172,7 +172,7 @@ def _prepare_sr_runtime(paths: ProjectPaths, config: Config, created: CreatedDir
     runtime = worker.path / "sr" / simulation_id
     artifacts: list[Path] = []
     try:
-        with _lock_parent(paths.workers):
+        with _lock_worker(paths, worker.path):
             _validate_paths(paths)
             for directory in (worker.path, worker.path / "sr", worker.path / "trim"):
                 if directory.is_symlink() or directory.is_junction():
@@ -231,7 +231,7 @@ def _prepare_sr_runtime(paths: ProjectPaths, config: Config, created: CreatedDir
                 engine,
                 request_snapshot,
                 resolved,
-                engine_inputs={"SR.IN": input_bytes, "VERSION": version_bytes, "runtime.json": manifest_bytes},
+                engine_inputs={**files, "runtime.json": manifest_bytes},
                 input_files=snapshots,
             )
             return runtime
