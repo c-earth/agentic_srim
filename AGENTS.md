@@ -1,6 +1,7 @@
 # Python environment
 
 - Run all project Python code through `D:\projects\agentic_srim\.venv\Scripts\python.exe`.
+- Always spell out that exact absolute executable path in commands, including test runs, temporary scripts, inline Python, and subprocess launches. Do not use relative paths such as `.venv/Scripts/python.exe`, bare `python`/`python3`, `py`, or environment activation as substitutes. Relative paths may fail to match the approved command prefix even when they resolve to the same interpreter.
 - Run all pip installs through `D:\projects\agentic_srim\.venv\Scripts\python.exe -m pip install`.
 
 # Follow the requested scope

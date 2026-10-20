@@ -14,7 +14,7 @@ Installation imports now normalize `_VERSION` to the logical `VERSION`, correct 
 - Native installation normalized-import checks: `.cache/cab-compatibility-import-verification.json` (2008: 345 compounds; 2013 Standard: 357).
 - Native 2008 after compatibility implementation: `.cache/cab-integration-2008-live-krrx1o3r/native-compatibility-verification.json`. Reused all 18 bonds and carbon from the verified matching baseline; fresh methane simulation, launch-free cache repeat and forced Bragg timeout passed. Interruption propagated with retained evidence and a GUI cleanup-timeout note. Installed input hashes remained unchanged.
 
-All `.cache` evidence is ignored/local and is not included in the commit. Preserve it for reproducibility. Earlier experiment scripts remain separately organized; temporary unit-test fixture directories have been removed.
+The user cleared all project `.cache/` contents on 2026-10-20 after closing its six SRIM processes. The empty directory remains. Evidence paths above are historical and no longer exist locally; the numerical results describe completed earlier checks. Raw artifacts and experiment scripts are not part of Git.
 
 ## Unresolved work
 
