@@ -493,3 +493,5 @@ direct web open failed. Do not describe this as a complete full-text review.
 Unresolved: user has not specified target material/phase or intended output
 (range, dpa or sputtering). No numerical parameter set or calculation protocol
 has been selected, approved, implemented or verified for a particular target.
+
+2026-10-21 continuation: the complete 92-element default table, all-version phase evidence, Standard-only compound audit, ATOMDATA comparison and reconstructed rules are now recorded in doc/reference/trim-input-defaults.md. See doc/TRIM_HANDOFF.md for current state and unresolved work. These extend the earlier default findings; native transport/dependency findings above remain separate.

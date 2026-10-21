@@ -12,6 +12,8 @@ Start with the [project README](../README.md) for what the project does and its 
 | Construct request/selection JSON or inspect records and units | [Data formats and layouts](reference/data-formats.md) |
 | Read the code/documentation discrepancy review | [Non-TRIM review](reviews/non-trim-review.md) |
 | Inspect recorded native validation and limitations | [CAB status and evidence](CAB_HANDOFF.md) |
+| Inspect the 92-element TRIM defaults, rules and coverage | [TRIM input defaults](reference/trim-input-defaults.md) |
+| Continue the TRIM default investigation | [TRIM handoff](TRIM_HANDOFF.md) |
 
 ## Historical design and investigation
 
@@ -27,4 +29,4 @@ Historical `.cache/` paths are relative to the repository root. Earlier artifact
 
 ## Separate investigation outside this review
 
-[TIN findings](TIN_FINDINGS.txt) and [TRIM findings](TRIM_FINDINGS.txt) remain in their existing locations and were not edited or reviewed as transport implementation. Their presence does not indicate that TIN/TRIM execution has been implemented.
+[TIN findings](TIN_FINDINGS.txt) and [TRIM findings](TRIM_FINDINGS.txt) preserve earlier native investigations. The [2026-10-21 default reference](reference/trim-input-defaults.md) records the complete table and subsequent compound/phase evidence; [TRIM handoff](TRIM_HANDOFF.md) identifies unfinished work. These records do not indicate that TIN/TRIM execution has been implemented.

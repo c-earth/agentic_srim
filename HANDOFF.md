@@ -1,4 +1,4 @@
-# Handoff - 2026-10-20
+# Handoff - 2026-10-21
 
 ## Current SR state
 
@@ -73,3 +73,9 @@ Additional website findings and source links are recorded in the final section o
 The repository-local scientific-figures skill was discovered by this session after creation. Its configured figure-reviewer agent has not been activated by name: the session's sub-agent interface did not expose custom-agent selection. An independent general sub-agent followed the configured instructions in a read-only exercise using conceptual and quantitative design briefs; it identified supported issues and withheld unavailable visual/statistical checks. Named-agent activation and review of actual rendered project figures remain unverified.
 
 Skill metadata, local reference links, agent TOML syntax, and the bundled PDF's SHA-256 match passed checks. The bundled skill validator could not run because the project interpreter lacks PyYAML; dependency-free structural checks passed instead, and no packages were installed. Root tmp/ and output/ directories containing the earlier PDF extraction/renders were removed at the user's request.
+
+## TRIM defaults investigation - 2026-10-21
+
+The complete session record is [TRIM input defaults](doc/reference/trim-input-defaults.md), including the 92-element table, empirical lookup rules, source references and final Standard compound-coverage histogram. This expands the earlier H-only sublimation comparison: all 92 surface defaults match positive ATOMDATA sublimation values or the observed zero-to-2 eV branch. Native causality and a published general fallback rule remain unverified.
+
+The final Standard-only compound audit has 64 completed contexts and 404 retained/fresh observations across all 53 elements represented in presets, with no energy discrepancies. Full mode/mixture/ion/compound matrices remain incomplete. Queues are stopped, owned executables closed and copied dictionaries restored. [TRIM handoff](doc/TRIM_HANDOFF.md) records evidence locations and pending work. No production code changed.
