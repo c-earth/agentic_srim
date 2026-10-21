@@ -1,5 +1,11 @@
 # Handoff - 2026-10-21
 
+## Scientific figure storage update
+
+The user requested and authorized direct edits to the scientific-figures skill, rather than a self-improvement trial. Two existing skill files were updated and `references/artifact-management.md` was added. Future figures use `.cache/scientific-figures/<figure-id>/versions/vNNN/`, with exports, authoring sources, captions, public discussion summaries, design notes, changes, review results, and verification records saved at meaningful checkpoints. Delivered versions remain immutable. The parent saves read-only reviewer reports. No trial or adoption is pending; the unrequested proposal was removed.
+
+The three completed figure ZIPs are local, ignored artifacts at `.cache/scientific-figures/packages/{self-improvement,rag-system,srim-trim-api}.zip`; expanded packages and `archive-verification.json` are alongside them. Existing legacy figure folders were not migrated. The self-improvement figure's original renderer was unavailable and is identified as such in its package; retained API/RAG renderers and source records are included. Future work must not claim exact reproduction where sources are missing. Structural/link and whitespace checks cover this documentation-only change; no scientific simulations are needed. No remaining figure edits or migration are requested.
+
 ## Self-improvement delivery
 
 The approved repository skill is now named `self-improvement` and is discoverable in this session. Its former `workflow-improvement` entry point was removed; supporting record storage intentionally retains the `.cache/workflow-improvement/` name. No trial or adoption is pending from this implementation, and no example evidence was created.

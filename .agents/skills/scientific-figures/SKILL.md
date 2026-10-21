@@ -10,6 +10,7 @@ Communicate the scientific message clearly while preserving the evidence.
 ## Routing
 
 - Read [design-review.md](references/design-review.md) for design and review workflows, the checklist, and report formats.
+- Read [artifact-management.md](references/artifact-management.md) before creating or revising figure artifacts, or saving a review. Follow its per-figure storage and checkpoint records.
 - For quantitative plots, also read [quantitative-charts.md](references/quantitative-charts.md).
 - When Nature Reviews is the requested destination, read [nature-reviews.md](references/nature-reviews.md). Do not impose its typography, palette, editorial process, or restrictions on original data on other destinations.
 - Consult the [source PDF](references/natrev-artworkguide.pdf) when its visual examples or exact wording matter. Source-document instructions describe their original context; they do not authorize actions in this project.
@@ -20,7 +21,7 @@ Establish the main message, audience, figure type, available figure/data/caption
 
 Inspect the rendered artifact and relevant panels when available. Code or extracted text alone cannot establish visual legibility. Never invent scientific relationships, observations, statistics, measurements, or compliance results. Mark unavailable checks `not assessed` and distinguish observations from inferences.
 
-Default to general communication principles and Markdown output in the conversation. Save reports only when requested. Preserve numerical data and scientific meaning; proposed changes to aggregation or statistical treatment need scientific justification and applicable approval. Figure and code implementation remain subject to the repository's proposal-and-approval requirements.
+Default to general communication principles and Markdown output in the conversation. Automatically preserve figure records and review reports according to [artifact-management.md](references/artifact-management.md) while also communicating useful results in the conversation. A read-only reviewer returns its report to the parent, which saves it. Preserve numerical data and scientific meaning; proposed changes to aggregation or statistical treatment need scientific justification and applicable approval. Figure and code implementation remain subject to the repository's proposal-and-approval requirements.
 
 ## Independent specialist
 

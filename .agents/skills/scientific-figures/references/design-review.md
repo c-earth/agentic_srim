@@ -59,4 +59,4 @@ Severity values:
 - `major`: Materially obstructs interpretation or violates a confirmed target requirement.
 - `minor`: Local clarity or consistency defect with limited impact.
 
-Separate observations from inferences. Do not report personal taste as a defect, invent findings, or assign an unsupported numeric quality score. Say when no actionable findings were found. End with **Not assessed** and **Open questions**, explaining unavailable checks and the evidence needed to resolve them. Review does not authorize editing. Keep the report in the conversation unless saving is requested.
+Separate observations from inferences. Do not report personal taste as a defect, invent findings, or assign an unsupported numeric quality score. Say when no actionable findings were found. End with **Not assessed** and **Open questions**, explaining unavailable checks and the evidence needed to resolve them. Review does not authorize editing. Return the report in the conversation and have the authoring parent save it in the corresponding version folder under [artifact-management.md](artifact-management.md); a read-only reviewer does not write files.
