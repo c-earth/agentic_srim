@@ -34,6 +34,8 @@ For concurrent execution, prepare simulations across separate workers, then call
 
 ## Documentation and verification
 
+Native input search provides a Python retrieval API for newly finalized SR/TRIM runs. Its catalog starts empty and updates incrementally after standalone runs or prepared batches, filtering verified saved inputs without indexing output values. Historical runs are not backfilled automatically. See [input search](doc/guides/input-search.md) and its [API/format reference](doc/reference/input-search-format.md). External imports and NERSC migration remain deferred.
+
 | Need | Read |
 | --- | --- |
 | Browse the documentation | [Documentation index](doc/README.md) |

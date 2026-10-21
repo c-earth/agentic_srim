@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
+from contextvars import copy_context
 from dataclasses import dataclass
 import math
 from pathlib import Path
 from threading import Event
 from time import perf_counter
 
+from src.knowledge.index import collect_index_updates
 from src.backend.config import Config
 from src.backend.paths import ProjectPaths
 from src.backend.records import _record_time, _validate_paths
@@ -104,38 +106,40 @@ def run_trim_batch(paths: ProjectPaths, config: Config, tasks: Sequence[Prepared
     dispatch. Return input-ordered outcomes, continuing independent failures.
     Keep working copies unless cleanup=True. On BaseException stop dispatch,
     cancel active owned native jobs, wait/preserve, retain workers and re-raise.
+    Finalized inputs are indexed once after active calls finish.
     Queue state exists only in memory; no retries or dependency scheduling.
     """
-    started = perf_counter()
-    prepared = _validate_trim_batch(paths, config, tasks, max_workers, timeout_seconds, cleanup)
-    pending = list(enumerate(prepared))
-    active: dict[Future[TRIMTaskResult], tuple[int, Path]] = {}
-    busy: set[Path] = set()
-    results: dict[int, TRIMTaskResult] = {}
-    stop = Event()
-    executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="trim-worker")
-    try:
-        while pending or active:
-            position = 0
-            while position < len(pending) and len(active) < max_workers:
-                index, task = pending[position]
-                worker = task.runtime.parent.parent
-                if worker in busy:
-                    position += 1
-                    continue
-                pending.pop(position)
-                busy.add(worker)
-                future = executor.submit(_execute_trim_task, paths, config, task, timeout_seconds, stop.is_set)
-                active[future] = index, worker
-            completed, _ = wait(active, timeout=0.1, return_when=FIRST_COMPLETED)
-            for future in completed:
-                index, worker = active.pop(future)
-                busy.remove(worker)
-                results[index] = future.result()
-    except BaseException:
-        stop.set()
-        raise
-    finally:
-        executor.shutdown(wait=True, cancel_futures=True)
-    outcomes = cleanup_trim_batch(paths, tuple(dict.fromkeys(task.runtime.parent.parent for task in prepared))) if cleanup else BatchCleanupReport((), ())
-    return TRIMBatchResult(tuple(results[i] for i in range(len(prepared))), outcomes, perf_counter() - started)
+    with collect_index_updates(paths):
+        started = perf_counter()
+        prepared = _validate_trim_batch(paths, config, tasks, max_workers, timeout_seconds, cleanup)
+        pending = list(enumerate(prepared))
+        active: dict[Future[TRIMTaskResult], tuple[int, Path]] = {}
+        busy: set[Path] = set()
+        results: dict[int, TRIMTaskResult] = {}
+        stop = Event()
+        executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="trim-worker")
+        try:
+            while pending or active:
+                position = 0
+                while position < len(pending) and len(active) < max_workers:
+                    index, task = pending[position]
+                    worker = task.runtime.parent.parent
+                    if worker in busy:
+                        position += 1
+                        continue
+                    pending.pop(position)
+                    busy.add(worker)
+                    future = executor.submit(copy_context().run, _execute_trim_task, paths, config, task, timeout_seconds, stop.is_set)
+                    active[future] = index, worker
+                completed, _ = wait(active, timeout=0.1, return_when=FIRST_COMPLETED)
+                for future in completed:
+                    index, worker = active.pop(future)
+                    busy.remove(worker)
+                    results[index] = future.result()
+        except BaseException:
+            stop.set()
+            raise
+        finally:
+            executor.shutdown(wait=True, cancel_futures=True)
+        outcomes = cleanup_trim_batch(paths, tuple(dict.fromkeys(task.runtime.parent.parent for task in prepared))) if cleanup else BatchCleanupReport((), ())
+        return TRIMBatchResult(tuple(results[i] for i in range(len(prepared))), outcomes, perf_counter() - started)

@@ -22,6 +22,28 @@ from src.srim.metadata import _validate_document, finish_simulation, initialize_
 class TestMetadata(unittest.TestCase):
     """Use unittest lifecycle to isolate simulation fixtures beneath this module and remove them after each test."""
 
+    def test_index_notification_after_unlock(self: TestMetadata) -> None:
+        """Observe durable terminal state outside the parent lease; return None."""
+        initialize_simulation(self.paths, self.created, self.engine, self.request, self.resolved)
+
+        def notified(paths: object, metadata: dict[str, object]) -> None:
+            """Check paths and metadata after finalization; return None, no mutations."""
+            with _lock_parent(self.paths.simulation_memory):
+                self.assertEqual(metadata["status"], "failed")
+            self.assertEqual(metadata, read_simulation(self.paths, self.created.path.name))
+
+        with patch("src.knowledge.index.notify_simulation_finished", side_effect=notified) as notify:
+            result = finish_simulation(self.paths, self.config, self.created.path.name, {"message": "controlled", "exit_code": 1})
+        notify.assert_called_once_with(self.paths, result)
+
+    def test_index_notification_failure_is_independent(self: TestMetadata) -> None:
+        """Do not reclassify published terminal state on notification errors; return None."""
+        initialize_simulation(self.paths, self.created, self.engine, self.request, self.resolved)
+        with patch("src.knowledge.index.notify_simulation_finished", side_effect=OSError("index disk")), self.assertLogs("src.srim.metadata", level="ERROR"):
+            result = finish_simulation(self.paths, self.config, self.created.path.name, {"message": "native failure", "exit_code": 7})
+        self.assertEqual(result["failure"], {"message": "native failure", "exit_code": 7})
+        self.assertEqual(read_simulation(self.paths, self.created.path.name), result)
+
     def test_trim_dispatch_and_sealing(self: TestMetadata) -> None:
         """Seal all new TRIM evidence before start and reject later mutations; return None."""
         from _fixtures import make_test_project

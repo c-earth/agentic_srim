@@ -2,11 +2,13 @@
 
 from collections.abc import Sequence
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
+from contextvars import copy_context
 from dataclasses import dataclass
 import math
 from pathlib import Path
 from time import perf_counter
 
+from src.knowledge.index import collect_index_updates
 from src.backend.config import Config
 from src.backend.paths import ProjectPaths
 from src.backend.records import _record_time, _validate_paths
@@ -114,36 +116,38 @@ def run_sr_batch(paths: ProjectPaths, config: Config, tasks: Sequence[PreparedSR
     start the earliest eligible task and return input-ordered results. Ordinary
     failures do not stop other tasks. Persist results immediately; clean only
     submitted workers after every task call finishes, returning cleanup outcomes.
+    Finalized input references are indexed once after active calls finish.
     No queue survives caller exit. On BaseException stop dispatch, cancel work
     not started, wait for active bounded calls, retain workers and re-raise.
     timeout_seconds applies separately to each native process, excluding waiting.
     """
-    started = perf_counter()
-    prepared = _validate_batch(paths, config, tasks, max_workers, timeout_seconds)
-    pending = list(enumerate(prepared))
-    active: dict[Future[SRTaskResult], tuple[int, Path]] = {}
-    workers: set[Path] = set()
-    results: dict[int, SRTaskResult] = {}
-    executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="sr-worker")
-    try:
-        while pending or active:
-            position = 0
-            while position < len(pending) and len(active) < max_workers:
-                index, task = pending[position]
-                worker = task.runtime.parent.parent
-                if worker in workers:
-                    position += 1
-                    continue
-                pending.pop(position)
-                workers.add(worker)
-                future = executor.submit(_execute_task, paths, config, task, timeout_seconds)
-                active[future] = (index, worker)
-            completed, _ = wait(active, return_when=FIRST_COMPLETED)
-            for future in completed:
-                index, worker = active.pop(future)
-                workers.remove(worker)
-                results[index] = future.result()
-    finally:
-        executor.shutdown(wait=True, cancel_futures=True)
-    cleanup = cleanup_sr_batch(paths, tuple(dict.fromkeys(task.runtime.parent.parent for task in prepared)))
-    return SRBatchResult(tuple(results[index] for index in range(len(prepared))), cleanup, perf_counter() - started)
+    with collect_index_updates(paths):
+        started = perf_counter()
+        prepared = _validate_batch(paths, config, tasks, max_workers, timeout_seconds)
+        pending = list(enumerate(prepared))
+        active: dict[Future[SRTaskResult], tuple[int, Path]] = {}
+        workers: set[Path] = set()
+        results: dict[int, SRTaskResult] = {}
+        executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="sr-worker")
+        try:
+            while pending or active:
+                position = 0
+                while position < len(pending) and len(active) < max_workers:
+                    index, task = pending[position]
+                    worker = task.runtime.parent.parent
+                    if worker in workers:
+                        position += 1
+                        continue
+                    pending.pop(position)
+                    workers.add(worker)
+                    future = executor.submit(copy_context().run, _execute_task, paths, config, task, timeout_seconds)
+                    active[future] = (index, worker)
+                completed, _ = wait(active, return_when=FIRST_COMPLETED)
+                for future in completed:
+                    index, worker = active.pop(future)
+                    workers.remove(worker)
+                    results[index] = future.result()
+        finally:
+            executor.shutdown(wait=True, cancel_futures=True)
+        cleanup = cleanup_sr_batch(paths, tuple(dict.fromkeys(task.runtime.parent.parent for task in prepared)))
+        return SRBatchResult(tuple(results[index] for index in range(len(prepared))), cleanup, perf_counter() - started)

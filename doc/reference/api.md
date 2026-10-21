@@ -6,6 +6,8 @@ This reference describes the shared backend and SR APIs, with links to TRIM's in
 
 ## Shared types and behavior
 
+Native SR/TRIM input retrieval is documented in the [input-search API and format reference](input-search-format.md), with a [Python workflow](../guides/input-search.md). Import its APIs from `src.knowledge.index`, `src.knowledge.search`, `src.knowledge.source` and `src.knowledge.schema`. The catalog starts empty and newly finalized native runs index incrementally; existing runner signatures and metadata schemas remain unchanged.
+
 `JSONObject = dict[str, JSONValue]`, where `JSONValue` is null/bool/int/float/str or recursive lists/string-keyed dictionaries. Domain numeric quantities generally use decimal strings. See the formats page for exact distinctions. `Mapping`, `Sequence`, `Callable` come from `collections.abc`; `Path` is `pathlib.Path`; `datetime` is timezone aware when supplied to record creation.
 
 `paths` is a `ProjectPaths` obtained from `get_project_paths` and initialized by `create_base_directories`. `config` is a validated `Config`. `worker` is an allocated `CreatedDirectory(kind="worker", ...)`; `created` is an empty allocated SRIM directory. Constructing a frozen dataclass stores fields; API entry points perform validation. Frozen fields do not make nested JSON maps immutable.

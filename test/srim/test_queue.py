@@ -161,3 +161,11 @@ class TestPreparedQueue(unittest.TestCase):
             run_sr_batch(self.paths, self.config, tasks, max_workers=1)
         self.assertTrue(self.worker.path.is_dir())
         self.assertEqual(read_simulation(self.paths, tasks[1].simulation_id)["status"], "created")
+
+    def test_indexing_once_after_native_batch(self: TestPreparedQueue) -> None:
+        """Collect finalized self tasks across copied contexts and flush once; return None."""
+        tasks = [self._make_task(self.worker) for _ in range(2)]
+        with patch("src.srim.execution.subprocess.run", side_effect=self._fake_run), patch("src.knowledge.index.update_index") as update:
+            result = run_sr_batch(self.paths, self.config, tasks, max_workers=2)
+        self.assertEqual([item.metadata["status"] for item in result.task_results], ["succeeded", "succeeded"])
+        update.assert_called_once_with(self.paths, sorted(task.simulation_id for task in tasks))

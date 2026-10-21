@@ -7,6 +7,8 @@ Start with the [project README](../README.md) for what the project does and its 
 | Task | Documentation |
 | --- | --- |
 | Configure the project and run a first calculation | [Getting started](guides/getting-started.md) |
+| Search verified native SR/TRIM inputs | [Input search](guides/input-search.md) |
+| Inspect input-search APIs, filters and references | [Input-search reference](reference/input-search-format.md) |
 | Search compounds, edit data, create variants or recover CAB entries | [Materials, resources and CAB](guides/resources-and-cab.md) |
 | Find function signatures, return values, side effects and error behavior | [Python API reference](reference/api.md) |
 | Construct request/selection JSON or inspect records and units | [Data formats and layouts](reference/data-formats.md) |

@@ -716,7 +716,9 @@ def finish_simulation(paths: ProjectPaths, config: Config, simulation_id: str, f
     Success requires running state and unchanged sealed local inputs. Failure
     permits created/running states and preserves evidence even if input integrity
     was lost. Terminal states cannot change. This function does not run engines,
-    interpret outputs, or modify shared resources.
+    interpret outputs, or modify shared resources. After releasing the record
+    lock, notify best-effort input indexing without changing returned metadata
+    or allowing ordinary indexing failures to change the simulation outcome.
     """
     if failure is not None:
         _validate_document(failure, "failure")
@@ -734,4 +736,14 @@ def finish_simulation(paths: ProjectPaths, config: Config, simulation_id: str, f
         metadata["finished_at"] = _record_time(config, None).isoformat()
         _validate_document(metadata, "metadata")
         _write_json(record / "metadata.json", metadata)
-        return _read_json(record / "metadata.json")
+        completed = _read_json(record / "metadata.json")
+    try:
+        from src.knowledge.index import notify_simulation_finished
+        notify_simulation_finished(paths, completed)
+    except Exception:
+        try:
+            import logging
+            logging.getLogger(__name__).exception("Native simulation finalized; input indexing notification failed")
+        except Exception:
+            pass
+    return completed

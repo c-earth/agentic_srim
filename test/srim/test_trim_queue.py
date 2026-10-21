@@ -17,6 +17,26 @@ from src.srim.trim_queue import PreparedTRIMTask, TRIMTaskResult, run_trim_batch
 class TestTRIMQueue(unittest.TestCase):
     """Exercise scheduling with mocked native task outcomes and no real processes."""
 
+    def test_index_collection_in_worker_context(self: TestTRIMQueue) -> None:
+        """Flush TRIM terminal notifications once after worker contexts finish; return None."""
+        from src.knowledge.index import notify_simulation_finished
+        from src.backend.records import CreateRequest, create_directories
+        with TemporaryDirectory(dir=CACHE) as directory:
+            paths, config, worker = make_test_project(Path(directory))
+            created = create_directories(paths, config, [CreateRequest("srim"), CreateRequest("srim")]).completed
+            tasks = [PreparedTRIMTask(item.path.name, worker.path / "trim" / item.path.name) for item in created]
+
+            def execute(project: object, settings: object, task: PreparedTRIMTask, timeout: float, cancel: object) -> TRIMTaskResult:
+                """Notify for project/task with settings/timeout/cancel unused; return result."""
+                metadata = {"id": task.simulation_id, "engine": {"name": "trim"}, "status": "failed"}
+                notify_simulation_finished(paths, metadata)
+                return TRIMTaskResult(task, metadata, None, 0.0)
+
+            with patch("src.srim.trim_queue.verify_trim_runtime"), patch("src.srim.trim_queue._execute_trim_task", side_effect=execute), patch("src.knowledge.index.update_index") as update:
+                result = run_trim_batch(paths, config, tasks, max_workers=2)
+            self.assertEqual(len(result.task_results), 2)
+            update.assert_called_once_with(paths, sorted(task.simulation_id for task in tasks))
+
     def test_input_order_and_same_worker_serialization(self: TestTRIMQueue) -> None:
         """Keep submitted same-worker tasks ordered even with higher capacity; return None."""
         with TemporaryDirectory(dir=CACHE) as directory:
@@ -72,7 +92,7 @@ class TestTRIMQueue(unittest.TestCase):
             with patch("src.srim.trim_queue.verify_trim_runtime"), patch("src.srim.trim_queue.ThreadPoolExecutor") as factory:
                 factory.return_value.submit.side_effect = futures
                 result = run_trim_batch(paths, config, tasks, max_workers=2)
-            self.assertEqual([call.args[3] for call in factory.return_value.submit.call_args_list], [tasks[0], tasks[2], tasks[1]])
+            self.assertEqual([call.args[4] for call in factory.return_value.submit.call_args_list], [tasks[0], tasks[2], tasks[1]])
             self.assertEqual([r.task for r in result.task_results], tasks)
 
     def test_interrupt_cancels_active_jobs(self: TestTRIMQueue) -> None:
