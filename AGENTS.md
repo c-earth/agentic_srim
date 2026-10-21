@@ -38,3 +38,7 @@
 - Class docstrings must clearly describe the class purpose, construction inputs, and the object or behavior provided, including relevant public attributes.
 - Add explicit type annotations to all function and method arguments, including variadic arguments. For Python instance and class methods, annotate `self` and `cls` as well. Annotate every return type, including `-> None` where applicable.
 - Do not place comments inside implementation code, including inline comments or standalone comments between statements. Put explanations in the required module, class, and function docstrings instead.
+
+# Self-improvement
+
+- At task completion, consult `.agents/skills/self-improvement/SKILL.md` to record meaningful efficiency evidence and determine whether a proposal is warranted. Before using trial behavior, consult the skill to reconcile its status.

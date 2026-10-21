@@ -1,5 +1,11 @@
 # Handoff - 2026-10-21
 
+## Self-improvement delivery
+
+The approved repository skill is now named `self-improvement` and is discoverable in this session. Its former `workflow-improvement` entry point was removed; supporting record storage intentionally retains the `.cache/workflow-improvement/` name. No trial or adoption is pending from this implementation, and no example evidence was created.
+
+Dependency-free structural checks passed for skill frontmatter, local references, renamed paths, target/storage distinctions, and the retained evidence location. The bundled skill validator remains unavailable because the project interpreter lacks PyYAML; no dependency was installed. Actual trial execution, conflict recovery, and cross-chat coordination have not been exercised. Those mechanisms rely on agents following instructions, without a background service or filesystem locking.
+
 ## Current SR state
 
 CAB integration and conservative installation compatibility fixes are implemented. Earlier state and native recovery evidence are in `doc/CAB_HANDOFF.md`; completed CAB scope is in `doc/history/CAB_INTEGRATION_TRACKER.md`. At visibility-feature completion the suite passed 127 tests (39 backend, 88 SRIM). The subsequent prepared-batch implementation and latest verification are recorded below. User authorized this handoff update and local commit; no publication requested.
