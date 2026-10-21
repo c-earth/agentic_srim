@@ -2,7 +2,9 @@
 
 ## Execution implementation and verification
 
-The user approved [TRIM_EXECUTION_PROPOSAL.md](TRIM_EXECUTION_PROPOSAL.md), including its later event-list annotation, not-calculated NOVAC, normalized-composition and quick-mode aggregate-table amendments. Implementation resumed after the requested pause and is complete for fresh execution, continuation, prepared batches, whole-runtime preservation and summary/profile parsing. Usage and exact contracts are in the [execution guide](guides/trim-execution.md) and [reference](reference/trim-execution-format.md). Changes remain uncommitted; no Git commit was requested.
+The user approved [TRIM_EXECUTION_PROPOSAL.md](TRIM_EXECUTION_PROPOSAL.md), including its later event-list annotation, not-calculated NOVAC, normalized-composition and quick-mode aggregate-table amendments. Implementation resumed after the requested pause and is complete for fresh execution, continuation, prepared batches, whole-runtime preservation and summary/profile parsing. Usage and exact contracts are in the [execution guide](guides/trim-execution.md) and [reference](reference/trim-execution-format.md). Implementation was committed as `7d4c780` — `Implement TRIM execution, continuation, batches and profile parsing`.
+
+The user also approved `.gitattributes` rules disabling text conversion for native `.txt`/`.sav` fixtures. All 20 staged fixture hashes/sizes matched the recorded originals before the commit. Native trailing spaces and CRLF bytes are intentional. The next review is the recoil cascade-file popup and resume save/increase-count popup, individually; no response handlers have been approved or implemented.
 
 The full SRIM regression passed 175 tests, and the backend suite passed 41 tests, with warnings as errors. After the final TRIM format/verification amendments, all 68 TRIM tests passed again. Syntax, required docstrings, complete argument/return annotations and absence of implementation comments passed across the 21 checked Python files. Documentation links and code fences were checked.
 

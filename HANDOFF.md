@@ -82,4 +82,8 @@ The final Standard-only compound audit has 64 completed contexts and 404 retaine
 
 ## TRIM input implementation — 2026-10-21
 
-The approved input-first phase is complete and verified. The current continuation state and unresolved native cases are in [doc/TRIM_HANDOFF.md](doc/TRIM_HANDOFF.md#input-implementation-handoff); detailed contracts and final acceptance evidence are in [doc/TRIM_INPUT_PROPOSAL.md](doc/TRIM_INPUT_PROPOSAL.md#implementation-verification-2026-10-21). Main TRIM runtime staging/execution remains deferred. The earlier investigation-only statements above describe their historical tasks.
+The approved input-first phase is complete and verified. Its historical state is in [doc/TRIM_HANDOFF.md](doc/TRIM_HANDOFF.md#input-implementation-handoff-historical); detailed contracts and final acceptance evidence are in [doc/TRIM_INPUT_PROPOSAL.md](doc/TRIM_INPUT_PROPOSAL.md#implementation-verification-2026-10-21). The execution handoff below supersedes the input-phase deferral of runtime staging/execution. The earlier investigation-only statements above describe their historical tasks.
+
+## TRIM execution implementation committed — 2026-10-21
+
+Implementation commit: `7d4c780` — `Implement TRIM execution, continuation, batches and profile parsing`. [Current handoff](doc/TRIM_HANDOFF.md#execution-implementation-and-verification) records acceptance evidence and remaining native limitations; the [execution guide](doc/guides/trim-execution.md) is the usage entry point. The user approved byte-preserving Git attributes for native fixtures; all 20 staged fixture hashes/sizes were verified. Unrelated data, Python caches and interrupted-test residue were excluded. Next: review the recoil cascade-file and resume save/increase-count popups one at a time. No popup-response handlers are approved yet.
