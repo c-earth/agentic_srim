@@ -16,7 +16,7 @@ from test_trim_defaults import CACHE
 from test_trim_inputs import TRIM_INSTALLATION_FILES, TRIM_REQUEST, TRIM_SELECTIONS
 from src.srim.trim_defaults import switch_trim_defaults
 from src.srim.trim_resolution import resolve_trim_inputs
-from src.srim.trim_storage import write_trim_input_bundle
+from src.srim.trim_storage import cleanup_trim_batch, parse_trim_directory, write_trim_input_bundle
 
 
 class TestTRIMStorage(unittest.TestCase):
@@ -111,3 +111,51 @@ class TestTRIMStorage(unittest.TestCase):
             self.assertEqual(len(staging), 1)
             self.assertTrue((staging[0] / "input/request.json").is_file())
             self.assertTrue(any(str(staging[0]) in note for note in caught.exception.__notes__))
+
+    def test_standalone_export(self: TestTRIMStorage) -> None:
+        """Import native fixtures without inventing request or execution provenance; return None."""
+        source = (Path(__file__).parent / "fixtures/trim/2013").resolve()
+        with TemporaryDirectory(dir=CACHE) as td:
+            destination = Path(td) / "parsed"
+            self.assertEqual(parse_trim_directory(source, destination), destination)
+            report = json.loads((destination / "parsed/results.json").read_bytes())
+            self.assertTrue(report["complete"])
+            self.assertFalse(report["consistency"]["request_checked"])
+            self.assertFalse((destination / "request.json").exists())
+            for path in source.rglob("*"):
+                if path.is_file():
+                    self.assertEqual(path.read_bytes(), (destination / "raw/runtime" / path.relative_to(source)).read_bytes())
+            with self.assertRaises(FileExistsError):
+                parse_trim_directory(source, destination)
+
+    def test_unsafe_import_paths(self: TestTRIMStorage) -> None:
+        """Reject imports overlapping their source or using relative paths; return None."""
+        source = (Path(__file__).parent / "fixtures/trim/2013").resolve()
+        with self.assertRaises(ValueError):
+            parse_trim_directory(source, source / "nested")
+        with self.assertRaises(ValueError):
+            parse_trim_directory(Path("relative"), source)
+
+    def test_cleanup_preservation_guard(self: TestTRIMStorage) -> None:
+        """Retain uninitialized TRIM runtime data during cleanup; return None."""
+        with TemporaryDirectory(dir=CACHE) as td:
+            paths, config, worker = make_test_project(Path(td))
+            unknown = worker.path / "trim/unknown"
+            unknown.mkdir()
+            (unknown / "result.txt").write_bytes(b"must retain")
+            report = cleanup_trim_batch(paths, [worker.path])
+            self.assertEqual(len(report.retained_workers), 1)
+            self.assertTrue((unknown / "result.txt").exists())
+
+    def test_live_source_change_rejected(self: TestTRIMStorage) -> None:
+        """Reject an import whose source inventory changes during copying; return None."""
+        from src.srim.metadata import _inventory
+        source = (Path(__file__).parent / "fixtures/trim/2013").resolve()
+        original = _inventory(source, source)
+        with TemporaryDirectory(dir=CACHE) as td:
+            destination = Path(td) / "changed"
+            with patch("src.srim.trim_storage._inventory", side_effect=[original, original, []]):
+                with self.assertRaisesRegex(ValueError, "source changed"):
+                    parse_trim_directory(source, destination)
+            self.assertFalse(destination.exists())
+            self.assertEqual(len(list(Path(td).glob(".trim-import-*"))), 1)

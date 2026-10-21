@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "case": "Five 50 keV Ar ions in 100 nm Si; full cascade; optional outputs enabled",
+  "files": [
+    {
+      "path": "2008/TDATA.txt",
+      "sha256": "2e2048a0118f8ce96a8f9cb1c2600cc4342cb7a139f186a8c488d572559517dd",
+      "size_bytes": 1848,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2008\\TDATA.txt"
+    },
+    {
+      "path": "2008/RANGE.txt",
+      "sha256": "a6c6a1ee84c21a7240e416e7a2097591167d63e81ea5d2f24aa2b1e44638c9af",
+      "size_bytes": 5390,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2008\\RANGE.txt"
+    },
+    {
+      "path": "2008/VACANCY.txt",
+      "sha256": "b6afdc1106e6540d763168e8cc4d06d7a7cedf3493f4f3c08126baa587dde898",
+      "size_bytes": 5580,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2008\\VACANCY.txt"
+    },
+    {
+      "path": "2008/IONIZ.txt",
+      "sha256": "b4e27ea298d1d0021ccc7767a7d76e148a562220ea967c9ae5ddb7726e8459f0",
+      "size_bytes": 5316,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2008\\IONIZ.txt"
+    },
+    {
+      "path": "2008/PHONON.txt",
+      "sha256": "15d045b4014e01b5a80723dde298b8032fbf6e41619d8eebe9790cd326e9c673",
+      "size_bytes": 4994,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2008\\PHONON.txt"
+    },
+    {
+      "path": "2008/E2RECOIL.txt",
+      "sha256": "2e35e1b30d6975a0ed7f0b5a84c50c460403a8f70d340bdd75888bbd1f89e6ed",
+      "size_bytes": 5265,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2008\\E2RECOIL.txt"
+    },
+    {
+      "path": "2008/NOVAC.txt",
+      "sha256": "bde25c1bc162ac5b3eae3c9270aac6353307a71fa7d97e3ff82176cff1d8abb4",
+      "size_bytes": 4000,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2008\\NOVAC.txt"
+    },
+    {
+      "path": "2008/LATERAL.txt",
+      "sha256": "1f7e4ef3f4701135cabbc31dc7ce470f5a5e451bb97b2fc9b96085bd2fc916ab",
+      "size_bytes": 9304,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2008\\LATERAL.txt"
+    },
+    {
+      "path": "2008/SRIM Restore/TDATA.sav",
+      "sha256": "2eac213c86aa07c4e233f1fb4993b85d32439752441bb9bed63e5debdb754f2b",
+      "size_bytes": 2681,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2008\\SRIM Restore\\TDATA.sav"
+    },
+    {
+      "path": "2008/SRIM Restore/TRIMIN.sav",
+      "sha256": "9205886c1a7be3f0123eb97ecf98833daa2427654e5aad777964f6661bcebdc1",
+      "size_bytes": 939,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2008\\SRIM Restore\\TRIMIN.sav"
+    },
+    {
+      "path": "2013/TDATA.txt",
+      "sha256": "c485e062425aa897c5146862e6922ce40fae2c35c28c66f3c3207dbeaf2c1f77",
+      "size_bytes": 1848,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2013_std\\TDATA.txt"
+    },
+    {
+      "path": "2013/RANGE.txt",
+      "sha256": "36f6f908669579f4bc9f8d115456f064102d6e3339cdeec94271166e5829fabf",
+      "size_bytes": 5390,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2013_std\\RANGE.txt"
+    },
+    {
+      "path": "2013/VACANCY.txt",
+      "sha256": "144ce70e0d0e6d92d9a0fc74461f4eb9beba0c19d90d8f508c9c901e1d70b245",
+      "size_bytes": 5583,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2013_std\\VACANCY.txt"
+    },
+    {
+      "path": "2013/IONIZ.txt",
+      "sha256": "fb49e8db35ce649b327579588baca292601567474e09581f4d159de26a5ccbd9",
+      "size_bytes": 5316,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2013_std\\IONIZ.txt"
+    },
+    {
+      "path": "2013/PHONON.txt",
+      "sha256": "596f0ce290a2710eec1cbac3a27d6553c0ad88ef379c9152a9f15effc9732d28",
+      "size_bytes": 4994,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2013_std\\PHONON.txt"
+    },
+    {
+      "path": "2013/E2RECOIL.txt",
+      "sha256": "e7bb494f9def81670873ad99249b0b82b072478eab2786d908452bb22a59802e",
+      "size_bytes": 5265,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2013_std\\E2RECOIL.txt"
+    },
+    {
+      "path": "2013/NOVAC.txt",
+      "sha256": "e543d58f9e213d0084ac881d74afca8a0e3da0c497a0d36bfc25249afea02f34",
+      "size_bytes": 4000,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2013_std\\NOVAC.txt"
+    },
+    {
+      "path": "2013/LATERAL.txt",
+      "sha256": "54f09f8bf1f0ff1eea6e678ed043252953cfb899064c1a6b476bdfd63be40912",
+      "size_bytes": 9304,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2013_std\\LATERAL.txt"
+    },
+    {
+      "path": "2013/SRIM Restore/TDATA.sav",
+      "sha256": "e5e4d6d42d1691f401cc1c272cb0fed46b6ca5a1fbfa58681a4786f90a267a79",
+      "size_bytes": 2632,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2013_std\\SRIM Restore\\TDATA.sav"
+    },
+    {
+      "path": "2013/SRIM Restore/TRIMIN.sav",
+      "sha256": "9205886c1a7be3f0123eb97ecf98833daa2427654e5aad777964f6661bcebdc1",
+      "size_bytes": 939,
+      "origin": ".cache\\trim-implementation\\outputs-20261021T142017Z\\srim_2013_std\\SRIM Restore\\TRIMIN.sav"
+    }
+  ]
+}

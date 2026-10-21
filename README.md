@@ -8,8 +8,9 @@ Use it to:
 - Search compound dictionaries and construct targets from explicit atomic proportions or compound records, including mass-based compositions.
 - Compare immutable versions of atomic data, electronic/nuclear coefficients and CAB strengths without editing the SRIM installation.
 - Recover default CAB strengths on demand, reuse matching calculations, and retain requests, effective inputs, hashes, diagnostics and outputs for inspection.
+- Execute layered TRIM calculations, continue complete saved checkpoints, schedule prepared batches, and parse native summaries and depth profiles with preserved evidence.
 
-The repository currently provides Python APIs. It has no command-line application, agent orchestration service or packaged installer. Case and postprocessing directories can be allocated, but analysis workflows for them are not implemented. TRIM input preparation resolves layered materials and exports reproducible native input bundles; main TRIM execution is not implemented.
+The repository currently provides Python APIs. It has no command-line application, agent orchestration service or packaged installer. Case and postprocessing directories can be allocated, but analysis workflows for them are not implemented. TRIM supports pinned input preparation, fresh/resumed execution, prepared batches and summary/profile parsing. Every detected interactive popup is reported without an automatic response; such attempts retain evidence and finish as failed.
 
 ## Requirements
 
@@ -25,7 +26,7 @@ Project Python dependencies are from the standard library; no pip dependency ins
 2. Follow the [first SR calculation](doc/guides/getting-started.md). It covers initialization, a complete request, execution and reading results.
 3. Use [materials, resources and CAB](doc/guides/resources-and-cab.md) for compound search, local overrides, version creation and targeted recovery.
 
-Window visibility is controlled independently in `settings.toml` under `[srim]`: `hide_sr_window = true` and `hide_trim_window = true`. Both default to `true` when omitted. Set `hide_sr_window = false` for normal SRModule window display; this also controls Bragg dependency runs. The TRIM flag is validated and stored for a future runner. CAB recovery's separate `SR.exe` capture GUI keeps its existing visible workflow.
+Window visibility is controlled independently in `settings.toml` under `[srim]`: `hide_sr_window = true` and `hide_trim_window = true`. Both default to `true` when omitted. Set `hide_sr_window = false` for normal SRModule window display; this also controls Bragg dependency runs. The TRIM flag controls initial display; native dialogs and later windows may still appear. CAB recovery's separate `SR.exe` capture GUI keeps its existing visible workflow.
 
 Preparation may run missing dependency calculations; the main calculation starts only when `run_sr_simulation` is called. List mode returns stopping values; range mode also returns projected range and straggling. Engine execution returns metadata with `status="succeeded"` or `status="failed"` for expected operational failures, so always inspect the status.
 
@@ -38,6 +39,7 @@ For concurrent execution, prepare simulations across separate workers, then call
 | Browse the documentation | [Documentation index](doc/README.md) |
 | Find a Python API | [API reference](doc/reference/api.md) |
 | Prepare layered TRIM inputs without starting TRIM | [TRIM input guide](doc/guides/trim-inputs.md) |
+| Execute/resume TRIM, schedule batches or parse existing outputs | [TRIM execution guide](doc/guides/trim-execution.md) |
 | Build requests or inspect stored records | [Data formats and layouts](doc/reference/data-formats.md) |
 | See discrepancies found in the review | [Non-TRIM review](doc/reviews/non-trim-review.md) |
 | Inspect previously recorded native checks | [CAB status and evidence](doc/CAB_HANDOFF.md) |

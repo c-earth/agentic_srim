@@ -1,6 +1,6 @@
 # Documentation
 
-Start with the [project README](../README.md) for what the project does and its prerequisites. The current user-facing scope is SR stopping/range calculation, material/coefficient resources, core-and-bond (CAB) corrections and TRIM input preparation. Main TRIM execution remains separate work.
+Start with the [project README](../README.md) for what the project does and its prerequisites. The current user-facing scope is SR stopping/range calculation, material/coefficient resources, core-and-bond (CAB) corrections, and TRIM input preparation, execution, continuation, batching and summary/profile data.
 
 ## Choose a task
 
@@ -11,6 +11,8 @@ Start with the [project README](../README.md) for what the project does and its 
 | Find function signatures, return values, side effects and error behavior | [Python API reference](reference/api.md) |
 | Construct request/selection JSON or inspect records and units | [Data formats and layouts](reference/data-formats.md) |
 | Resolve layered TRIM inputs and export a reproducible bundle | [TRIM input guide](guides/trim-inputs.md) |
+| Execute/resume TRIM, schedule batches and parse existing outputs | [TRIM execution guide](guides/trim-execution.md) |
+| Inspect runtime, lifecycle and parsed-result contracts | [TRIM execution reference](reference/trim-execution-format.md) |
 | Inspect TRIM input schemas, resources, APIs and limits policy | [TRIM input format](reference/trim-input-format.md) |
 | Read the code/documentation discrepancy review | [Non-TRIM review](reviews/non-trim-review.md) |
 | Inspect recorded native validation and limitations | [CAB status and evidence](CAB_HANDOFF.md) |
@@ -31,4 +33,4 @@ Historical `.cache/` paths are relative to the repository root. Earlier artifact
 
 ## Separate investigation outside this review
 
-[TIN findings](TIN_FINDINGS.txt) and [TRIM findings](TRIM_FINDINGS.txt) preserve earlier native investigations. The [2026-10-21 default reference](reference/trim-input-defaults.md) records the complete table and subsequent compound/phase evidence; [TRIM handoff](TRIM_HANDOFF.md) identifies unfinished work. These records do not indicate that TIN/TRIM execution has been implemented.
+[TIN findings](TIN_FINDINGS.txt) and [TRIM findings](TRIM_FINDINGS.txt) preserve earlier native investigations. The [2026-10-21 default reference](reference/trim-input-defaults.md) records the complete table and subsequent compound/phase evidence; [TRIM handoff](TRIM_HANDOFF.md) records later implementation and acceptance state. Use the execution guide/reference for current runtime behavior; UI-assisted historical probes do not establish unattended support for every native mode.

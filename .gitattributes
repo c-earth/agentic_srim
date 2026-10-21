@@ -1,0 +1,2 @@
+test/srim/fixtures/trim/**/*.txt -text
+test/srim/fixtures/trim/**/*.sav -text

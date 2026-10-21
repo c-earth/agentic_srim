@@ -22,6 +22,30 @@ from src.srim.metadata import _validate_document, finish_simulation, initialize_
 class TestMetadata(unittest.TestCase):
     """Use unittest lifecycle to isolate simulation fixtures beneath this module and remove them after each test."""
 
+    def test_trim_dispatch_and_sealing(self: TestMetadata) -> None:
+        """Seal all new TRIM evidence before start and reject later mutations; return None."""
+        from _fixtures import make_test_project
+        from test_trim_inputs import TRIM_INSTALLATION_FILES, TRIM_REQUEST, TRIM_SELECTIONS
+        from test_trim_runtime import CACHE
+        from src.srim.trim_defaults import switch_trim_defaults
+        from src.srim.trim_resolution import resolve_trim_inputs
+        from src.srim.trim_runtime import prepare_trim_simulation
+        with TemporaryDirectory(dir=CACHE) as td:
+            paths, config, worker = make_test_project(Path(td))
+            for name, payload in TRIM_INSTALLATION_FILES.items():
+                (config.srim_root / name).write_bytes(payload)
+            switch_trim_defaults(paths, config)
+            inputs = resolve_trim_inputs(paths, config, worker, TRIM_REQUEST, TRIM_SELECTIONS)
+            _validate_document(inputs.request, "request")
+            _validate_document(inputs.resolved, "resolved")
+            created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
+            prepare_trim_simulation(paths, config, created, worker, inputs)
+            control = created.path / "input/execution/control.json"
+            control.write_bytes(control.read_bytes() + b" ")
+            with self.assertRaises(ValueError):
+                start_simulation(paths, config, created.path.name)
+            self.assertEqual(read_simulation(paths, created.path.name)["status"], "created")
+
     def setUp(self: TestMetadata) -> None:
         """Create self's temporary project, source resource, engine identity, and request documents; return None or propagate setup errors."""
         self.temporary = TemporaryDirectory(dir=Path(__file__).parent)

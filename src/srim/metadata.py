@@ -65,7 +65,7 @@ class SRDependencyInputs:
 
 
 def _validate_document(document: JSONObject, document_type: str) -> None:
-    """Validate document against document_type's exact legacy or version-two schema; return None or raise ValueError without filesystem effects.
+    """Validate document against document_type's legacy, version-two or TRIM schema; return None or raise ValueError without filesystem effects.
 
     Nested references, selections, manifests, CAB snapshots, continuation links,
     and lifecycle timestamps are structurally validated here. Engine physics,
@@ -92,6 +92,33 @@ def _validate_document(document: JSONObject, document_type: str) -> None:
     if document_type in ("request", "resolved", "metadata"):
         if type(document.get("schema_version")) is not int or document["schema_version"] not in (1, 2):
             raise ValueError("Unsupported simulation schema")
+    if document_type in ("request", "resolved") and document.get("engine") == "trim":
+        from src.srim.trim_inputs import validate_trim_request
+        if document_type == "request":
+            validate_trim_request(document)
+        else:
+            expected = {"schema_version", "engine", "installation", "defaults", "resources", "layers", "atom_index_map", "dependencies", "native_checks", "files"}
+            if set(document) != expected or document["schema_version"] != 1 or not isinstance(document["resources"], dict) or not isinstance(document["files"], list):
+                raise ValueError("Invalid resolved TRIM schema")
+            profile = document["installation"]
+            if not isinstance(profile, dict) or set(profile) != {"schema_version", "engine_family", "version_text", "native_fields", "files"} or type(profile["schema_version"]) is not int or profile["schema_version"] != 1 or profile["engine_family"] not in ("2008", "2013") or not isinstance(profile["version_text"], str) or not isinstance(profile["native_fields"], dict) or not isinstance(profile["files"], list):
+                raise ValueError("Invalid TRIM installation profile")
+            if not {"atomdata", "electronic", "nuclear", "core", "bond", "damage"} <= set(document["resources"]) or set(document["resources"]) - {"atomdata", "electronic", "nuclear", "core", "bond", "damage", "compound"}:
+                raise ValueError("Invalid TRIM resource roles")
+            for role in document["resources"].values():
+                _validate_document(role, "resolved-role")
+            if not isinstance(document["defaults"], dict) or set(document["defaults"]) != {"sr", "trim", "dependency_engine"}:
+                raise ValueError("Invalid TRIM default evidence")
+            for key in ("layers", "atom_index_map", "dependencies", "native_checks"):
+                if not isinstance(document[key], list) or any(not isinstance(item, dict) for item in document[key]):
+                    raise ValueError(f"Invalid TRIM {key} evidence")
+            if not document["layers"] or not document["atom_index_map"]:
+                raise ValueError("TRIM requires layer/component provenance")
+            for item in profile["files"]:
+                _validate_document(item, "manifest")
+            for item in document["files"]:
+                _validate_document(item, "manifest")
+        return
     if document_type == "entry-reference":
         if set(document) != {"dataset", "dependency_key", "entry_id", "sha256", "size_bytes"}:
             raise ValueError("Invalid calculated entry reference fields")
@@ -501,7 +528,8 @@ def _write_input_file(path: Path, contents: bytes) -> None:
 def _validate_input_files(input_files: Mapping[str, bytes] | None) -> dict[str, bytes]:
     """Return copied safe nested input_files bytes, or an empty map for None, without I/O.
 
-    Accept resources/cab descendants and effective-request.json/selections.json.
+    Accept resource/CAB/installation/dependency/continuation/execution descendants
+    and effective-request.json/selections.json.
     Reject reserved, unsafe, duplicate, overlapping or nonbyte entries with ValueError.
     """
     if input_files is None:
@@ -514,7 +542,7 @@ def _validate_input_files(input_files: Mapping[str, bytes] | None) -> dict[str, 
         if not isinstance(name, str) or not name or not isinstance(contents, bytes):
             raise ValueError("Input evidence requires string names and byte contents")
         parts = name.split("/")
-        if name not in ("effective-request.json", "selections.json") and (len(parts) < 2 or parts[0] not in ("resources", "cab")):
+        if name not in ("effective-request.json", "selections.json") and (len(parts) < 2 or parts[0] not in ("resources", "cab", "installation", "dependencies", "continuation", "execution")):
             raise ValueError("Unknown input evidence root")
         for part in parts:
             if not part or part in (".", "..") or part.endswith((".", " ")) or os.path.isreserved(part) or any(ord(char) < 32 or char in '<>:"\\|?*' for char in part):
@@ -534,7 +562,7 @@ def _collect_resource_references(resolved: JSONObject) -> list[JSONObject]:
     ValueError for invalid reference/document structure.
     """
     _validate_document(resolved, "resolved")
-    if resolved["schema_version"] == 1:
+    if resolved["schema_version"] == 1 and resolved.get("engine") != "trim":
         references = [selection["reference"] for selection in resolved["resources"]]
         references.extend(selection["transformation"]["original"] for selection in resolved["resources"] if "transformation" in selection)
         if resolved["cab"] is not None and resolved["cab"]["mode"] == "derived":
@@ -659,7 +687,7 @@ def start_simulation(paths: ProjectPaths, config: Config, simulation_id: str) ->
         _validate_document(request, "request")
         _validate_document(resolved, "resolved")
         current = _inventory(record / "input", record)
-        if metadata["schema_version"] == 2 and current != metadata["inputs"]:
+        if (metadata["schema_version"] == 2 or request.get("engine") == "trim") and current != metadata["inputs"]:
             raise ValueError("Initialized version-two inputs were changed")
         documents = {item["path"]: item for item in current}
         for original in metadata["inputs"]:

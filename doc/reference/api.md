@@ -2,7 +2,7 @@
 
 [Documentation index](../README.md) · [First calculation](../guides/getting-started.md) · [Data formats](data-formats.md) · [Review findings](../reviews/non-trim-review.md)
 
-This reference describes the current non-TRIM code. Import from `src.backend.<module>` or `src.srim.<module>` while running from the repository root. The historical CAB proposal/catalog record design decisions; they are not the current user entry point.
+This reference describes the shared backend and SR APIs, with links to TRIM's input and execution references. Import from `src.backend.<module>` or `src.srim.<module>` while running from the repository root. The historical CAB proposal/catalog record design decisions; they are not the current user entry point.
 
 ## Shared types and behavior
 
@@ -28,7 +28,7 @@ get_project_paths(root: Path) -> ProjectPaths
 create_base_directories(paths: ProjectPaths) -> DirectoryReport
 ```
 
-- `load_config` reads TOML afresh; timezone defaults to UTC, while SRIM root is required and absolute. Optional `[srim]` keys `hide_sr_window` and `hide_trim_window` accept only actual booleans and both default to true. Unknown keys/tables/types fail. It performs no discovery, expansion, directory creation or installation preflight. Malformed TOML and file-access exceptions propagate. Config stores both immutable flags; existing two-argument construction retains hidden defaults. The TRIM flag is reserved for its future runner.
+- `load_config` reads TOML afresh; timezone defaults to UTC, while SRIM root is required and absolute. Optional `[srim]` keys `hide_sr_window` and `hide_trim_window` accept only actual booleans and both default to true. Unknown keys/tables/types fail. It performs no discovery, expansion, directory creation or installation preflight. Malformed TOML and file-access exceptions propagate. Config stores both immutable flags; existing two-argument construction retains hidden defaults. The TRIM flag controls initial display; native popups are still reported without a response.
 - `get_project_paths` derives the agreed layout without I/O; relative roots raise `ValueError`.
 - `create_base_directories` creates missing directories and reports created/existing paths in encounter order. It rejects symlinks/junctions, preserves partial creation on error and has no locking/rollback.
 
@@ -293,7 +293,7 @@ These are advanced evidence-bearing APIs. A discovered core dependency-identity 
 
 ## Low-level simulation lifecycle
 
-For TRIM's separate input-only validators, renderers, versioned damage resources, resolver and bundle export, see the [TRIM API reference](trim-input-format.md#apis-and-effects) and [complete typed catalogue](../TRIM_INPUT_PROPOSAL.md#api-catalogue). These APIs do not add a main TRIM execution/lifecycle path. The shared resolve_material_correction signature and effects are recorded in the [approved correction extraction](../TRIM_INPUT_PROPOSAL.md#shared-cab-extraction-in-resolutionpy).
+For TRIM's validators, renderers, versioned damage resources, resolver and bundle export, see the [TRIM input API reference](trim-input-format.md#apis-and-effects). Main staging, execution, continuation, prepared batches and summary/profile parsing are documented in the [TRIM execution reference](trim-execution-format.md) and [execution guide](../guides/trim-execution.md). The shared resolve_material_correction signature and effects are recorded in the [approved correction extraction](../TRIM_INPUT_PROPOSAL.md#shared-cab-extraction-in-resolutionpy).
 
 Source: [metadata.py](../../src/srim/metadata.py).
 

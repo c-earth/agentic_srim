@@ -1,0 +1,28 @@
+==> TRIM input generated from pinned explicit parameters.
+Ion: Z1, M1, Energy (keV), Angle, Number, Bragg Corr, AutoSave Number.
+18 39.962 50 0 5 0 10000
+Cascades, Random Number Seed, Reminders
+2 12345 0
+Diskfiles: Ranges, Backscatter, Transmit, Sputtered, Collisions, EXYZ increment (eV)
+1 1 1 1 2 1000
+Target material: Number of Elements and Layers
+"Si 100 nm" 1 1
+PlotType (0-5), Plot Depths: minimum/maximum (Angstrom)
+5 0 1000
+Target Elements: Z Mass(amu)
+Atom 1          14 28.086
+Layer Layer Name Width Density Stoichiometry
+Number Description (Angstrom) (g/cm3) Atom entries
+1 "Silicon" 1000 2.3212 1
+0 Target layer phases (0=Solid, 1=Gas)
+0
+Target Compound Corrections (Bragg)
+1.0
+Individual target atom displacement energies (eV)
+15
+Individual target atom lattice binding energies (eV)
+2
+Individual target atom surface binding energies (eV)
+4.70
+Stopping Power Version (copied from installed input)
+0

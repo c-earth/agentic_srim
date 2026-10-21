@@ -12,8 +12,8 @@ class Config:
 
     timezone is a timezone setting string, and srim_root is the SRIM installation
     path. hide_sr_window and hide_trim_window are boolean display preferences,
-    both defaulting to True. Only the SRModule preference currently has a runner;
-    the TRIM preference is reserved for future execution. Direct construction
+    both defaulting to True. TRIM's preference controls initial display; native
+    dialogs remain reportable and are never automatically answered. Direct construction
     stores inputs without validation or I/O; load_config validates file inputs.
     """
 
