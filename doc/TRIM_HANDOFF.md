@@ -1,5 +1,13 @@
 # TRIM investigation handoff — 2026-10-21
 
+## Input implementation handoff
+
+The approved input-first implementation is complete. Its API contracts, acceptance results and native limitations are recorded in [TRIM_INPUT_PROPOSAL.md](TRIM_INPUT_PROPOSAL.md#implementation-verification-2026-10-21); usage is in [guides/trim-inputs.md](guides/trim-inputs.md). This supersedes the older pending production-integration item below for input preparation only. No work remains within the approved input scope.
+
+For a future execution proposal, resolve native dialog/error handling and saved-value verification before claiming unattended support for every event mode. The latest bounded 2013 specified-ion full/recoil probes did not establish completion; a recoil diagnostic displayed the cascade-output prompt. Embedded quotes in both calculation/layer names caused native runtime error 9 in a 2013 Standard probe; the individual cause remains unisolated. Preserve these unresolved cases without silently rewriting inputs or inventing limits. Runtime staging, main execution, resume and the deferred representative TRIM worker-scaling retest remain unimplemented.
+
+The final local evidence index is `.cache/trim-implementation/verification-summary.json`; optional-output evidence is `outputs-20261021T142017Z/results.json` in that directory. Native evidence is local cache only; durable conclusions are in the proposal. The unrelated untracked `memory/NERSC_TRIM_20k/`, Python caches and interrupted-test residue `test/srim/tmp2uuond23/` were left untouched and excluded from this commit.
+
 The durable record is [TRIM input defaults](reference/trim-input-defaults.md), including the complete [92-element CSV](reference/trim-elemental-defaults.csv), reconstructed lookup rules, sources and coverage histogram. It expands the narrower 2026-10-20 default findings in `TRIM_FINDINGS.txt`; older transport/dependency findings remain separate.
 
 ## Current state

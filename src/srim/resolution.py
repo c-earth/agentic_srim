@@ -240,6 +240,182 @@ def _calculate_cab(composition: Sequence[JSONObject], bonds: Sequence[JSONObject
         raise ValueError("CAB arithmetic exceeds supported decimal limits") from error
 
 
+def resolve_material_correction(
+    paths: ProjectPaths,
+    config: Config,
+    worker: CreatedDirectory,
+    correction: JSONObject,
+    composition: Sequence[JSONObject],
+    bonds: Sequence[JSONObject],
+    atomdata: JSONObject,
+    defaults: JSONObject,
+    resources: JSONObject,
+    snapshots: Mapping[str, bytes],
+    dependency_inputs: SRDependencyInputs | None,
+    completed_entries: list[JSONObject],
+    *,
+    capture_timeout_seconds: float = 30.0,
+    dependency_timeout_seconds: float = 60.0,
+    progress: Callable[[JSONObject], None] | None = None,
+) -> tuple[JSONObject, list[JSONObject]]:
+    """Resolve a material correction using pinned inputs and existing CAB machinery.
+
+    paths/config/worker locate dependency records and owned operations. correction,
+    composition, bonds, atomdata, defaults, resources and snapshots supply validated
+    material intent and immutable sources. dependency_inputs is required for derived
+    mode; completed_entries accumulates retained published dependency references.
+    Timeouts bound dependency operations; progress reports existing CAB events.
+    Return copied effective correction and dependency references. May run/publish
+    SR/CAB dependencies and invoke callbacks, but never a main simulation. Preserve
+    existing ValueError/OSError/interruption behavior and mutate only the explicit
+    completed_entries accumulator.
+    """
+    for timeout in (capture_timeout_seconds, dependency_timeout_seconds):
+        if type(timeout) not in (int, float) or timeout <= 0 or not math.isfinite(timeout):
+            raise ValueError("Operation timeouts must be finite and positive")
+    if progress is not None and not callable(progress):
+        raise ValueError("progress must be callable or None")
+    if not isinstance(correction, dict) or correction.get("mode") not in ("none", "supplied", "derived"):
+        raise ValueError("Invalid material correction mode")
+    if not isinstance(completed_entries, list):
+        raise ValueError("completed_entries must be a list")
+    correction = deepcopy(correction)
+    dependencies: list[JSONObject] = []
+    if correction["mode"] != "derived":
+        _validate_document(correction, "cab")
+        return correction, dependencies
+    if set(correction) != {"mode"} or not isinstance(dependency_inputs, SRDependencyInputs):
+        raise ValueError("Derived correction requires pinned dependency inputs")
+    _validate_document(defaults, "recorded-generation")
+    generation = defaults["generation"]
+    if correction["mode"] == "derived":
+        values_by_kind: dict[str, dict[object, str]] = {}
+        recovered: dict[str, bool] = {}
+        removed_by_kind: dict[str, list[str]] = {}
+        available: dict[str, dict[str, JSONObject]] = {}
+        for kind in ("core", "bond"):
+            source = json.loads(snapshots[f"resources/{kind}/source"], object_pairs_hook=_unique_object)
+            is_default = set(source) == {"schema_version", "dataset", "entries", "values"}
+            values = _decode_payload(kind, json.dumps(source["values"]).encode("utf-8")) if is_default else _decode_payload(kind, snapshots[f"resources/{kind}/source"])
+            values, removed = _apply_cab_overrides(kind, values, resources[kind]["overrides"])
+            values_by_kind[kind] = values
+            removed_by_kind[kind] = removed
+            recovered[kind] = is_default and resources[kind]["published"] is None
+            available[kind] = {entry["entry_id"]: entry for entry in source["entries"]} if recovered[kind] else {}
+        bond_entries: list[JSONObject] = []
+        core_entries: list[JSONObject] = []
+        bragg_entries: list[JSONObject] = []
+        omissions: list[JSONObject] = []
+        strengths: dict[str, str] = {}
+        cores: dict[int, str] = {}
+        stopping: dict[int, str] = {}
+        all_entries: dict[str, JSONObject] = {}
+        total = len(bonds) + 2 * len(composition)
+        completed = 0
+        for bond in bonds:
+            key = next(iter(_normalize_entries("bond", {bond["identifier"]: "0"})))
+            identifier = f"z{key[0]:03d}-z{key[1]:03d}-" + {"-": "s", "=": "d", "#": "t"}[key[2]]
+            value = values_by_kind["bond"].get(key)
+            entry_reference = None
+            origin = "dataset"
+            override_index = None
+            for index, operation in enumerate(resources["bond"]["overrides"]):
+                normalized = next(iter(_normalize_entries("bond", {operation["key"]: "0"})))
+                if normalized == key and operation["operation"] == "set":
+                    origin, override_index = "override", index
+            if Decimal(bond["count"]) == 0:
+                value, origin = "0", "zero-fallback"
+                omissions.append({"dataset": "bond", "entry_id": identifier, "reason": "zero-count"})
+            elif identifier in removed_by_kind["bond"]:
+                value, origin = "0", "zero-fallback"
+                omissions.append({"dataset": "bond", "entry_id": identifier, "reason": "removed-entry"})
+            elif value is None and recovered["bond"] and key in SR_BONDS:
+                if resources["bond"]["reference"] != generation["resources"]["bond"]:
+                    raise ValueError("An inactive default bond version cannot recover missing entries")
+                from src.srim.cab_recovery import resolve_default_bond
+                result = resolve_default_bond(paths, config, worker, generation, key, capture_timeout_seconds=capture_timeout_seconds, dependency_timeout_seconds=dependency_timeout_seconds)
+                entry_reference = asdict(result.reference)
+                completed_entries.append(entry_reference)
+                entry = load_cab_entry(paths, result.reference)
+                value, origin = entry["value"], "recovered-default"
+                if progress is not None:
+                    progress({"kind": "bond", "entry_id": identifier, "state": "calculated" if result.calculated else "cached", "completed": completed + 1, "total": total})
+            elif value is None:
+                value, origin = "0", "zero-fallback"
+                omissions.append({"dataset": "bond", "entry_id": identifier, "reason": "unsupported-default-bond" if recovered["bond"] else "missing-user-entry"})
+            elif origin == "dataset" and identifier in available["bond"]:
+                entry_reference, origin = available["bond"][identifier], "recovered-default"
+            if entry_reference is not None:
+                all_entries[json.dumps(entry_reference, sort_keys=True)] = entry_reference
+            strengths[bond["identifier"]] = value
+            bond_entries.append({"entry_id": identifier, "value": value, "origin": origin, "entry_reference": entry_reference, "snapshot": resources["bond"]["effective"] if origin in ("dataset", "override") else None, "override_index": override_index if origin == "override" else None})
+            completed += 1
+        if any(Decimal(bond["count"]) > 0 and Decimal(strengths[bond["identifier"]]) != 0 for bond in bonds):
+            from src.srim.bragg import resolve_bragg
+            for atom in composition:
+                z = atom["atomic_number"]
+                identifier = f"z{z:03d}"
+                result = resolve_bragg(paths, config, worker, dependency_inputs, z, timeout_seconds=dependency_timeout_seconds)
+                entry_reference = asdict(result.reference)
+                completed_entries.append(entry_reference)
+                entry = load_cab_entry(paths, result.reference)
+                stopping[z] = entry["value"]
+                bragg_entries.append(entry_reference)
+                all_entries[json.dumps(entry_reference, sort_keys=True)] = entry_reference
+                completed += 1
+                if progress is not None:
+                    progress({"kind": "bragg", "entry_id": identifier, "state": "calculated" if result.calculated else "cached", "completed": completed, "total": total})
+                value = values_by_kind["core"].get(z)
+                entry_reference, origin, override_index = None, "dataset", None
+                for index, operation in enumerate(resources["core"]["overrides"]):
+                    normalized = next(iter(_normalize_entries("core", {operation["key"]: "0"})))
+                    if normalized == z and operation["operation"] == "set":
+                        origin, override_index = "override", index
+                if identifier in removed_by_kind["core"] or (value is None and not recovered["core"]):
+                    value, origin, entry_reference = stopping[z], "bragg-fallback", bragg_entries[-1]
+                    omissions.append({"dataset": "core", "entry_id": identifier, "reason": "removed-entry" if identifier in removed_by_kind["core"] else "missing-user-entry"})
+                elif value is None:
+                    if resources["core"]["reference"] != generation["resources"]["core"]:
+                        raise ValueError("An inactive default core version cannot recover missing entries")
+                    from src.srim.cab_recovery import resolve_default_core
+                    result = resolve_default_core(paths, config, worker, generation, z, capture_timeout_seconds=capture_timeout_seconds, dependency_timeout_seconds=dependency_timeout_seconds)
+                    entry_reference = asdict(result.reference)
+                    completed_entries.append(entry_reference)
+                    value, origin = load_cab_entry(paths, result.reference)["value"], "recovered-default"
+                    if progress is not None:
+                        progress({"kind": "core", "entry_id": identifier, "state": "calculated" if result.calculated else "cached", "completed": completed + 1, "total": total})
+                elif origin == "dataset" and identifier in available["core"]:
+                    entry_reference, origin = available["core"][identifier], "convention" if z == 1 else "recovered-default"
+                if entry_reference is not None:
+                    all_entries[json.dumps(entry_reference, sort_keys=True)] = entry_reference
+                cores[z] = value
+                core_entries.append({"entry_id": identifier, "value": value, "origin": origin, "entry_reference": entry_reference, "snapshot": resources["core"]["effective"] if origin in ("dataset", "override") else None, "override_index": override_index if origin == "override" else None})
+                completed += 1
+        calculation = _calculate_cab(composition, bonds, cores, strengths, stopping)
+        with localcontext() as context:
+            context.prec, context.rounding = CAB_PRECISION, CAB_ROUNDING
+            hydrogen = atomdata["rows"][0]["isotope_mass_amu"]
+            energy = format(125 * Decimal(hydrogen), "f")
+        correction = {"mode": "derived", "applied_factor": calculation["calculated_factor"], "core_entries": core_entries, "bond_entries": bond_entries, "bragg_entries": bragg_entries, "composition": composition, "bonds": bonds, "omissions": omissions, "reference": {"projectile": 1, "mass_amu": hydrogen, "energy_keV": energy, "phase": "gas", "contribution_units": CAB_UNITS}, "calculation": calculation}
+        pending = [all_entries[key] for key in sorted(all_entries)]
+        visited: set[str] = set()
+        evidence_seen: set[str] = set()
+        while pending:
+            reference = pending.pop(0)
+            identity = json.dumps(reference, sort_keys=True)
+            if identity in visited:
+                continue
+            visited.add(identity)
+            entry = load_cab_entry(paths, CABEntryReference(ResourceReference(**reference["dataset"]), reference["dependency_key"], reference["entry_id"], reference["sha256"], reference["size_bytes"]))
+            for evidence in entry["simulations"] + entry["captures"]:
+                key = json.dumps(evidence, sort_keys=True)
+                if key not in evidence_seen:
+                    evidence_seen.add(key)
+                    dependencies.append(evidence)
+            pending.extend(entry["dependency"]["entries"])
+    return correction, dependencies
+
+
 def resolve_sr_inputs(paths: ProjectPaths, config: Config, worker: CreatedDirectory, request: JSONObject, selections: JSONObject, *, capture_timeout_seconds: float = 30.0, dependency_timeout_seconds: float = 60.0, progress: Callable[[JSONObject], None] | None = None) -> ResolvedSRInputs:
     """Resolve request/selections with paths/config/worker into a pinned, replayable input bundle.
 
@@ -298,131 +474,12 @@ def resolve_sr_inputs(paths: ProjectPaths, config: Config, worker: CreatedDirect
         composition = [{"atomic_number": element["atomic_number"], "atomic_mass": element["mass_amu"], "atom_count": element["stoichiometry"]} for element in target["target"]["elements"]]
         correction = deepcopy(intent["parameters"]["correction"])
         dependencies: list[JSONObject] = []
-        if correction["mode"] == "derived":
-            values_by_kind: dict[str, dict[object, str]] = {}
-            recovered: dict[str, bool] = {}
-            removed_by_kind: dict[str, list[str]] = {}
-            available: dict[str, dict[str, JSONObject]] = {}
-            for kind in ("core", "bond"):
-                source = json.loads(snapshots[f"resources/{kind}/source"], object_pairs_hook=_unique_object)
-                is_default = set(source) == {"schema_version", "dataset", "entries", "values"}
-                values = _decode_payload(kind, json.dumps(source["values"]).encode("utf-8")) if is_default else _decode_payload(kind, snapshots[f"resources/{kind}/source"])
-                values, removed = _apply_cab_overrides(kind, values, resources[kind]["overrides"])
-                values_by_kind[kind] = values
-                removed_by_kind[kind] = removed
-                recovered[kind] = is_default and resources[kind]["published"] is None
-                available[kind] = {entry["entry_id"]: entry for entry in source["entries"]} if recovered[kind] else {}
-            bond_entries: list[JSONObject] = []
-            core_entries: list[JSONObject] = []
-            bragg_entries: list[JSONObject] = []
-            omissions: list[JSONObject] = []
-            strengths: dict[str, str] = {}
-            cores: dict[int, str] = {}
-            stopping: dict[int, str] = {}
-            all_entries: dict[str, JSONObject] = {}
-            total = len(target["bonds"]) + 2 * len(composition)
-            completed = 0
-            for bond in target["bonds"]:
-                key = next(iter(_normalize_entries("bond", {bond["identifier"]: "0"})))
-                identifier = f"z{key[0]:03d}-z{key[1]:03d}-" + {"-": "s", "=": "d", "#": "t"}[key[2]]
-                value = values_by_kind["bond"].get(key)
-                entry_reference = None
-                origin = "dataset"
-                override_index = None
-                for index, operation in enumerate(resources["bond"]["overrides"]):
-                    normalized = next(iter(_normalize_entries("bond", {operation["key"]: "0"})))
-                    if normalized == key and operation["operation"] == "set":
-                        origin, override_index = "override", index
-                if Decimal(bond["count"]) == 0:
-                    value, origin = "0", "zero-fallback"
-                    omissions.append({"dataset": "bond", "entry_id": identifier, "reason": "zero-count"})
-                elif identifier in removed_by_kind["bond"]:
-                    value, origin = "0", "zero-fallback"
-                    omissions.append({"dataset": "bond", "entry_id": identifier, "reason": "removed-entry"})
-                elif value is None and recovered["bond"] and key in SR_BONDS:
-                    if resources["bond"]["reference"] != generation["resources"]["bond"]:
-                        raise ValueError("An inactive default bond version cannot recover missing entries")
-                    from src.srim.cab_recovery import resolve_default_bond
-                    result = resolve_default_bond(paths, config, worker, generation, key, capture_timeout_seconds=capture_timeout_seconds, dependency_timeout_seconds=dependency_timeout_seconds)
-                    entry_reference = asdict(result.reference)
-                    completed_entries.append(entry_reference)
-                    entry = load_cab_entry(paths, result.reference)
-                    value, origin = entry["value"], "recovered-default"
-                    if progress is not None:
-                        progress({"kind": "bond", "entry_id": identifier, "state": "calculated" if result.calculated else "cached", "completed": completed + 1, "total": total})
-                elif value is None:
-                    value, origin = "0", "zero-fallback"
-                    omissions.append({"dataset": "bond", "entry_id": identifier, "reason": "unsupported-default-bond" if recovered["bond"] else "missing-user-entry"})
-                elif origin == "dataset" and identifier in available["bond"]:
-                    entry_reference, origin = available["bond"][identifier], "recovered-default"
-                if entry_reference is not None:
-                    all_entries[json.dumps(entry_reference, sort_keys=True)] = entry_reference
-                strengths[bond["identifier"]] = value
-                bond_entries.append({"entry_id": identifier, "value": value, "origin": origin, "entry_reference": entry_reference, "snapshot": resources["bond"]["effective"] if origin in ("dataset", "override") else None, "override_index": override_index if origin == "override" else None})
-                completed += 1
-            if any(Decimal(bond["count"]) > 0 and Decimal(strengths[bond["identifier"]]) != 0 for bond in target["bonds"]):
-                from src.srim.bragg import resolve_bragg
-                for atom in composition:
-                    z = atom["atomic_number"]
-                    identifier = f"z{z:03d}"
-                    result = resolve_bragg(paths, config, worker, dependency_inputs, z, timeout_seconds=dependency_timeout_seconds)
-                    entry_reference = asdict(result.reference)
-                    completed_entries.append(entry_reference)
-                    entry = load_cab_entry(paths, result.reference)
-                    stopping[z] = entry["value"]
-                    bragg_entries.append(entry_reference)
-                    all_entries[json.dumps(entry_reference, sort_keys=True)] = entry_reference
-                    completed += 1
-                    if progress is not None:
-                        progress({"kind": "bragg", "entry_id": identifier, "state": "calculated" if result.calculated else "cached", "completed": completed, "total": total})
-                    value = values_by_kind["core"].get(z)
-                    entry_reference, origin, override_index = None, "dataset", None
-                    for index, operation in enumerate(resources["core"]["overrides"]):
-                        normalized = next(iter(_normalize_entries("core", {operation["key"]: "0"})))
-                        if normalized == z and operation["operation"] == "set":
-                            origin, override_index = "override", index
-                    if identifier in removed_by_kind["core"] or (value is None and not recovered["core"]):
-                        value, origin, entry_reference = stopping[z], "bragg-fallback", bragg_entries[-1]
-                        omissions.append({"dataset": "core", "entry_id": identifier, "reason": "removed-entry" if identifier in removed_by_kind["core"] else "missing-user-entry"})
-                    elif value is None:
-                        if resources["core"]["reference"] != generation["resources"]["core"]:
-                            raise ValueError("An inactive default core version cannot recover missing entries")
-                        from src.srim.cab_recovery import resolve_default_core
-                        result = resolve_default_core(paths, config, worker, generation, z, capture_timeout_seconds=capture_timeout_seconds, dependency_timeout_seconds=dependency_timeout_seconds)
-                        entry_reference = asdict(result.reference)
-                        completed_entries.append(entry_reference)
-                        value, origin = load_cab_entry(paths, result.reference)["value"], "recovered-default"
-                        if progress is not None:
-                            progress({"kind": "core", "entry_id": identifier, "state": "calculated" if result.calculated else "cached", "completed": completed + 1, "total": total})
-                    elif origin == "dataset" and identifier in available["core"]:
-                        entry_reference, origin = available["core"][identifier], "convention" if z == 1 else "recovered-default"
-                    if entry_reference is not None:
-                        all_entries[json.dumps(entry_reference, sort_keys=True)] = entry_reference
-                    cores[z] = value
-                    core_entries.append({"entry_id": identifier, "value": value, "origin": origin, "entry_reference": entry_reference, "snapshot": resources["core"]["effective"] if origin in ("dataset", "override") else None, "override_index": override_index if origin == "override" else None})
-                    completed += 1
-            calculation = _calculate_cab(composition, target["bonds"], cores, strengths, stopping)
-            with localcontext() as context:
-                context.prec, context.rounding = CAB_PRECISION, CAB_ROUNDING
-                hydrogen = atoms["rows"][0]["isotope_mass_amu"]
-                energy = format(125 * Decimal(hydrogen), "f")
-            correction = {"mode": "derived", "applied_factor": calculation["calculated_factor"], "core_entries": core_entries, "bond_entries": bond_entries, "bragg_entries": bragg_entries, "composition": composition, "bonds": target["bonds"], "omissions": omissions, "reference": {"projectile": 1, "mass_amu": hydrogen, "energy_keV": energy, "phase": "gas", "contribution_units": CAB_UNITS}, "calculation": calculation}
-            pending = [all_entries[key] for key in sorted(all_entries)]
-            visited: set[str] = set()
-            evidence_seen: set[str] = set()
-            while pending:
-                reference = pending.pop(0)
-                identity = json.dumps(reference, sort_keys=True)
-                if identity in visited:
-                    continue
-                visited.add(identity)
-                entry = load_cab_entry(paths, CABEntryReference(ResourceReference(**reference["dataset"]), reference["dependency_key"], reference["entry_id"], reference["sha256"], reference["size_bytes"]))
-                for evidence in entry["simulations"] + entry["captures"]:
-                    key = json.dumps(evidence, sort_keys=True)
-                    if key not in evidence_seen:
-                        evidence_seen.add(key)
-                        dependencies.append(evidence)
-                pending.extend(entry["dependency"]["entries"])
+        correction, dependencies = resolve_material_correction(
+            paths, config, worker, correction, composition, target["bonds"], atoms,
+            defaults, resources, snapshots, dependency_inputs, completed_entries,
+            capture_timeout_seconds=capture_timeout_seconds,
+            dependency_timeout_seconds=dependency_timeout_seconds, progress=progress,
+        )
         effective_request = {"schema_version": 2, "parameters": {**deepcopy(intent["parameters"]), "target": target["target"], "correction": {"mode": "derived", "applied_factor": format(Decimal(correction["applied_factor"]), "f")} if correction["mode"] == "derived" else deepcopy(correction)}}
         validate_sr_engine_request(effective_request)
         resolved = {"schema_version": 2, "parameters": effective_request["parameters"], "sources": sources, "resources": resources, "cab": correction, "defaults": defaults, "target_provenance": target["provenance"], "dependencies": dependencies}

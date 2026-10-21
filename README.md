@@ -9,7 +9,7 @@ Use it to:
 - Compare immutable versions of atomic data, electronic/nuclear coefficients and CAB strengths without editing the SRIM installation.
 - Recover default CAB strengths on demand, reuse matching calculations, and retain requests, effective inputs, hashes, diagnostics and outputs for inspection.
 
-The repository currently provides Python APIs. It has no command-line application, agent orchestration service or packaged installer. Case and postprocessing directories can be allocated, but analysis workflows for them are not implemented. TRIM execution is not implemented and is outside this documentation review.
+The repository currently provides Python APIs. It has no command-line application, agent orchestration service or packaged installer. Case and postprocessing directories can be allocated, but analysis workflows for them are not implemented. TRIM input preparation resolves layered materials and exports reproducible native input bundles; main TRIM execution is not implemented.
 
 ## Requirements
 
@@ -37,6 +37,7 @@ For concurrent execution, prepare simulations across separate workers, then call
 | --- | --- |
 | Browse the documentation | [Documentation index](doc/README.md) |
 | Find a Python API | [API reference](doc/reference/api.md) |
+| Prepare layered TRIM inputs without starting TRIM | [TRIM input guide](doc/guides/trim-inputs.md) |
 | Build requests or inspect stored records | [Data formats and layouts](doc/reference/data-formats.md) |
 | See discrepancies found in the review | [Non-TRIM review](doc/reviews/non-trim-review.md) |
 | Inspect previously recorded native checks | [CAB status and evidence](doc/CAB_HANDOFF.md) |

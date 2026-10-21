@@ -31,6 +31,17 @@ class TestSRResolution(unittest.TestCase):
         self.paths, self.config, self.worker = make_test_project(Path(self.temporary.name).absolute())
         self.request, self.selections = make_test_request(), make_test_selections()
 
+    def test_shared_correction_preserves_sr_result(self: TestSRResolution) -> None:
+        """Verify self's existing SR path calls shared correction without changing replay; return None."""
+        from src.srim.resolution import resolve_material_correction
+        request = deepcopy(self.request)
+        request["parameters"]["target"]["bonds"] = {}
+        with patch("src.srim.resolution.resolve_material_correction", wraps=resolve_material_correction) as shared:
+            bundle = resolve_sr_inputs(self.paths, self.config, self.worker, request, self.selections)
+        self.assertEqual(shared.call_count, 1)
+        self.assertEqual(bundle.resolved["cab"]["applied_factor"], "1.0")
+        self.assertEqual(verify_sr_resolution(self.paths, request, self.selections, bundle.resolved, dict(bundle.snapshots)), bundle.effective_request)
+
     def test_sources_and_version_creation(self: TestSRResolution) -> None:
         """Check self's filesystem/inline/registered sources and explicit immutable publications; return None."""
         request = deepcopy(self.request)

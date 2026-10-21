@@ -1,6 +1,6 @@
 # Documentation
 
-Start with the [project README](../README.md) for what the project does and its prerequisites. The current user-facing scope is SR stopping/range calculation, material/coefficient resources and core-and-bond (CAB) corrections.
+Start with the [project README](../README.md) for what the project does and its prerequisites. The current user-facing scope is SR stopping/range calculation, material/coefficient resources, core-and-bond (CAB) corrections and TRIM input preparation. Main TRIM execution remains separate work.
 
 ## Choose a task
 
@@ -10,6 +10,8 @@ Start with the [project README](../README.md) for what the project does and its 
 | Search compounds, edit data, create variants or recover CAB entries | [Materials, resources and CAB](guides/resources-and-cab.md) |
 | Find function signatures, return values, side effects and error behavior | [Python API reference](reference/api.md) |
 | Construct request/selection JSON or inspect records and units | [Data formats and layouts](reference/data-formats.md) |
+| Resolve layered TRIM inputs and export a reproducible bundle | [TRIM input guide](guides/trim-inputs.md) |
+| Inspect TRIM input schemas, resources, APIs and limits policy | [TRIM input format](reference/trim-input-format.md) |
 | Read the code/documentation discrepancy review | [Non-TRIM review](reviews/non-trim-review.md) |
 | Inspect recorded native validation and limitations | [CAB status and evidence](CAB_HANDOFF.md) |
 | Inspect the 92-element TRIM defaults, rules and coverage | [TRIM input defaults](reference/trim-input-defaults.md) |

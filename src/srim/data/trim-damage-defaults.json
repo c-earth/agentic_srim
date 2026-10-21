@@ -1,0 +1,466 @@
+{
+  "rows": [
+    {
+      "atomic_number": 1,
+      "displacement_eV": "10",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 2,
+      "displacement_eV": "5",
+      "lattice_binding_eV": "1"
+    },
+    {
+      "atomic_number": 3,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 4,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 5,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 6,
+      "displacement_eV": "28",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 7,
+      "displacement_eV": "28",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 8,
+      "displacement_eV": "28",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 9,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 10,
+      "displacement_eV": "5",
+      "lattice_binding_eV": "1"
+    },
+    {
+      "atomic_number": 11,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 12,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 13,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 14,
+      "displacement_eV": "15",
+      "lattice_binding_eV": "2"
+    },
+    {
+      "atomic_number": 15,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 16,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 17,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 18,
+      "displacement_eV": "5",
+      "lattice_binding_eV": "1"
+    },
+    {
+      "atomic_number": 19,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 20,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 21,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 22,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 23,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 24,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 25,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 26,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 27,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 28,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 29,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 30,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 31,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 32,
+      "displacement_eV": "15",
+      "lattice_binding_eV": "2"
+    },
+    {
+      "atomic_number": 33,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 34,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 35,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 36,
+      "displacement_eV": "5",
+      "lattice_binding_eV": "1"
+    },
+    {
+      "atomic_number": 37,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 38,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 39,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 40,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 41,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 42,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 43,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 44,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 45,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 46,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 47,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 48,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 49,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 50,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 51,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 52,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 53,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 54,
+      "displacement_eV": "5",
+      "lattice_binding_eV": "1"
+    },
+    {
+      "atomic_number": 55,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 56,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 57,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 58,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 59,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 60,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 61,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 62,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 63,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 64,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 65,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 66,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 67,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 68,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 69,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 70,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 71,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 72,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 73,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 74,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 75,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 76,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 77,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 78,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 79,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 80,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 81,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 82,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 83,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 84,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 85,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 86,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 87,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 88,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 89,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 90,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 91,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    },
+    {
+      "atomic_number": 92,
+      "displacement_eV": "25",
+      "lattice_binding_eV": "3"
+    }
+  ],
+  "schema_version": 1,
+  "units": "eV"
+}

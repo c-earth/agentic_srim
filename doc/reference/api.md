@@ -293,6 +293,8 @@ These are advanced evidence-bearing APIs. A discovered core dependency-identity 
 
 ## Low-level simulation lifecycle
 
+For TRIM's separate input-only validators, renderers, versioned damage resources, resolver and bundle export, see the [TRIM API reference](trim-input-format.md#apis-and-effects) and [complete typed catalogue](../TRIM_INPUT_PROPOSAL.md#api-catalogue). These APIs do not add a main TRIM execution/lifecycle path. The shared resolve_material_correction signature and effects are recorded in the [approved correction extraction](../TRIM_INPUT_PROPOSAL.md#shared-cab-extraction-in-resolutionpy).
+
 Source: [metadata.py](../../src/srim/metadata.py).
 
 ```python
