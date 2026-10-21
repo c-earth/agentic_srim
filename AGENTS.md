@@ -11,6 +11,11 @@
 - Before reporting completion, verify that the result matches the user's requirements and is internally consistent.
 - Handoffs must not repeat instructions or context already loaded; record only additional state and unresolved work.
 
+# Auxiliary files
+
+- Create files and artifacts that are only indirectly related to the project under the repository-root `.cache/` directory. This includes auxiliary document extractions, page renders, temporary scripts, and other supporting work products.
+- Do not create repository-root `tmp/` or `output/` directories for this auxiliary work. Use descriptive subdirectories within `.cache/` instead.
+
 # Git command execution
 
 - Never use standalone `--` in Git commands; it triggers sandbox permission errors. Use `./` for filenames starting with `-`.

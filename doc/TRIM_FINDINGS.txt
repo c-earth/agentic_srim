@@ -221,3 +221,275 @@ TIN's Common Compounds window became separately enumerable after loading and
 could be targeted directly. SR still required its secondary screenshot and
 separating overlapping windows. Capturing another window invalidated previously
 issued screenshot IDs, so each input used a fresh capture of its intended target.
+
+WINDOWS APPLICATION-CONTROL BLOCK - 2026-10-20
+
+The initial isolated 2013 Standard dependency baseline failed to launch with
+WinError 4551 (Application Control policy blocked the file). Windows Code
+Integrity event 3077 at 08:58:13 America/New_York identified TRIM.exe as the
+blocked file, Python as the launching process, and VerifiedAndReputableDesktop
+as the enforcing policy (Smart App Control). This was not a PowerShell
+execution-policy failure. The copied executable matched the source SHA-256:
+8B8B910615426B38D6C9898F1C45AC0F376192283970D006DD3C170CE81AFFE2.
+Both files were unsigned and had no Zone.Identifier stream. The unsigned 2008
+baseline nevertheless ran successfully; unsigned status alone did not explain
+the difference. An outside-sandbox launch retry was declined and did not run.
+
+The user subsequently confirmed turning off Smart App Control. The requested
+retry through the same Python launch then exited with code 0 in about 1.84
+seconds; SRIM Restore/TDATA.sav confirmed all 10 requested ions completed.
+The changed security setting was user-performed, not changed by the agent.
+The successful retry followed that change; it was not an unexplained recovery
+under unchanged Windows security settings. This records the local test context,
+not a requirement to disable Smart App Control for all installations.
+
+Evidence: .cache/trim-dependencies-20261020/2013-retry-result.json and
+2013-baseline/SRIM Restore/TDATA.sav. Individual file-removal dependency checks
+had not yet started at the time of this note. No project implementation changed.
+
+FILE-DEPENDENCY CHECKS - 2026-10-20
+
+Isolated 2008.04 and 2013.00 Standard fresh runs completed 10 boron ions:
+Z5, mass 11 amu, 200 keV, normal incidence, full cascades (input code 2),
+seed 12345, no graphics (plot code 5), no optional outputs, autosave 10000.
+Each used its own installation's existing W/SiO2/Si example target unchanged,
+with plot depths set to 0 0. The examples differ between versions; comparisons
+are within each version, not cross-version physical-equivalence checks.
+TRIMAUTO contained 1 followed by a blank second line. Each working directory
+contained TRIM.exe, TRIM.IN, TRIMAUTO, Data/, SRIM Outputs/ and SRIM Restore/.
+
+Individual Data-file omissions in both versions:
+  ATOMDATA, Compound.dat, F12new.bin, F21new.bin, F24new.bin, SNUC03.dat:
+    exit 0, saved results byte-identical to the corresponding baseline.
+  POTCOEF03.DAT:
+    2013 omission also gave byte-identical results; absent from 2008 Data,
+    so the 2008 nominal omission is only a baseline-equivalent control.
+  TRIM.cfg, SCOEF03.dat, VERSION:
+    each omission prevented completion within the five-second timeout.
+    The owned process was killed after timeout. Dialog contents were not
+    inspected, so these are operational failures, not diagnosed error messages.
+
+Reduced-bundle verification then supplied only TRIM.cfg, SCOEF03.dat and
+VERSION inside Data/ (plus the executable, input/control files and empty
+output/restore directories described above). Both versions exited 0 and their
+complete saved-file sets matched their respective baseline SHA-256 inventories.
+Baseline TDATA.sav confirmed 10/10 ions. This establishes a small sufficient
+bundle for this specific fresh full-cascade workload on the current Windows
+host. It does not establish requirements for every mode, plots, optional output,
+gas targets, other ion/target pairs, resume, or Windows DLL/OCX installation.
+No TIN, SR, help documents, fonts or images were copied outside Data/; none
+were supplied in the reduced Data/ bundle either. Existing host-level runtime
+dependencies remain available and were not inventoried by this experiment.
+
+Source TRIM.exe and all source Data files still matched the original baseline
+copies after testing: 22 files for 2008 and 24 for 2013. Evidence directory:
+  .cache/trim-dependencies-20261020/
+    removal-results.json       20 individual-omission/control runs
+    reduced-results.json       two reduced-bundle runs and output hashes
+    source-integrity.json      source/copy integrity checks
+    {2008,2013}-baseline/      preserved baseline input/runtime/results
+    {2008,2013}-without-*/     preserved individual-omission runtimes
+    {2008,2013}-reduced/       preserved reduced-bundle runtimes
+No project implementation changed. Broader mode/output/resume coverage remains.
+
+ALL SUPPORTED CALCULATION MODES AND RESUME - 2026-10-20
+
+Fresh calculations:
+  Tested every supported input code: 2008 codes 1-7 and 2013 Standard codes 1-8.
+  Each combination ran once with the full Data directory and once with only
+  TRIM.cfg, SCOEF03.dat and VERSION: 30 successful fresh runs, all exit code 0.
+  Modes 1-3 used 10 boron ions and the preceding baseline settings. Modes 4+
+  used one event in ASCII CRLF TRIM.DAT with ten headers and final byte 0x1A:
+    T0001 5 1000 100 0 0 1 0 0     for specified-ion modes 4/5
+    T0001 74 1000 100 0 0 1 0 0    for recoil modes
+  Setup remained B, mass 11, 200 keV; W is present at event depth 100 A.
+  No optional outputs, no graphics, seed 12345, autosave interval 10000.
+  Targets remained each version's original multilayer example.
+
+  All generated summary text and saved files matched byte-for-byte within each
+  full/reduced pair: 20 files per 2008 run, 26 per 2013 run. Unlike the earlier
+  saved-directory-only inventory, this comparison includes root-level *.txt.
+  Automatic fresh runs wrote summary *.txt in the working root, despite the
+  manuals' general SRIM Outputs description. Preserve the entire runtime rather
+  than assuming all outputs occupy one subdirectory. Final TDATA.sav counts
+  confirmed all ten ions or the single event completed.
+
+  UI handling was necessary despite TRIMAUTO=1:
+    2008 codes 6/7 and 2013 codes 6/8: No to optional per-cascade COLLISON.txt.
+    2013 codes 5-8: OK at End of TRIM.DAT calculation (1 ion).
+  Thus these successful checks are UI-assisted, not unattended-mode proof.
+
+Resume checks:
+  Used independent copies of complete reduced-bundle fresh checkpoints,
+  TRIMAUTO first line 2, and initially a blank second line. Edited the saved
+  TDATA.sav Current/Total/AutoSave record: kept Current, increased Total by one,
+  set AutoSave to 1. TRIM.IN was retained unchanged. In both versions modes 1-3
+  advanced the saved count from 10 to 11. Every event-driven mode advanced
+  from 1 to 2 when TRIM.DAT contained the original event plus T0002 at 2000 eV
+  (otherwise the same species, location and direction). Its saved special
+  event number also advanced to 2 in all nine event-mode combinations.
+  All 15 combinations therefore demonstrated operational saved-state progress
+  using the reduced numerical/configuration bundle.
+
+  These are checkpoint checks, not 15 clean-exit resume successes. The initial
+  10-second attempts timed out without publishing a new final save. A longer
+  2008 mode-2 observation visibly reached 12/12, then asked Yes=Save data or
+  No=Increase number of ions. Attempting the default save UI did not establish
+  an updated TDATA.sav (it remained Current=10, Total=12); do not count that
+  attempt as successful checkpoint publication. Resume also opened an XY plot
+  despite the original fresh-run no-graphics setting. The subsequent autosave
+  checks established progress independently of that unverified save workflow.
+  Ordinary-mode probes were stopped after 12 seconds; corrected event probes
+  were stopped when TDATA.sav showed the new checkpoint. Exit code 1 in those
+  reports is from deliberate owned-process termination, not a clean native exit.
+  Exact snapshot atomicity and clean unattended resume termination remain open.
+
+  Reusing an exhausted one-event file while increasing the count is unsafe:
+  2008 recoil codes 6/7 displayed runtime error 9 (Subscript out of range)
+  after their cascade-log prompt was declined. Those were exploratory invalid
+  continuation inputs. Supplying a second event allowed both to advance;
+  all nine corrected event-mode probes reached saved event number 2. Do not
+  generalize the exhausted-file errors into a general inability to resume.
+  The superseded dialog-test loop was stopped; partial results are exploratory.
+
+Resume state completeness:
+  Individually omitted each original saved file from mode-2 checkpoints in
+  both versions: 12 omissions in 2008 and 18 in 2013. Missing TDATA.sav did
+  not advance. Other omissions often still advanced the ion count, but removing
+  accumulated-data files changed the corresponding saved results compared with
+  a complete-state continuation. Removing STOPPING.sav changed many files and
+  in 2008 changed the transmitted-ion count. Missing SPUTTER.sav and TRIMIN.sav
+  happened to reproduce this workload's files (no sputtered atoms); this is not
+  grounds to omit them generally. Preserve and validate the complete state set.
+  The original saved sets are the twelve 2008 *.sav files; 2013 additionally
+  contains Ioniz3D.sav, NoVac3D.sav, Phonon3D.sav, Range3D.sav, Recoil3D.sav
+  and Vac3D.sav. Resume may add TP0.bmp. Preserve TRIM.DAT and its event identity
+  as well for event-driven modes; do not treat TDATA.sav alone as a checkpoint.
+
+Resume path behavior:
+  Both absolute and relative second-line paths with a trailing backslash worked
+  in TRIMAUTO for mode 2 in both versions. Checkpoints were relocated to a
+  directory named checkpoint, leaving default SRIM Restore empty. TRIM read
+  the custom checkpoint (Current=10, Total=11), then autosaved Current=11 into
+  the working directory's default SRIM Restore. The input checkpoint stayed
+  unchanged. Thus the resume input path is not necessarily the save destination.
+
+Uninterrupted comparison and limits:
+  Compared modes 1-3 resumed 10->11 against fresh uninterrupted 11-ion runs.
+  All range/vacancy saved arrays matched for these checks, but some binary
+  ionization/phonon files differed (2008 mode 3; 2013 modes 2/3, including
+  corresponding 3-D files). TDATA.sav and TRIMIN.sav also differed as expected
+  from settings, input count and plot state. Binary-field semantics and the
+  numerical significance of the ionization/phonon differences are unresolved;
+  do not claim bit-for-bit or universal physical equivalence of resume.
+  These short runs do not validate physics accuracy, every material/energy,
+  optional-output/graphics combinations, Pro execution, exact interruption
+  recovery, checkpoint atomicity, or host DLL/OCX dependencies.
+
+Evidence under .cache/trim-dependencies-20261020/:
+  mode-checks-1-3.json, mode-checks-events.json: fresh run status/saved hashes
+  all-output-mode-comparison.json: complete generated-output pair inventories
+  fresh-mode-summary.json: completed fresh counts
+  resume-checks-1-3.json: exploratory short-timeout attempts
+  resume-inspect-result.json, resume-end-dialog.txt: longer UI observation
+  resume-autosave-results.json: bounded checkpoint probes, including prompts
+  resume-dialog-results.json, resume-error-*.txt: partial exhausted-file probes
+  resume-twoevent-results.json, resume-event-cursors.json: corrected event tests
+  resume-omission-results.json, resume-omission-comparison.json: state omissions
+  resume-path-results.json: relocated input and default autosave destinations
+  continuous-vs-resume.json, resume-byte-differences.json: uninterrupted checks
+  dialog-*.txt, end-*.txt, twoevent-start-*.txt: captured UI text where recorded
+  verification-summary.json: 15 fresh pairs, 15 advanced resume checkpoints,
+    qualifications and final source-integrity checks
+  Matching runtime directories preserve inputs, saved state and generated files.
+Final source TRIM.exe/Data checks still matched baseline copies: 22 files for
+2008, 24 for 2013. No owned TRIM test windows remained. No implementation code
+was added or changed. Further work includes reliable unattended resume lifecycle
+and investigation of the uninterrupted/resumed binary-data differences.
+
+ELEMENTAL DAMAGE-ENERGY DEFAULTS - 2026-10-20
+
+For the requested correlation plot, captured all 92 H-U entries directly from
+2013 Standard TIN in an isolated single-component solid layer. Selected each
+atomic number and read its displayed displacement, lattice and surface fields.
+The ordered atomic numbers and symbols were checked against ATOMDATA. N and
+Si were reselected after other elements and reproduced their captured values.
+These are displayed elemental defaults, not compound-specific measurements.
+
+Displacement energy: 81 elements use 25 eV; He/Ne/Ar/Kr/Xe use 5 eV;
+H uses 10 eV; Si/Ge use 15 eV; C/N/O use 28 eV.
+Lattice binding: 85 elements use 3 eV; He/Ne/Ar/Kr/Xe use 1 eV;
+Si/Ge use 2 eV. Surface binding varies by element. H, for example, displays
+2 eV although its ATOMDATA sublimation entry is zero, so copying raw
+sublimation values alone does not reproduce all displayed surface defaults.
+The general fallback/default algorithm has not been independently established.
+
+Pearson correlations across the 92 captured entries:
+  displacement versus lattice: 0.9432025731
+  displacement versus surface: 0.1579809826
+  lattice versus surface:      0.1379040821
+The high first correlation is strongly shaped by repeated default assignments;
+do not interpret it as an experimentally established material relationship.
+No 2008 or Pro energy-default comparison was performed in this capture.
+
+Evidence: .cache/trim-energy-defaults-20261020/energies.{json,csv}, summary.json,
+recheck-nitrogen.txt and recheck-silicon.txt. The interactive plot is drafted;
+initial visual rendering passed, but final hover/narrow-layout verification and
+delivery were unfinished when the user requested stopping and a handoff.
+
+DAMAGE-ENERGY SELECTION: WEBSITE RESEARCH (2026-10-20)
+
+Documentation research only; no new native tests or implementation changes.
+Disp, Latt and Surf are per-component inputs in eV/atom, not quantities that
+TRIM determines uniquely from composition. Existing definitions above remain.
+
+Practical procedure discussed with the user:
+  1. Define composition, phase, density and layer geometry.
+  2. Find material-specific experimental data or a published TRIM study using
+     the same material and intended output; record its parameter sources/mode.
+  3. Start from documented defaults where better evidence is unavailable.
+     For displacement damage, prioritize species-specific displacement
+     thresholds. For sputtering, prioritize surface binding and check lattice
+     binding sensitivity. For range calculations, prioritize target/stopping
+     inputs; defaults are a starting point, not an accuracy validation.
+  4. Vary uncertain energies over justified ranges and assess output sensitivity.
+  5. Report actual energies, sources, version, calculation mode and ion count.
+This procedure is a synthesis of the sources, not a universal mandated protocol.
+
+Obtaining values:
+  Disp: experiment or material-specific molecular dynamics. In MD, vary recoil
+    energy until a persistent defect forms, sample recoil directions, and use
+    an appropriate directional average; treat compound species separately.
+  Latt: validated material/model-specific value or documented default; there
+    is no universal conversion from Disp or Surf. The input manual quotes
+    roughly 1-3 eV, with values unknown for many compounds.
+  Surf: for elemental solids, sublimation enthalpy is a common approximation:
+    E_s (eV/atom) = Delta H_sub (kJ/mol) / 96.485.
+    Example: 400 kJ/mol gives approximately 4.15 eV/atom. A compound's average
+    atomization/sublimation value does not establish species-specific Surf.
+
+Important qualification to the default/physical-value advice:
+  Some established radiation-damage/dpa workflows use Quick Kinchin-Pease
+  calculations with Latt = 0 eV. This is a damage-model convention, not a
+  physical assertion of zero binding. Follow the complete chosen protocol;
+  do not transfer these settings automatically to sputtering. The exact dpa
+  workflow, normalization and compound treatment were not selected here.
+
+Sources consulted online:
+  Official TRIM setup/input chapter (definitions, rough scales, defaults,
+  sublimation estimate): https://srim.org/SRIM/SRIM%2008.pdf
+  Official damage tutorial:
+  https://www.srim.org/SRIM/Tutorials/SRIM%20Tutorial%204%20-%20Target%20Damage.pdf
+  Official per-layer energy support: https://srim.org/SRIM/SRIM2011.htm
+  MD displacement-threshold study:
+  https://pmc.ncbi.nlm.nih.gov/articles/PMC9965197/
+  Sputtering study retaining default displacement/lattice energies after
+  sensitivity assessment: https://www.mdpi.com/2079-6412/12/10/1541
+  Stoller et al. (2013), On the use of SRIM for computing radiation damage
+  exposure: https://www.sciencedirect.com/science/article/pii/S0168583X13005053
+Online search excerpts supported the discussion; the official input PDF's
+direct web open failed. Do not describe this as a complete full-text review.
+
+Unresolved: user has not specified target material/phase or intended output
+(range, dpa or sputtering). No numerical parameter set or calculation protocol
+has been selected, approved, implemented or verified for a particular target.
