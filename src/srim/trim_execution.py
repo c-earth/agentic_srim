@@ -18,12 +18,14 @@ from src.srim.trim_outputs import PROFILES, compare_trim_saved_values, parse_tri
 from src.srim.trim_resolution import ResolvedTRIMInputs
 from src.srim.trim_runtime import verify_trim_runtime
 from src.srim.trim_storage import preserve_trim_runtime
+from src.srim.trim_dialogs import assess_trim_histories
 
 
-def _trim_completion(inputs: ResolvedTRIMInputs, process_result: JSONObject, parsed: JSONObject, saved_values: JSONObject, continuation: JSONObject | None) -> JSONObject:
+def _trim_completion(inputs: ResolvedTRIMInputs, process_result: JSONObject, parsed: JSONObject, saved_values: JSONObject, continuation: JSONObject | None, *, availability: JSONObject | None = None) -> JSONObject:
     """Classify pinned inputs/process_result/parsed/saved_values and continuation.
 
-    continuation supplies explicit resume control or None. Return complete,
+    continuation supplies explicit resume control or None; availability optionally
+    adds a required-history check. Return complete,
     reason and checks without effects. Require clean exit, full consistent
     summary/profiles, exact achieved count and no substitutions. Malformed
     report arguments raise ValueError; native differences are reported.
@@ -37,6 +39,8 @@ def _trim_completion(inputs: ResolvedTRIMInputs, process_result: JSONObject, par
     assertions = [("process", process_result.get("termination") == "exit" and process_result.get("exit_code") == 0 and not process_result.get("popups") and not process_result.get("monitor_errors"), "Clean owned native exit without popup or monitoring failure"), ("parsing", parsed.get("complete") is True, "Complete consistent summary and seven profiles"), ("checkpoint", checkpoint is not None, "Textual native saved state is available"), ("saved_values", not saved_values.get("differences"), "Requested values preserved at native precision")]
     if checkpoint is not None:
         assertions.extend((("counts", checkpoint["counts"]["current"] == checkpoint["counts"]["total"] == expected, f"Saved current/total must equal requested {expected}"), ("autosave", checkpoint["counts"]["autosave"] == autosave, f"Saved autosave must equal requested {autosave}")))
+    if availability is not None:
+        assertions.append(("histories", availability["histories"]["status"] in ("not-requested", "available", "native-unavailable"), "Requested histories available or explicitly qualified by verified native limitation"))
     for field, equal, detail in assertions:
         checks.append({"field": field, "status": "equal" if equal else "different", "detail": detail})
     failures = [item for item in checks if item["status"] == "different"]
@@ -69,19 +73,30 @@ def run_trim_simulation(paths: ProjectPaths, config: Config, simulation_id: str,
         report: JSONObject = {"schema_version": 1, "engine": "trim", "simulation_id": simulation_id, "runtime_path": runtime.relative_to(paths.root).as_posix(), "timeout_seconds": None if timeout_seconds is None else float(timeout_seconds), "stage": "preflight", "process": None, "completion": None, "failure": None}
         preserved = False
         try:
+            sealed_control = _read_json(record / "input/execution/control.json")
+            if sealed_control.get("schema_version") == 2 and _inventory(record / "input", record) == metadata["inputs"]:
+                report["schema_version"] = 2
+                report["availability"] = assess_trim_histories({}, sealed_control["dialog_policy"], [])
+                report["availability"]["histories"]["status"] = "unverified"
             try:
                 inputs = verify_trim_runtime(paths, simulation_id, runtime)
             except ValueError as error:
                 report["failure"] = {"code": "preflight", "message": str(error)}
                 preserve_trim_runtime(paths, simulation_id, runtime)
                 preserved = True
+                if report["schema_version"] == 2:
+                    _write_json(record / "output/parsed/availability.json", report["availability"])
                 _write_json(record / "output/raw/execution.json", report)
                 return finish_simulation(paths, config, simulation_id, {"message": str(error), "exit_code": None})
             control = _read_json(record / "input/execution/control.json")
+            policy = control.get("dialog_policy")
+            if policy is not None:
+                report["schema_version"] = 2
+                report["availability"] = assess_trim_histories({}, policy, [])
             initial_manifest = _read_json(record / "input/execution/runtime.json")
             start_simulation(paths, config, simulation_id)
             report["stage"] = "native"
-            result = execute_trim_process(runtime / "TRIM.exe", runtime, hide_window=config.hide_trim_window, timeout_seconds=timeout_seconds, stdout_path=record / "output/raw/stdout.bin", stderr_path=record / "output/raw/stderr.bin", cancel=cancel)
+            result = execute_trim_process(runtime / "TRIM.exe", runtime, hide_window=config.hide_trim_window, timeout_seconds=timeout_seconds, stdout_path=record / "output/raw/stdout.bin", stderr_path=record / "output/raw/stderr.bin", cancel=cancel, dialog_policy=policy)
             report["process"] = result
             report["stage"] = "preserve"
             preserve_trim_runtime(paths, simulation_id, runtime)
@@ -104,7 +119,17 @@ def run_trim_simulation(paths: ProjectPaths, config: Config, simulation_id: str,
                 data = _read_regular_bytes(permanent / entry["path"])
                 if (hashlib.sha256(data).hexdigest(), len(data)) != (entry["sha256"], entry["size_bytes"]):
                     integrity_errors.append(entry["path"])
-            completion = _trim_completion(inputs, result, parsed, comparison, control if control["kind"] == "resume" else None)
+            availability = None
+            if policy is not None:
+                histories = {entry["path"]: _read_regular_bytes(permanent / entry["path"]) for entry in _inventory(permanent, permanent) if entry["path"].casefold() == "srim outputs/collison.txt"}
+                availability = assess_trim_histories({**files, **histories}, policy, result.get("dialog_events", []))
+                core = _trim_completion(inputs, result, parsed, comparison, control if control["kind"] == "resume" else None)
+                availability["core_verified"] = core["complete"] and not integrity_errors
+                if not availability["core_verified"] and availability["histories"]["status"] == "native-unavailable":
+                    availability["histories"]["status"] = "unverified"
+                report["availability"] = availability
+                _write_json(record / "output/parsed/availability.json", availability)
+            completion = _trim_completion(inputs, result, parsed, comparison, control if control["kind"] == "resume" else None, availability=availability)
             report["completion"] = completion
             code: str | None = None
             message: str | None = None
@@ -119,6 +144,8 @@ def run_trim_simulation(paths: ProjectPaths, config: Config, simulation_id: str,
                 code, message = "substitution", "Native saved values differ from requested values"
             elif not parsed["complete"]:
                 code, message = "parse", "Native summary/profile output is missing, invalid or inconsistent"
+            elif availability is not None and availability["histories"]["status"] not in ("not-requested", "available", "native-unavailable"):
+                code, message = "output-requirement", "Requested cascade histories are missing, inconsistent or unverified"
             elif not completion["complete"]:
                 code, message = "incomplete", str(completion["reason"])
             report["stage"] = "finished"
@@ -131,6 +158,8 @@ def run_trim_simulation(paths: ProjectPaths, config: Config, simulation_id: str,
                 if not preserved:
                     preserve_trim_runtime(paths, simulation_id, runtime)
                 report["failure"] = {"code": "cancelled" if not isinstance(error, Exception) else "preservation" if report["stage"] == "preserve" else "integrity", "message": str(error) or type(error).__name__}
+                if report["schema_version"] == 2 and not (record / "output/parsed/availability.json").exists():
+                    _write_json(record / "output/parsed/availability.json", report["availability"])
                 if not (record / "output/raw/execution.json").exists():
                     _write_json(record / "output/raw/execution.json", report)
                 current = read_simulation(paths, simulation_id)
@@ -139,3 +168,24 @@ def run_trim_simulation(paths: ProjectPaths, config: Config, simulation_id: str,
             except BaseException as final_error:
                 error.add_note(f"TRIM finalization failed: {final_error}")
             raise
+
+
+def read_trim_output_availability(paths: ProjectPaths, simulation_id: str) -> JSONObject:
+    """Return verified terminal simulation_id's availability under paths.
+
+    Check sealed output inventory without writes. Raise ValueError on wrong
+    engine/state/schema or tampering, FileNotFoundError for older absent reports,
+    and OSError on unsafe I/O. Return an independent JSON object.
+    """
+    record = _simulation_path(paths, simulation_id)
+    metadata = read_simulation(paths, simulation_id)
+    if metadata["engine"]["name"] != "trim" or metadata["status"] not in ("succeeded", "failed") or _inventory(record / "output", record) != metadata["outputs"]:
+        raise ValueError("TRIM availability requires sealed terminal outputs")
+    result = _read_json(record / "output/parsed/availability.json")
+    keys = {"schema_version", "engine", "cascade_output", "core_verified", "histories", "limitations"}
+    if set(result) != keys or type(result["schema_version"]) is not int or result["schema_version"] != 1 or result["engine"] != "trim" or result["cascade_output"] not in ("none", "statistics", "detailed") or type(result["core_verified"]) is not bool or not isinstance(result["histories"], dict) or set(result["histories"]) != {"path", "requested", "status", "evidence"} or result["histories"]["path"] != "SRIM Outputs/COLLISON.txt" or result["histories"]["requested"] != result["cascade_output"] or result["histories"]["status"] not in ("not-requested", "available", "native-unavailable", "missing", "inconsistent", "unverified") or not isinstance(result["histories"]["evidence"], list) or not isinstance(result["limitations"], list):
+        raise ValueError("Invalid TRIM availability schema")
+    for limitation in result["limitations"]:
+        if not isinstance(limitation, dict) or set(limitation) != {"code", "message", "requested", "observed", "evidence"} or limitation["code"] not in ("native-kp-no-trajectories", "native-2013-full-detail-unavailable", "native-signed-energy-transfer") or not isinstance(limitation["evidence"], list):
+            raise ValueError("Invalid TRIM availability limitation")
+    return deepcopy(result)

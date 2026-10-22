@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "source": ".cache/popup-review/mode-version-matrix/srim_2008/mode-07",
+  "files": [
+    {
+      "path": "detailed/COLLISON.txt",
+      "sha256": "d8ec3489271469efa9dfada371cee21c6a2f811f573a5ad5a26a43a592b1aee1",
+      "size_bytes": 409452
+    },
+    {
+      "path": "statistics/COLLISON.txt",
+      "sha256": "df6b53d67cfdd5b89ba8a38777eecf72eda541028b7cc9a28bb80da2ab2c2cc0",
+      "size_bytes": 137036
+    }
+  ]
+}

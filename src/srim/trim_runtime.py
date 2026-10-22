@@ -18,6 +18,7 @@ from src.srim.runtime import _read_regular_bytes, _validate_preparation_allocati
 from src.srim.trim_inputs import render_trim_events, validate_trim_request
 from src.srim.trim_outputs import parse_trim_checkpoint
 from src.srim.trim_resolution import ResolvedTRIMInputs, verify_trim_resolution
+from src.srim.trim_dialogs import build_trim_dialog_policy, validate_trim_native_request
 
 
 def load_trim_input_bundle(source: Path) -> ResolvedTRIMInputs:
@@ -69,21 +70,23 @@ def _trim_runtime_manifest(files: Mapping[str, bytes]) -> JSONObject:
     return {"schema_version": 1, "files": entries}
 
 
-def prepare_trim_simulation(paths: ProjectPaths, config: Config, created: CreatedDirectory, worker: CreatedDirectory, inputs: ResolvedTRIMInputs) -> Path:
+def prepare_trim_simulation(paths: ProjectPaths, config: Config, created: CreatedDirectory, worker: CreatedDirectory, inputs: ResolvedTRIMInputs, *, cascade_output: str | None = None) -> Path:
     """Verify inputs and stage created's fresh simulation on allocated worker.
 
-    Return created runtime Path; never run native code or resolve live resources.
+    cascade_output opts into reviewed none/statistics/detailed responses; None
+    retains report-only behavior. Return created runtime Path; run no native code.
     Raise ValueError/OSError for invalid allocation/evidence or staging failures,
     retaining partial artifacts with exception notes. Caller data is copied.
     """
-    return _stage_trim_runtime(paths, config, created, worker, deepcopy(inputs), None, {})
+    return _stage_trim_runtime(paths, config, created, worker, deepcopy(inputs), None, {}, cascade_output=cascade_output)
 
 
-def _stage_trim_runtime(paths: ProjectPaths, config: Config, created: CreatedDirectory, worker: CreatedDirectory, inputs: ResolvedTRIMInputs, continuation: JSONObject | None, checkpoint_files: Mapping[str, bytes]) -> Path:
+def _stage_trim_runtime(paths: ProjectPaths, config: Config, created: CreatedDirectory, worker: CreatedDirectory, inputs: ResolvedTRIMInputs, continuation: JSONObject | None, checkpoint_files: Mapping[str, bytes], *, cascade_output: str | None) -> Path:
     """Stage pinned inputs/control/checkpoint_files for allocations under a lease.
 
     Return exclusively published runtime and initialized created record.
     continuation is None for fresh; otherwise contains sealed parent evidence.
+    cascade_output seals an optional reviewed response policy, None is legacy.
     Run no native code; retain partial files on ValueError/OSError/interruption.
     """
     simulation_id = _validate_preparation_allocations(paths, created, worker)
@@ -106,6 +109,10 @@ def _stage_trim_runtime(paths: ProjectPaths, config: Config, created: CreatedDir
         files.update({"checkpoint/" + name: data for name, data in checkpoint_files.items() if name != "TRIM.DAT"})
         if "TRIM.DAT" in checkpoint_files:
             files["TRIM.DAT"] = checkpoint_files["TRIM.DAT"]
+    validate_trim_native_request(inputs, total_ions=control["total_ions"], event_contents=files.get("TRIM.DAT"))
+    policy = build_trim_dialog_policy(inputs, control, cascade_output)
+    if policy is not None:
+        control.update({"schema_version": 2, "dialog_policy": policy})
     manifest = _trim_runtime_manifest(files)
     runtime = worker.path / "trim" / simulation_id
     staging: Path | None = None
@@ -178,8 +185,15 @@ def verify_trim_runtime(paths: ProjectPaths, simulation_id: str, runtime: Path) 
     expected["TRIM.IN"] = mapping["engine/TRIM.IN"]
     control = _read_json(record / "input/execution/control.json")
     control_keys = {"schema_version", "engine", "kind", "parent_id", "initial_count", "total_ions", "autosave_ions", "event_prefix_sha256", "edits"}
-    if set(control) != control_keys or type(control["schema_version"]) is not int or control["schema_version"] != 1 or control["engine"] != "trim" or control["kind"] not in ("fresh", "resume") or any(type(control[key]) is not int for key in ("initial_count", "total_ions", "autosave_ions")) or not 0 <= control["initial_count"] < control["total_ions"] or not isinstance(control["edits"], list):
+    if control.get("schema_version") == 2:
+        control_keys.add("dialog_policy")
+    if set(control) != control_keys or type(control["schema_version"]) is not int or control["schema_version"] not in (1, 2) or control["engine"] != "trim" or control["kind"] not in ("fresh", "resume") or any(type(control[key]) is not int for key in ("initial_count", "total_ions", "autosave_ions")) or not 0 <= control["initial_count"] < control["total_ions"] or not isinstance(control["edits"], list):
         raise ValueError("Invalid TRIM execution controls")
+    validate_trim_native_request(bundle, total_ions=control["total_ions"], event_contents=files.get("TRIM.DAT"))
+    if control["schema_version"] == 2:
+        policy = control["dialog_policy"]
+        if not isinstance(policy, dict) or build_trim_dialog_policy(bundle, control, policy.get("cascade_output")) != policy:
+            raise ValueError("TRIM dialog policy differs from sealed inputs")
     if control["event_prefix_sha256"] is not None and (not isinstance(control["event_prefix_sha256"], str) or re.fullmatch(r"[0-9a-f]{64}", control["event_prefix_sha256"]) is None):
         raise ValueError("Invalid continuation event prefix hash")
     if control["kind"] == "fresh" and (control["parent_id"] is not None or control["initial_count"] != 0 or control["edits"] or control["event_prefix_sha256"] is not None or metadata["continuation"] is not None or control["total_ions"] != bundle.effective_request["parameters"]["total_ions"] or control["autosave_ions"] != bundle.effective_request["parameters"]["autosave_ions"]):
@@ -220,11 +234,13 @@ def verify_trim_runtime(paths: ProjectPaths, simulation_id: str, runtime: Path) 
     return deepcopy(bundle)
 
 
-def prepare_trim_continuation(paths: ProjectPaths, config: Config, created: CreatedDirectory, worker: CreatedDirectory, parent_id: str, *, total_ions: int, autosave_ions: int, events: list[JSONObject] | None = None) -> Path:
+def prepare_trim_continuation(paths: ProjectPaths, config: Config, created: CreatedDirectory, worker: CreatedDirectory, parent_id: str, *, total_ions: int, autosave_ions: int, events: list[JSONObject] | None = None, cascade_output: str | None = None) -> Path:
     """Prepare a new record continuing parent_id to explicit total/autosave counts.
 
     events is a list of structured appended-prefix-preserving events for event
-    modes, otherwise None. Preserve complete terminal parent's bytes and physics.
+    modes, otherwise None. cascade_output must be None for report-only
+    continuation; other choices raise ValueError before staging until checkpoint
+    .sav result integration is available. Preserve terminal parent bytes/physics.
     Return new runtime; reject ineligible/incomplete/changed checkpoints with
     ValueError, propagate safe I/O/lease errors and never modify the parent.
     """
@@ -293,4 +309,4 @@ def prepare_trim_continuation(paths: ProjectPaths, config: Config, created: Crea
     elif events is not None:
         raise ValueError("Ordinary modes do not accept events")
     control = {"schema_version": 1, "engine": "trim", "kind": "resume", "parent_id": parent_id, "initial_count": saved_state["counts"]["current"], "total_ions": total_ions, "autosave_ions": autosave_ions, "event_prefix_sha256": prefix_hash, "edits": edits}
-    return _stage_trim_runtime(paths, config, created, worker, bundle, {"control": control, "parent": {"parent_id": parent_id, "inputs": metadata["inputs"], "outputs": metadata["outputs"], "checkpoint_atomicity": "not established for binary native arrays"}}, checkpoint_files)
+    return _stage_trim_runtime(paths, config, created, worker, bundle, {"control": control, "parent": {"parent_id": parent_id, "inputs": metadata["inputs"], "outputs": metadata["outputs"], "checkpoint_atomicity": "not established for binary native arrays"}}, checkpoint_files, cascade_output=cascade_output)

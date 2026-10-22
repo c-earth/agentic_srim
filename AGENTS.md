@@ -11,6 +11,12 @@
 - Before reporting completion, verify that the result matches the user's requirements and is internally consistent.
 - Handoffs must not repeat instructions or context already loaded; record only additional state and unresolved work.
 
+# Current TRIM continuation direction
+
+- The user selected checkpoint `.sav` recovery for resumed results. Continue with completion/checkpoint-save handling and recovery/parser/lifecycle integration.
+- The F-button export, export-folder chooser, directory-item reader and 2008 export-button mapping branch was explicitly abandoned on 2026-10-22. Do not revive, implement, test or recommend it from old proposals, handoffs, cache scripts or unfinished code unless the user explicitly reopens that branch.
+- Read `doc/TRIM_DIRECTION.md` for the current decision and remaining checkpoint integration. Resume-export code has been removed; do not restore it from old proposals or Git history. Preserve fresh cascade handling, checkpoint saving, checkpoint recovery, timeout support and the committed startup filter.
+
 # Auxiliary files
 
 - Create files and artifacts that are only indirectly related to the project under the repository-root `.cache/` directory. This includes auxiliary document extractions, page renders, temporary scripts, and other supporting work products.

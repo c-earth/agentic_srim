@@ -1,4 +1,4 @@
-"""Own Windows TRIM process jobs and report native popups without responding."""
+"""Own Windows TRIM jobs and apply optional sealed, verified dialog responses."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from time import monotonic, sleep
 
 from src.srim.metadata import JSONObject
 from src.srim.runtime import _read_regular_bytes
+from src.srim.trim_dialogs import advance_trim_dialog_state, classify_trim_dialog, initial_trim_dialog_state
 
 
 def _read_trim_window_text(window_handle: int) -> JSONObject:
@@ -34,6 +35,12 @@ def _read_trim_window_text(window_handle: int) -> JSONObject:
     user.GetWindow.restype = wintypes.HWND
     user.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
     user.IsWindow.argtypes = [wintypes.HWND]
+    user.GetDlgCtrlID.argtypes = [wintypes.HWND]
+    user.GetParent.argtypes = [wintypes.HWND]
+    user.GetParent.restype = wintypes.HWND
+    user.IsWindowEnabled.argtypes = [wintypes.HWND]
+    user.IsWindowVisible.argtypes = [wintypes.HWND]
+    user.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
     result: JSONObject = {"title": "", "controls": [], "capture_errors": []}
     pending = [window_handle]
     visited: set[int] = set()
@@ -58,7 +65,10 @@ def _read_trim_window_text(window_handle: int) -> JSONObject:
             else:
                 class_buffer = ctypes.create_unicode_buffer(256)
                 user.GetClassNameW(handle, class_buffer, len(class_buffer))
-                result["controls"].append({"handle": handle, "class": class_buffer.value, "text": buffer.value})
+                pid = wintypes.DWORD()
+                user.GetWindowThreadProcessId(handle, ctypes.byref(pid))
+                parent = user.GetParent(handle)
+                result["controls"].append({"handle": handle, "class": class_buffer.value, "text": buffer.value, "control_id": user.GetDlgCtrlID(handle), "enabled": bool(user.IsWindowEnabled(handle)), "visible": bool(user.IsWindowVisible(handle)), "parent_handle": int(parent) if parent else None, "pid": pid.value})
         child = user.GetWindow(handle, 5)
         siblings: set[int] = set()
         while child and int(child) not in siblings:
@@ -117,6 +127,41 @@ def _read_trim_windows(process_id: int) -> list[JSONObject]:
     return windows
 
 
+def _post_trim_command(process_id: int, window: JSONObject, command: JSONObject) -> JSONObject:
+    """Revalidate process_id/window/command and post one asynchronous notification.
+
+    Return queue acceptance evidence. Never focus or retry. Raise ValueError
+    on stale text, controls, parentage or ownership, OSError on native failure.
+    process_id must already have been verified as a member of the owned job.
+    """
+    if os.name != "nt":
+        raise OSError("TRIM responses require Windows")
+    if command.get("action") != "button":
+        raise ValueError("Unrecognized TRIM command")
+    current = _read_trim_window_text(window["handle"])
+    if window.get("pid") != process_id or current["capture_errors"] or current["title"] != window["title"] or current["controls"] != window["controls"]:
+        raise ValueError("TRIM dialog changed before response")
+    user = ctypes.WinDLL("user32", use_last_error=True)
+    user.IsWindow.argtypes = [wintypes.HWND]
+    user.IsWindowEnabled.argtypes = [wintypes.HWND]
+    user.IsWindowVisible.argtypes = [wintypes.HWND]
+    user.IsChild.argtypes = [wintypes.HWND, wintypes.HWND]
+    user.GetDlgCtrlID.argtypes = [wintypes.HWND]
+    user.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    user.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+    user.PostMessageW.restype = wintypes.BOOL
+    target = command["target_handle"]
+    for handle in (window["handle"], target):
+        pid = wintypes.DWORD()
+        if not user.IsWindow(handle) or not user.IsWindowEnabled(handle) or not user.IsWindowVisible(handle) or not user.GetWindowThreadProcessId(handle, ctypes.byref(pid)) or pid.value != process_id:
+            raise ValueError("TRIM response target ownership/state changed")
+    if not user.IsChild(window["handle"], target) or user.GetDlgCtrlID(target) != command["control_id"]:
+        raise ValueError("TRIM response target parent/control changed")
+    if not user.PostMessageW(window["handle"], 0x0111, command["control_id"], target):
+        raise ctypes.WinError(ctypes.get_last_error())
+    return {"queued": True, "error": None}
+
+
 def _filter_trim_startup_windows(windows: list[JSONObject], state: dict[tuple[int, int], float], elapsed_seconds: float) -> list[JSONObject]:
     """Copy windows and briefly defer only the observed unreadable startup form.
 
@@ -139,14 +184,81 @@ def _filter_trim_startup_windows(windows: list[JSONObject], state: dict[tuple[in
     return result
 
 
-def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, timeout_seconds: float | None, stdout_path: Path, stderr_path: Path, cancel: Callable[[], bool] | None = None) -> JSONObject:
+def _observe_trim_dialogs(process_id: int, runtime: Path, policy: JSONObject, state: JSONObject, elapsed_seconds: float, *, startup_state: dict[tuple[int, int], float] | None = None) -> JSONObject:
+    """Observe owned process_id and advance supplied response state under policy.
+
+    runtime is validated for caller compatibility; no export files are read.
+    elapsed_seconds bounds pending responses.
+    Optional startup_state stores per-attempt startup candidate deadlines;
+    None retains direct-call behavior without startup deferral.
+    Return state, events, unhandled windows and errors. Send at most one command,
+    never retry. Invalid arguments raise ValueError; native failures are returned.
+    """
+    initial_trim_dialog_state(policy)
+    if not runtime.is_absolute() or not math.isfinite(elapsed_seconds) or elapsed_seconds < 0:
+        raise ValueError("Invalid TRIM observation controls")
+    windows = _read_trim_windows(process_id)
+    if startup_state is not None:
+        windows = _filter_trim_startup_windows(windows, startup_state, elapsed_seconds)
+    result: JSONObject = {"state": deepcopy(state), "events": [], "unhandled": [], "errors": []}
+    popups = [w for w in windows if w["detection_reason"]]
+    dialogs = [w for w in popups if w["class"] == "#32770" and w["visible"] and w["enabled"]]
+    candidates = [w for w in popups if w["detection_reason"] == "owned-popup" and w["visible"] and w["enabled"]]
+    pending = state.get("pending_sequence")
+    if pending is not None:
+        previous = state["events"][pending - 1]
+        same = any(w["handle"] == previous["window"]["handle"] and w["title"] == previous["window"]["title"] and [(c["class"], c["text"]) for c in w["controls"]] == [(c["class"], c["text"]) for c in previous["window"]["controls"]] for w in popups)
+        if same:
+            if elapsed_seconds - previous["elapsed_seconds"] >= policy["response_transition_seconds"]:
+                result["errors"].append("Posted TRIM command did not advance; no retry")
+                result["state"]["events"][pending - 1]["transition"] = "failed"
+                result["state"]["events"][pending - 1]["error"] = result["errors"][-1]
+                result["state"]["stage"] = "failed"
+            return result
+        result["state"] = advance_trim_dialog_state(result["state"], {"transition": "verified"}, None)
+        result["state"]["events"][pending - 1]["transition"] = "verified"
+    if len(dialogs) + len(candidates) > 1:
+        result["unhandled"] = popups
+        return result
+    if not dialogs and not candidates:
+        if popups:
+            since = result["state"].setdefault("transient_since", elapsed_seconds)
+            if elapsed_seconds - since >= policy["response_transition_seconds"]:
+                result["unhandled"] = popups
+        else:
+            result["state"].pop("transient_since", None)
+        return result
+    result["state"].pop("transient_since", None)
+    window = (dialogs or candidates)[0]
+    classified = classify_trim_dialog(window, policy, result["state"])
+    if classified["decision"] == "reject":
+        result["unhandled"] = popups
+        return result
+    if classified["decision"] == "respond":
+        command = classified["command"]
+        event: JSONObject = {"sequence": len(result["state"]["events"]) + 1, "elapsed_seconds": elapsed_seconds, "process_id": process_id, "window": deepcopy(window), "stage_before": result["state"]["stage"], "stage_after": classified["next_stage"], **command, "message": "WM_COMMAND/BN_CLICKED", "queued": False, "transition": "pending", "error": None}
+        try:
+            event.update(_post_trim_command(process_id, window, command))
+            result["state"] = advance_trim_dialog_state(result["state"], classified, event)
+        except (ValueError, OSError) as error:
+            event.update({"error": str(error), "transition": "failed"})
+            result["errors"].append(str(error))
+        result["state"]["events"].append(event)
+        result["events"].append(event)
+    return result
+
+
+def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, timeout_seconds: float | None, stdout_path: Path, stderr_path: Path, cancel: Callable[[], bool] | None = None, dialog_policy: JSONObject | None = None) -> JSONObject:
     """Run executable in runtime under a Windows kill-on-close job with bounded monitoring.
 
     hide_window controls initial display; timeout_seconds is positive and finite
     or None to disable the overall execution deadline.
     Write exact diagnostics exclusively to stdout_path/stderr_path; cancel may
     request termination. Return exit/popup/timeout/cancellation/monitor evidence.
-    Never answer popups or kill unrelated processes. Validation/I/O errors raise;
+    dialog_policy opts into sealed reviewed fresh responses; None only reports
+    popups. Automatic continuation raises ValueError pending checkpoint .sav
+    integration, before creating a job or launching a process.
+    Never kill unrelated processes. Validation/I/O errors raise;
     BaseException closes the owned job and waits before propagating.
     """
     if os.name != "nt":
@@ -179,6 +291,11 @@ def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, 
     started = monotonic()
     startup_state: dict[tuple[int, int], float] = {}
     result: JSONObject = {"pid": None, "exit_code": None, "elapsed_seconds": 0.0, "termination": "launch-error", "popups": [], "monitor_errors": []}
+    dialog_state = initial_trim_dialog_state(dialog_policy) if dialog_policy is not None else None
+    if dialog_policy is not None and dialog_policy["kind"] == "resume":
+        raise ValueError("Automatic continuation awaits checkpoint .sav integration; GUI exports were removed")
+    if dialog_state is not None:
+        dialog_state["events"] = []
     job = kernel.CreateJobObjectW(None, None)
     if not job:
         result["monitor_errors"].append(str(ctypes.WinError(ctypes.get_last_error())))
@@ -238,10 +355,19 @@ def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, 
                                 raise ctypes.WinError(ctypes.get_last_error())
                             if not member.value:
                                 continue
-                            windows = _filter_trim_startup_windows(_read_trim_windows(pid), startup_state, elapsed)
-                            result["popups"].extend(window for window in windows if window["detection_reason"])
+                            if dialog_state is None:
+                                windows = _filter_trim_startup_windows(_read_trim_windows(pid), startup_state, elapsed)
+                                result["popups"].extend(window for window in windows if window["detection_reason"])
+                            else:
+                                observation = _observe_trim_dialogs(pid, runtime, dialog_policy, dialog_state, elapsed, startup_state=startup_state)
+                                dialog_state = observation["state"]
+                                result["popups"].extend(observation["unhandled"])
+                                result["monitor_errors"].extend(observation["errors"])
                         finally:
                             kernel.CloseHandle(owned)
+                    if result["monitor_errors"]:
+                        result["termination"] = "monitor-error"
+                        break
                     if result["popups"]:
                         if not any(window["detection_reason"] == "dialog" for window in result["popups"]):
                             sleep(0.1)
@@ -281,4 +407,13 @@ def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, 
         else:
             kernel.CloseHandle(job)
         result["elapsed_seconds"] = monotonic() - started
+        if dialog_state is not None:
+            result["dialog_events"] = dialog_state.pop("events")
+            dialog_state.pop("transient_since", None)
+            if result["termination"] == "exit":
+                if dialog_state["pending_sequence"] is not None:
+                    result["dialog_events"][dialog_state["pending_sequence"] - 1]["transition"] = "verified"
+                    dialog_state["pending_sequence"] = None
+                dialog_state["stage"] = "done"
+            result["dialog_state"] = dialog_state
     return result

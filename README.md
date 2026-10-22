@@ -1,5 +1,9 @@
 # agentic_srim
 
+## TRIM continuation work direction
+
+The current continuation-results route is [checkpoint `.sav` recovery](doc/TRIM_DIRECTION.md). GUI F-button and directory-chooser export automation is abandoned. Recovery exists; integration with normal result parsing and lifecycle completion remains to be designed and implemented.
+
 Python APIs for reproducible SRIM stopping/range and layered TRIM calculations on Windows. The system resolves material and coefficient choices into pinned inputs, runs native SRIM executables in isolated workers, preserves calculation evidence, and makes saved simulation inputs searchable.
 
 The current project is a Python library used from the repository root. There is no CLI application, packaged installer, model integration, or agent orchestration service. Case and postprocessing directories can be allocated, but their analysis workflows are not implemented.

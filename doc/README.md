@@ -4,6 +4,8 @@ Start with the [project README](../README.md) for what the project does and its 
 
 ## Choose a task
 
+For continuation work, first read the [current `.sav` recovery direction](TRIM_DIRECTION.md). The F-button/directory-chooser export branch is abandoned; historical proposals and unfinished export code do not authorize restarting it.
+
 | Task | Documentation |
 | --- | --- |
 | Configure the project and run a first calculation | [Getting started](guides/getting-started.md) |

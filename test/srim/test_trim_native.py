@@ -4,14 +4,16 @@ from __future__ import annotations
 
 from pathlib import Path
 import ctypes
-from copy import deepcopy
 import struct
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
 
 from test_trim_runtime import CACHE
-from src.srim.trim_native import _filter_trim_startup_windows, _read_trim_window_text, _read_trim_windows, execute_trim_process
+from src.srim.trim_native import _filter_trim_startup_windows, _observe_trim_dialogs, _post_trim_command, _read_trim_window_text, _read_trim_windows, execute_trim_process
+from src.srim.trim_dialogs import initial_trim_dialog_state
+from test_trim_dialogs import POLICY, WINDOW
+from copy import deepcopy
 
 
 class TestTRIMNative(unittest.TestCase):
@@ -55,6 +57,18 @@ class TestTRIMNative(unittest.TestCase):
             window = {**candidate, **change}
             self.assertEqual(_filter_trim_startup_windows([window], {}, 1.0), [window])
 
+    def test_startup_opted_in_observation(self: TestTRIMNative) -> None:
+        """Defer one synthetic startup candidate in opted-in mode, then fail expiry; return None."""
+        candidate = {"pid": 42, "handle": 12, "owner_handle": 11, "class": "ThunderRT5Form", "title": "", "visible": True, "enabled": True, "rectangle": [645, 406, 891, 457], "controls": [], "capture_errors": ["unavailable"], "detection_reason": "owned-popup"}
+        timing: dict[tuple[int, int], float] = {}
+        state = {**initial_trim_dialog_state(POLICY), "events": []}
+        with patch("src.srim.trim_native._read_trim_windows", return_value=[candidate]), patch("src.srim.trim_native._post_trim_command") as post:
+            first = _observe_trim_dialogs(42, CACHE, POLICY, state, 1.0, startup_state=timing)
+            self.assertEqual(first["unhandled"], [])
+            expired = _observe_trim_dialogs(42, CACHE, POLICY, first["state"], 1.5, startup_state=timing)
+            self.assertEqual(expired["unhandled"], [candidate])
+            post.assert_not_called()
+
     def test_startup_wait_preserves_timeout_and_cancellation(self: TestTRIMNative) -> None:
         """Defer a synthetic owned form then honor timeout or cancellation and cleanup; return None."""
         candidate = {"pid": 43, "handle": 12, "owner_handle": 11, "class": "ThunderRT5Form", "title": "", "visible": True, "enabled": True, "rectangle": [645, 406, 891, 457], "controls": [], "capture_errors": ["unavailable"], "detection_reason": "owned-popup"}
@@ -76,6 +90,92 @@ class TestTRIMNative(unittest.TestCase):
                 self.assertEqual(report["popups"], [])
                 api.TerminateJobObject.assert_called_once_with(12, 1)
                 process.wait.assert_called_once()
+
+    def test_known_responses_owned(self: TestTRIMNative) -> None:
+        """Queue one recognized owned response and retain evidence; return None."""
+        window = {**deepcopy(WINDOW), "detection_reason": "dialog"}
+        state = {**initial_trim_dialog_state(POLICY), "events": []}
+        with patch("src.srim.trim_native._read_trim_windows", return_value=[window]), patch("src.srim.trim_native._post_trim_command", return_value={"queued": True, "error": None}) as post:
+            report = _observe_trim_dialogs(42, CACHE, POLICY, state, 0.1)
+        self.assertEqual(post.call_count, 1)
+        self.assertEqual(post.call_args.args[0], 42)
+        self.assertEqual(report["state"]["pending_sequence"], 1)
+        self.assertEqual(report["events"][0]["transition"], "pending")
+
+    def test_response_revalidation(self: TestTRIMNative) -> None:
+        """Reject changed native text before posting any command; return None."""
+        with patch("src.srim.trim_native._read_trim_window_text", return_value={"title": "changed", "controls": [], "capture_errors": []}), patch("src.srim.trim_native.ctypes.WinDLL") as api:
+            with self.assertRaises(ValueError):
+                _post_trim_command(42, WINDOW, {"action": "button", "target_handle": 12, "control_id": 6, "response": "Yes"})
+            api.assert_not_called()
+
+    def test_post_failure_no_retry(self: TestTRIMNative) -> None:
+        """Record a queue failure once without retrying; return None."""
+        state = {**initial_trim_dialog_state(POLICY), "events": []}
+        with patch("src.srim.trim_native._read_trim_windows", return_value=[{**WINDOW, "detection_reason": "dialog"}]), patch("src.srim.trim_native._post_trim_command", side_effect=OSError("queue failed")) as post:
+            report = _observe_trim_dialogs(42, CACHE, POLICY, state, 0.1)
+        self.assertEqual(post.call_count, 1)
+        self.assertEqual(report["errors"], ["queue failed"])
+        self.assertEqual(report["events"][0]["transition"], "failed")
+
+    def test_transition_timeout(self: TestTRIMNative) -> None:
+        """Reject an unchanged pending dialog after two seconds; return None."""
+        window = {**deepcopy(WINDOW), "detection_reason": "dialog"}
+        state = {**initial_trim_dialog_state(POLICY), "events": []}
+        with patch("src.srim.trim_native._read_trim_windows", return_value=[window]), patch("src.srim.trim_native._post_trim_command", return_value={"queued": True, "error": None}) as post:
+            first = _observe_trim_dialogs(42, CACHE, POLICY, state, 0.1)
+            second = _observe_trim_dialogs(42, CACHE, POLICY, first["state"], 1)
+            final = _observe_trim_dialogs(42, CACHE, POLICY, second["state"], 2.2)
+        self.assertEqual(post.call_count, 1)
+        self.assertTrue(final["errors"])
+        self.assertEqual(final["state"]["stage"], "failed")
+
+    def test_export_forms_never_responded(self: TestTRIMNative) -> None:
+        """Reject synthetic abandoned export forms without posting commands; return None."""
+        for title in ("TRIM", "Plots"):
+            state = {**initial_trim_dialog_state(POLICY), "events": []}
+            form = {**deepcopy(WINDOW), "class": "ThunderRT5Form", "title": title, "detection_reason": "owned-popup"}
+            with patch("src.srim.trim_native._read_trim_windows", return_value=[form]), patch("src.srim.trim_native._post_trim_command") as post:
+                report = _observe_trim_dialogs(42, CACHE, POLICY, state, 0.1)
+            post.assert_not_called()
+            self.assertEqual(report["unhandled"], [form])
+
+    def test_opt_in_resume_rejected_before_launch(self: TestTRIMNative) -> None:
+        """Reject a valid synthetic resume policy before job/process creation; return None."""
+        with TemporaryDirectory(dir=CACHE) as directory:
+            root = Path(directory)
+            (root / "TRIM.exe").write_bytes(b"fixture")
+            api = MagicMock()
+            with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.subprocess.Popen") as launch:
+                with self.assertRaisesRegex(ValueError, "checkpoint .sav integration"):
+                    execute_trim_process(root / "TRIM.exe", root, hide_window=True, timeout_seconds=None, stdout_path=root / "stdout", stderr_path=root / "stderr", dialog_policy={**POLICY, "kind": "resume"})
+            launch.assert_not_called()
+            api.CreateJobObjectW.assert_not_called()
+            self.assertFalse((root / "stdout").exists())
+
+    def test_menu_exit_rejected(self: TestTRIMNative) -> None:
+        """Reject the removed menu command before inspection or native messaging; return None."""
+        with patch("src.srim.trim_native._read_trim_window_text") as read, patch("src.srim.trim_native.ctypes.WinDLL") as api:
+            with self.assertRaises(ValueError):
+                _post_trim_command(42, WINDOW, {"action": "menu-exit", "target_handle": 10, "control_id": 7})
+            read.assert_not_called()
+            api.assert_not_called()
+
+    def test_cancellation_during_response(self: TestTRIMNative) -> None:
+        """Stop an opted-in owned job before responding when cancelled; return None."""
+        with TemporaryDirectory(dir=CACHE) as directory:
+            root = Path(directory)
+            (root / "TRIM.exe").write_bytes(b"fixture")
+            api = MagicMock()
+            api.NtResumeProcess.return_value = 0
+            api.CreateJobObjectW.return_value = 12
+            process = MagicMock(pid=43, returncode=1, _handle=44)
+            process.poll.side_effect = [None, 1]
+            with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.subprocess.Popen", return_value=process), patch("src.srim.trim_native._observe_trim_dialogs") as observer:
+                result = execute_trim_process(root / "TRIM.exe", root, hide_window=True, timeout_seconds=5, stdout_path=root / "stdout", stderr_path=root / "stderr", cancel=MagicMock(return_value=True), dialog_policy=POLICY)
+            observer.assert_not_called()
+            self.assertEqual(result["termination"], "cancelled")
+            api.TerminateJobObject.assert_called_once_with(12, 1)
 
     def test_job_ownership_before_start(self: TestTRIMNative) -> None:
         """Require assignment before resume and clean exit job closure; return None."""

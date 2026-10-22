@@ -38,7 +38,7 @@ print(results["issues"])
 
 Inspect `metadata["status"]`: expected native failures return `failed` metadata. A clean exit alone is insufficient. Success also requires consistent summary/profile data, the requested saved ion count and no detected parameter substitution. Some preflight failures have only execution/raw evidence, so read parsed files only when present.
 
-`hide_trim_window` controls initial display, independently of SR's setting. TRIM can display windows later. Every detected interactive popup is recorded without a response; the runner terminates its owned process job, preserves the runtime and returns a popup failure. This includes native completion questions. Popup text, classes, ownership and capture errors are in `execution["process"]["popups"]`. Startup progress forms and the ordinary calculation window are distinguished from interactive dialogs. No parameter is silently changed and no failed run is retried automatically.
+`hide_trim_window` controls initial display, independently of SR's setting. TRIM can display windows later. With the default cascade_output=None, every detected interactive popup is recorded without a response; the runner terminates its owned process job, preserves the runtime and returns a popup failure. Fresh runs may explicitly opt into reviewed button responses through cascade_output, subject to the [execution reference](../reference/trim-execution-format.md). This includes native completion questions. Popup text, classes, ownership and capture errors are in `execution["process"]["popups"]`. Startup progress forms and the ordinary calculation window are distinguished from interactive dialogs. No parameter is silently changed and no failed run is retried automatically.
 
 ## Read preserved data
 
@@ -63,6 +63,8 @@ Quick-mode NOVAC may explicitly state that replacement collisions were not calcu
 TRIM writes files in the working root, `SRIM Outputs` and `SRIM Restore`. All locations, including generated data files, optional particle histories, binary arrays and empty directories, are preserved under `output/raw/runtime`. The first parser does not interpret individual collision/particle/EXYZ histories or binary accumulated arrays.
 
 ## Resume into a new simulation
+
+Continuation currently requires `cascade_output=None` (the default), retaining report-only popup behavior. Explicit automatic choices raise ValueError before creating a runtime: automatic continuation awaits checkpoint `.sav` result/lifecycle integration. The GUI result-export route has been removed. [Checkpoint recovery](trim-checkpoint-recovery.md) exists separately; recovered data is not currently substituted for required native text outputs or used to waive execution completion checks. See the [current direction](../TRIM_DIRECTION.md).
 
 Resume accepts a sealed terminal project record. Successful parents are eligible; failed parents must have ended through popup, timeout or cancellation and have a complete verified saved-state set. A missing/inconsistent checkpoint is rejected. The parent is never edited.
 

@@ -1,0 +1,1325 @@
+============================== SRIM-2008.04 ==============================
+==============================================================================
+------------------------------------------------------------------------------
+Si 100 nm
+------------------------------------------------------------------------------
+============================================================
+======  Special Calculation based on TRIM.DAT file.  =======
+=                                                          =
+=Si 100 nm=
+============================================================
+>     Si  Displacement Energy of Si = 0015.00000 eV
+  Latt.Binding Energy of Si = 0002.00000 eV
+  SurfaceBind. Energy of Si = 0004.70000 eV
+============================================================
+ 
+==========================  COLLISION HISTORY  =======================================================
+  NOTES: Only Ion Collisions which produce Displacements are tabulated.                               
+         Atom Sums and Averages are Incomplete if Recoil Cascades Leave Target.                       
+         Target DISPlacements = VACancies + REPLACement Collisions.                                   
+         Target VACancies = INTERstitials + Sputtered + Transmitted Atoms.                            
+                            Recoil Atoms which end at the surface, are not counted (see manual).      
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00001³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000031³000029³000002³000031³
+======================================================================================================
+- For Ion 0000001:               For All Ions to date :                                              º
+- Displacements     = 000031.0   Average Displacements/Ion     = 0000031.000                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.000                         º
+- Vacancies         = 000029.0   Average Vacancies/Ion         = 0000029.000                         º
+- Interstitials     = 000031.0   Average Interstitials/Ion     = 0000031.000                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00002³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000032³000028³000004³000032³
+======================================================================================================
+- For Ion 0000002:               For All Ions to date :                                              º
+- Displacements     = 000032.0   Average Displacements/Ion     = 0000031.500                         º
+- Replacements      = 000004.0   Average Replacements/Ion      = 0000003.000                         º
+- Vacancies         = 000028.0   Average Vacancies/Ion         = 0000028.500                         º
+- Interstitials     = 000032.0   Average Interstitials/Ion     = 0000031.500                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00003³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000030³000027³000003³000030³
+======================================================================================================
+- For Ion 0000003:               For All Ions to date :                                              º
+- Displacements     = 000030.0   Average Displacements/Ion     = 0000031.000                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000003.000                         º
+- Vacancies         = 000027.0   Average Vacancies/Ion         = 0000028.000                         º
+- Interstitials     = 000030.0   Average Interstitials/Ion     = 0000031.000                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00004³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000030³000028³000002³000030³
+======================================================================================================
+- For Ion 0000004:               For All Ions to date :                                              º
+- Displacements     = 000030.0   Average Displacements/Ion     = 0000030.750                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.800                         º
+- Vacancies         = 000028.0   Average Vacancies/Ion         = 0000028.000                         º
+- Interstitials     = 000030.0   Average Interstitials/Ion     = 0000030.800                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00005³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000030³000029³000001³000030³
+======================================================================================================
+- For Ion 0000005:               For All Ions to date :                                              º
+- Displacements     = 000030.0   Average Displacements/Ion     = 0000030.600                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.400                         º
+- Vacancies         = 000029.0   Average Vacancies/Ion         = 0000028.200                         º
+- Interstitials     = 000030.0   Average Interstitials/Ion     = 0000030.600                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00006³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000031³000029³000002³000031³
+======================================================================================================
+- For Ion 0000006:               For All Ions to date :                                              º
+- Displacements     = 000031.0   Average Displacements/Ion     = 0000030.667                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.300                         º
+- Vacancies         = 000029.0   Average Vacancies/Ion         = 0000028.300                         º
+- Interstitials     = 000031.0   Average Interstitials/Ion     = 0000030.700                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00007³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000034³000032³000002³000034³
+======================================================================================================
+- For Ion 0000007:               For All Ions to date :                                              º
+- Displacements     = 000034.0   Average Displacements/Ion     = 0000031.143                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.300                         º
+- Vacancies         = 000032.0   Average Vacancies/Ion         = 0000028.900                         º
+- Interstitials     = 000034.0   Average Interstitials/Ion     = 0000031.100                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00008³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000035³000031³000004³000035³
+======================================================================================================
+- For Ion 0000008:               For All Ions to date :                                              º
+- Displacements     = 000035.0   Average Displacements/Ion     = 0000031.625                         º
+- Replacements      = 000004.0   Average Replacements/Ion      = 0000002.500                         º
+- Vacancies         = 000031.0   Average Vacancies/Ion         = 0000029.100                         º
+- Interstitials     = 000035.0   Average Interstitials/Ion     = 0000031.600                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00009³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000032³000028³000004³000032³
+======================================================================================================
+- For Ion 0000009:               For All Ions to date :                                              º
+- Displacements     = 000032.0   Average Displacements/Ion     = 0000031.667                         º
+- Replacements      = 000004.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000028.0   Average Vacancies/Ion         = 0000029.000                         º
+- Interstitials     = 000032.0   Average Interstitials/Ion     = 0000031.700                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00010³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000030³000029³000001³000030³
+======================================================================================================
+- For Ion 0000010:               For All Ions to date :                                              º
+- Displacements     = 000030.0   Average Displacements/Ion     = 0000031.500                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.500                         º
+- Vacancies         = 000029.0   Average Vacancies/Ion         = 0000029.000                         º
+- Interstitials     = 000030.0   Average Interstitials/Ion     = 0000031.500                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00011³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000033³000030³000003³000033³
+======================================================================================================
+- For Ion 0000011:               For All Ions to date :                                              º
+- Displacements     = 000033.0   Average Displacements/Ion     = 0000031.636                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.500                         º
+- Vacancies         = 000030.0   Average Vacancies/Ion         = 0000029.100                         º
+- Interstitials     = 000033.0   Average Interstitials/Ion     = 0000031.600                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00012³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000029³000028³000001³000029³
+======================================================================================================
+- For Ion 0000012:               For All Ions to date :                                              º
+- Displacements     = 000029.0   Average Displacements/Ion     = 0000031.417                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.400                         º
+- Vacancies         = 000028.0   Average Vacancies/Ion         = 0000029.000                         º
+- Interstitials     = 000029.0   Average Interstitials/Ion     = 0000031.400                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00013³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000030³000026³000004³000030³
+======================================================================================================
+- For Ion 0000013:               For All Ions to date :                                              º
+- Displacements     = 000030.0   Average Displacements/Ion     = 0000031.308                         º
+- Replacements      = 000004.0   Average Replacements/Ion      = 0000002.500                         º
+- Vacancies         = 000026.0   Average Vacancies/Ion         = 0000028.800                         º
+- Interstitials     = 000030.0   Average Interstitials/Ion     = 0000031.300                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00014³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000025³000023³000002³000025³
+======================================================================================================
+- For Ion 0000014:               For All Ions to date :                                              º
+- Displacements     = 000025.0   Average Displacements/Ion     = 0000030.857                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.500                         º
+- Vacancies         = 000023.0   Average Vacancies/Ion         = 0000028.400                         º
+- Interstitials     = 000025.0   Average Interstitials/Ion     = 0000030.900                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00015³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000030³000027³000003³000030³
+======================================================================================================
+- For Ion 0000015:               For All Ions to date :                                              º
+- Displacements     = 000030.0   Average Displacements/Ion     = 0000030.800                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.500                         º
+- Vacancies         = 000027.0   Average Vacancies/Ion         = 0000028.300                         º
+- Interstitials     = 000030.0   Average Interstitials/Ion     = 0000030.800                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00016³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000026³000026³000000³000026³
+======================================================================================================
+- For Ion 0000016:               For All Ions to date :                                              º
+- Displacements     = 000026.0   Average Displacements/Ion     = 0000030.500                         º
+- Replacements      = 000000.0   Average Replacements/Ion      = 0000002.400                         º
+- Vacancies         = 000026.0   Average Vacancies/Ion         = 0000028.100                         º
+- Interstitials     = 000026.0   Average Interstitials/Ion     = 0000030.500                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00017³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000028³000025³000003³000028³
+======================================================================================================
+- For Ion 0000017:               For All Ions to date :                                              º
+- Displacements     = 000028.0   Average Displacements/Ion     = 0000030.353                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.400                         º
+- Vacancies         = 000025.0   Average Vacancies/Ion         = 0000027.900                         º
+- Interstitials     = 000028.0   Average Interstitials/Ion     = 0000030.400                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00018³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000034³000028³000006³000034³
+======================================================================================================
+- For Ion 0000018:               For All Ions to date :                                              º
+- Displacements     = 000034.0   Average Displacements/Ion     = 0000030.556                         º
+- Replacements      = 000006.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000028.0   Average Vacancies/Ion         = 0000027.900                         º
+- Interstitials     = 000034.0   Average Interstitials/Ion     = 0000030.600                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00019³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000030³000026³000004³000030³
+======================================================================================================
+- For Ion 0000019:               For All Ions to date :                                              º
+- Displacements     = 000030.0   Average Displacements/Ion     = 0000030.526                         º
+- Replacements      = 000004.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000026.0   Average Vacancies/Ion         = 0000027.800                         º
+- Interstitials     = 000030.0   Average Interstitials/Ion     = 0000030.500                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00020³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000025³000024³000001³000025³
+======================================================================================================
+- For Ion 0000020:               For All Ions to date :                                              º
+- Displacements     = 000025.0   Average Displacements/Ion     = 0000030.250                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000024.0   Average Vacancies/Ion         = 0000027.700                         º
+- Interstitials     = 000025.0   Average Interstitials/Ion     = 0000030.300                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00021³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000034³000027³000007³000034³
+======================================================================================================
+- For Ion 0000021:               For All Ions to date :                                              º
+- Displacements     = 000034.0   Average Displacements/Ion     = 0000030.429                         º
+- Replacements      = 000007.0   Average Replacements/Ion      = 0000002.800                         º
+- Vacancies         = 000027.0   Average Vacancies/Ion         = 0000027.600                         º
+- Interstitials     = 000034.0   Average Interstitials/Ion     = 0000030.400                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00022³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000031³000028³000003³000031³
+======================================================================================================
+- For Ion 0000022:               For All Ions to date :                                              º
+- Displacements     = 000031.0   Average Displacements/Ion     = 0000030.455                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.800                         º
+- Vacancies         = 000028.0   Average Vacancies/Ion         = 0000027.600                         º
+- Interstitials     = 000031.0   Average Interstitials/Ion     = 0000030.500                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00023³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000034³000032³000002³000034³
+======================================================================================================
+- For Ion 0000023:               For All Ions to date :                                              º
+- Displacements     = 000034.0   Average Displacements/Ion     = 0000030.609                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.800                         º
+- Vacancies         = 000032.0   Average Vacancies/Ion         = 0000027.800                         º
+- Interstitials     = 000034.0   Average Interstitials/Ion     = 0000030.600                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00024³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000026³000024³000002³000026³
+======================================================================================================
+- For Ion 0000024:               For All Ions to date :                                              º
+- Displacements     = 000026.0   Average Displacements/Ion     = 0000030.417                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.800                         º
+- Vacancies         = 000024.0   Average Vacancies/Ion         = 0000027.700                         º
+- Interstitials     = 000026.0   Average Interstitials/Ion     = 0000030.400                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00025³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000032³000030³000002³000032³
+======================================================================================================
+- For Ion 0000025:               For All Ions to date :                                              º
+- Displacements     = 000032.0   Average Displacements/Ion     = 0000030.480                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000030.0   Average Vacancies/Ion         = 0000027.800                         º
+- Interstitials     = 000032.0   Average Interstitials/Ion     = 0000030.500                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00026³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000036³000033³000003³000036³
+======================================================================================================
+- For Ion 0000026:               For All Ions to date :                                              º
+- Displacements     = 000036.0   Average Displacements/Ion     = 0000030.692                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000033.0   Average Vacancies/Ion         = 0000028.000                         º
+- Interstitials     = 000036.0   Average Interstitials/Ion     = 0000030.700                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00027³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000034³000034³000000³000034³
+======================================================================================================
+- For Ion 0000027:               For All Ions to date :                                              º
+- Displacements     = 000034.0   Average Displacements/Ion     = 0000030.815                         º
+- Replacements      = 000000.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000034.0   Average Vacancies/Ion         = 0000028.200                         º
+- Interstitials     = 000034.0   Average Interstitials/Ion     = 0000030.800                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00028³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000029³000026³000003³000029³
+======================================================================================================
+- For Ion 0000028:               For All Ions to date :                                              º
+- Displacements     = 000029.0   Average Displacements/Ion     = 0000030.750                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000026.0   Average Vacancies/Ion         = 0000028.100                         º
+- Interstitials     = 000029.0   Average Interstitials/Ion     = 0000030.800                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00029³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000029³000026³000003³000029³
+======================================================================================================
+- For Ion 0000029:               For All Ions to date :                                              º
+- Displacements     = 000029.0   Average Displacements/Ion     = 0000030.690                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000026.0   Average Vacancies/Ion         = 0000028.000                         º
+- Interstitials     = 000029.0   Average Interstitials/Ion     = 0000030.700                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00030³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000036³000030³000006³000036³
+======================================================================================================
+- For Ion 0000030:               For All Ions to date :                                              º
+- Displacements     = 000036.0   Average Displacements/Ion     = 0000030.867                         º
+- Replacements      = 000006.0   Average Replacements/Ion      = 0000002.800                         º
+- Vacancies         = 000030.0   Average Vacancies/Ion         = 0000028.100                         º
+- Interstitials     = 000036.0   Average Interstitials/Ion     = 0000030.900                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00031³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000039³000034³000005³000039³
+======================================================================================================
+- For Ion 0000031:               For All Ions to date :                                              º
+- Displacements     = 000039.0   Average Displacements/Ion     = 0000031.129                         º
+- Replacements      = 000005.0   Average Replacements/Ion      = 0000002.800                         º
+- Vacancies         = 000034.0   Average Vacancies/Ion         = 0000028.300                         º
+- Interstitials     = 000039.0   Average Interstitials/Ion     = 0000031.100                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00032³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000032³000031³000001³000032³
+======================================================================================================
+- For Ion 0000032:               For All Ions to date :                                              º
+- Displacements     = 000032.0   Average Displacements/Ion     = 0000031.156                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.800                         º
+- Vacancies         = 000031.0   Average Vacancies/Ion         = 0000028.400                         º
+- Interstitials     = 000032.0   Average Interstitials/Ion     = 0000031.200                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00033³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000031³000030³000001³000031³
+======================================================================================================
+- For Ion 0000033:               For All Ions to date :                                              º
+- Displacements     = 000031.0   Average Displacements/Ion     = 0000031.152                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000030.0   Average Vacancies/Ion         = 0000028.400                         º
+- Interstitials     = 000031.0   Average Interstitials/Ion     = 0000031.200                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00034³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000034³000030³000004³000034³
+======================================================================================================
+- For Ion 0000034:               For All Ions to date :                                              º
+- Displacements     = 000034.0   Average Displacements/Ion     = 0000031.235                         º
+- Replacements      = 000004.0   Average Replacements/Ion      = 0000002.800                         º
+- Vacancies         = 000030.0   Average Vacancies/Ion         = 0000028.500                         º
+- Interstitials     = 000034.0   Average Interstitials/Ion     = 0000031.200                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00035³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000030³000028³000002³000030³
+======================================================================================================
+- For Ion 0000035:               For All Ions to date :                                              º
+- Displacements     = 000030.0   Average Displacements/Ion     = 0000031.200                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000028.0   Average Vacancies/Ion         = 0000028.500                         º
+- Interstitials     = 000030.0   Average Interstitials/Ion     = 0000031.200                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00036³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000035³000033³000002³000035³
+======================================================================================================
+- For Ion 0000036:               For All Ions to date :                                              º
+- Displacements     = 000035.0   Average Displacements/Ion     = 0000031.306                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000033.0   Average Vacancies/Ion         = 0000028.600                         º
+- Interstitials     = 000035.0   Average Interstitials/Ion     = 0000031.300                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00037³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000028³000026³000002³000028³
+======================================================================================================
+- For Ion 0000037:               For All Ions to date :                                              º
+- Displacements     = 000028.0   Average Displacements/Ion     = 0000031.216                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000026.0   Average Vacancies/Ion         = 0000028.500                         º
+- Interstitials     = 000028.0   Average Interstitials/Ion     = 0000031.200                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00038³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000027³000024³000003³000027³
+======================================================================================================
+- For Ion 0000038:               For All Ions to date :                                              º
+- Displacements     = 000027.0   Average Displacements/Ion     = 0000031.105                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000024.0   Average Vacancies/Ion         = 0000028.400                         º
+- Interstitials     = 000027.0   Average Interstitials/Ion     = 0000031.100                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00039³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000027³000025³000002³000027³
+======================================================================================================
+- For Ion 0000039:               For All Ions to date :                                              º
+- Displacements     = 000027.0   Average Displacements/Ion     = 0000031.000                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000025.0   Average Vacancies/Ion         = 0000028.300                         º
+- Interstitials     = 000027.0   Average Interstitials/Ion     = 0000031.000                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00040³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000035³000033³000002³000035³
+======================================================================================================
+- For Ion 0000040:               For All Ions to date :                                              º
+- Displacements     = 000035.0   Average Displacements/Ion     = 0000031.100                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000033.0   Average Vacancies/Ion         = 0000028.400                         º
+- Interstitials     = 000035.0   Average Interstitials/Ion     = 0000031.100                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00041³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000031³000030³000001³000031³
+======================================================================================================
+- For Ion 0000041:               For All Ions to date :                                              º
+- Displacements     = 000031.0   Average Displacements/Ion     = 0000031.098                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000030.0   Average Vacancies/Ion         = 0000028.500                         º
+- Interstitials     = 000031.0   Average Interstitials/Ion     = 0000031.100                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00042³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000043³000039³000004³000043³
+======================================================================================================
+- For Ion 0000042:               For All Ions to date :                                              º
+- Displacements     = 000043.0   Average Displacements/Ion     = 0000031.381                         º
+- Replacements      = 000004.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000039.0   Average Vacancies/Ion         = 0000028.700                         º
+- Interstitials     = 000043.0   Average Interstitials/Ion     = 0000031.400                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00043³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000032³000030³000002³000032³
+======================================================================================================
+- For Ion 0000043:               For All Ions to date :                                              º
+- Displacements     = 000032.0   Average Displacements/Ion     = 0000031.395                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000030.0   Average Vacancies/Ion         = 0000028.700                         º
+- Interstitials     = 000032.0   Average Interstitials/Ion     = 0000031.400                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00044³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000030³000028³000002³000030³
+======================================================================================================
+- For Ion 0000044:               For All Ions to date :                                              º
+- Displacements     = 000030.0   Average Displacements/Ion     = 0000031.364                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000028.0   Average Vacancies/Ion         = 0000028.700                         º
+- Interstitials     = 000030.0   Average Interstitials/Ion     = 0000031.400                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00045³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000028³000024³000004³000028³
+======================================================================================================
+- For Ion 0000045:               For All Ions to date :                                              º
+- Displacements     = 000028.0   Average Displacements/Ion     = 0000031.289                         º
+- Replacements      = 000004.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000024.0   Average Vacancies/Ion         = 0000028.600                         º
+- Interstitials     = 000028.0   Average Interstitials/Ion     = 0000031.300                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00046³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000029³000028³000001³000029³
+======================================================================================================
+- For Ion 0000046:               For All Ions to date :                                              º
+- Displacements     = 000029.0   Average Displacements/Ion     = 0000031.239                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000028.0   Average Vacancies/Ion         = 0000028.600                         º
+- Interstitials     = 000029.0   Average Interstitials/Ion     = 0000031.200                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00047³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000028³000027³000001³000028³
+======================================================================================================
+- For Ion 0000047:               For All Ions to date :                                              º
+- Displacements     = 000028.0   Average Displacements/Ion     = 0000031.170                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000027.0   Average Vacancies/Ion         = 0000028.600                         º
+- Interstitials     = 000028.0   Average Interstitials/Ion     = 0000031.200                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00048³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000034³000033³000001³000034³
+======================================================================================================
+- For Ion 0000048:               For All Ions to date :                                              º
+- Displacements     = 000034.0   Average Displacements/Ion     = 0000031.229                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000033.0   Average Vacancies/Ion         = 0000028.700                         º
+- Interstitials     = 000034.0   Average Interstitials/Ion     = 0000031.200                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00049³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000028³000026³000002³000028³
+======================================================================================================
+- For Ion 0000049:               For All Ions to date :                                              º
+- Displacements     = 000028.0   Average Displacements/Ion     = 0000031.163                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000026.0   Average Vacancies/Ion         = 0000028.600                         º
+- Interstitials     = 000028.0   Average Interstitials/Ion     = 0000031.200                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00050³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000033³000030³000003³000033³
+======================================================================================================
+- For Ion 0000050:               For All Ions to date :                                              º
+- Displacements     = 000033.0   Average Displacements/Ion     = 0000031.200                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000030.0   Average Vacancies/Ion         = 0000028.600                         º
+- Interstitials     = 000033.0   Average Interstitials/Ion     = 0000031.200                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00051³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000029³000026³000003³000029³
+======================================================================================================
+- For Ion 0000051:               For All Ions to date :                                              º
+- Displacements     = 000029.0   Average Displacements/Ion     = 0000031.157                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000026.0   Average Vacancies/Ion         = 0000028.600                         º
+- Interstitials     = 000029.0   Average Interstitials/Ion     = 0000031.200                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00052³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000032³000026³000006³000032³
+======================================================================================================
+- For Ion 0000052:               For All Ions to date :                                              º
+- Displacements     = 000032.0   Average Displacements/Ion     = 0000031.173                         º
+- Replacements      = 000006.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000026.0   Average Vacancies/Ion         = 0000028.500                         º
+- Interstitials     = 000032.0   Average Interstitials/Ion     = 0000031.200                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00053³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000032³000029³000003³000032³
+======================================================================================================
+- For Ion 0000053:               For All Ions to date :                                              º
+- Displacements     = 000032.0   Average Displacements/Ion     = 0000031.189                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000029.0   Average Vacancies/Ion         = 0000028.500                         º
+- Interstitials     = 000032.0   Average Interstitials/Ion     = 0000031.200                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00054³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000033³000028³000005³000033³
+======================================================================================================
+- For Ion 0000054:               For All Ions to date :                                              º
+- Displacements     = 000033.0   Average Displacements/Ion     = 0000031.222                         º
+- Replacements      = 000005.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000028.0   Average Vacancies/Ion         = 0000028.500                         º
+- Interstitials     = 000033.0   Average Interstitials/Ion     = 0000031.200                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00055³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000037³000032³000005³000037³
+======================================================================================================
+- For Ion 0000055:               For All Ions to date :                                              º
+- Displacements     = 000037.0   Average Displacements/Ion     = 0000031.327                         º
+- Replacements      = 000005.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000032.0   Average Vacancies/Ion         = 0000028.600                         º
+- Interstitials     = 000037.0   Average Interstitials/Ion     = 0000031.300                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00056³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000043³000040³000003³000043³
+======================================================================================================
+- For Ion 0000056:               For All Ions to date :                                              º
+- Displacements     = 000043.0   Average Displacements/Ion     = 0000031.536                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000040.0   Average Vacancies/Ion         = 0000028.800                         º
+- Interstitials     = 000043.0   Average Interstitials/Ion     = 0000031.500                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00057³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000039³000036³000003³000039³
+======================================================================================================
+- For Ion 0000057:               For All Ions to date :                                              º
+- Displacements     = 000039.0   Average Displacements/Ion     = 0000031.667                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000036.0   Average Vacancies/Ion         = 0000028.900                         º
+- Interstitials     = 000039.0   Average Interstitials/Ion     = 0000031.700                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00058³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000032³000032³000000³000032³
+======================================================================================================
+- For Ion 0000058:               For All Ions to date :                                              º
+- Displacements     = 000032.0   Average Displacements/Ion     = 0000031.672                         º
+- Replacements      = 000000.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000032.0   Average Vacancies/Ion         = 0000029.000                         º
+- Interstitials     = 000032.0   Average Interstitials/Ion     = 0000031.700                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00059³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000029³000025³000004³000029³
+======================================================================================================
+- For Ion 0000059:               For All Ions to date :                                              º
+- Displacements     = 000029.0   Average Displacements/Ion     = 0000031.627                         º
+- Replacements      = 000004.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000025.0   Average Vacancies/Ion         = 0000028.900                         º
+- Interstitials     = 000029.0   Average Interstitials/Ion     = 0000031.600                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00060³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000027³000024³000003³000027³
+======================================================================================================
+- For Ion 0000060:               For All Ions to date :                                              º
+- Displacements     = 000027.0   Average Displacements/Ion     = 0000031.550                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000024.0   Average Vacancies/Ion         = 0000028.800                         º
+- Interstitials     = 000027.0   Average Interstitials/Ion     = 0000031.600                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00061³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000035³000032³000003³000035³
+======================================================================================================
+- For Ion 0000061:               For All Ions to date :                                              º
+- Displacements     = 000035.0   Average Displacements/Ion     = 0000031.607                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000032.0   Average Vacancies/Ion         = 0000028.900                         º
+- Interstitials     = 000035.0   Average Interstitials/Ion     = 0000031.600                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00062³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000023³000023³000000³000023³
+======================================================================================================
+- For Ion 0000062:               For All Ions to date :                                              º
+- Displacements     = 000023.0   Average Displacements/Ion     = 0000031.468                         º
+- Replacements      = 000000.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000023.0   Average Vacancies/Ion         = 0000028.800                         º
+- Interstitials     = 000023.0   Average Interstitials/Ion     = 0000031.500                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00063³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000036³000035³000001³000036³
+======================================================================================================
+- For Ion 0000063:               For All Ions to date :                                              º
+- Displacements     = 000036.0   Average Displacements/Ion     = 0000031.540                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000035.0   Average Vacancies/Ion         = 0000028.900                         º
+- Interstitials     = 000036.0   Average Interstitials/Ion     = 0000031.500                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00064³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000032³000031³000001³000032³
+======================================================================================================
+- For Ion 0000064:               For All Ions to date :                                              º
+- Displacements     = 000032.0   Average Displacements/Ion     = 0000031.547                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000031.0   Average Vacancies/Ion         = 0000028.900                         º
+- Interstitials     = 000032.0   Average Interstitials/Ion     = 0000031.500                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00065³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000031³000029³000002³000031³
+======================================================================================================
+- For Ion 0000065:               For All Ions to date :                                              º
+- Displacements     = 000031.0   Average Displacements/Ion     = 0000031.538                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000029.0   Average Vacancies/Ion         = 0000028.900                         º
+- Interstitials     = 000031.0   Average Interstitials/Ion     = 0000031.500                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00066³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000037³000036³000001³000037³
+======================================================================================================
+- For Ion 0000066:               For All Ions to date :                                              º
+- Displacements     = 000037.0   Average Displacements/Ion     = 0000031.621                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000036.0   Average Vacancies/Ion         = 0000029.000                         º
+- Interstitials     = 000037.0   Average Interstitials/Ion     = 0000031.600                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00067³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000033³000028³000005³000033³
+======================================================================================================
+- For Ion 0000067:               For All Ions to date :                                              º
+- Displacements     = 000033.0   Average Displacements/Ion     = 0000031.642                         º
+- Replacements      = 000005.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000028.0   Average Vacancies/Ion         = 0000029.000                         º
+- Interstitials     = 000033.0   Average Interstitials/Ion     = 0000031.600                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00068³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000029³000029³000000³000029³
+======================================================================================================
+- For Ion 0000068:               For All Ions to date :                                              º
+- Displacements     = 000029.0   Average Displacements/Ion     = 0000031.603                         º
+- Replacements      = 000000.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000029.0   Average Vacancies/Ion         = 0000029.000                         º
+- Interstitials     = 000029.0   Average Interstitials/Ion     = 0000031.600                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00069³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000040³000036³000004³000040³
+======================================================================================================
+- For Ion 0000069:               For All Ions to date :                                              º
+- Displacements     = 000040.0   Average Displacements/Ion     = 0000031.725                         º
+- Replacements      = 000004.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000036.0   Average Vacancies/Ion         = 0000029.100                         º
+- Interstitials     = 000040.0   Average Interstitials/Ion     = 0000031.700                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00070³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000027³000026³000001³000027³
+======================================================================================================
+- For Ion 0000070:               For All Ions to date :                                              º
+- Displacements     = 000027.0   Average Displacements/Ion     = 0000031.657                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000026.0   Average Vacancies/Ion         = 0000029.100                         º
+- Interstitials     = 000027.0   Average Interstitials/Ion     = 0000031.700                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00071³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000036³000032³000004³000036³
+======================================================================================================
+- For Ion 0000071:               For All Ions to date :                                              º
+- Displacements     = 000036.0   Average Displacements/Ion     = 0000031.718                         º
+- Replacements      = 000004.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000032.0   Average Vacancies/Ion         = 0000029.100                         º
+- Interstitials     = 000036.0   Average Interstitials/Ion     = 0000031.700                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00072³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000032³000032³000000³000032³
+======================================================================================================
+- For Ion 0000072:               For All Ions to date :                                              º
+- Displacements     = 000032.0   Average Displacements/Ion     = 0000031.722                         º
+- Replacements      = 000000.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000032.0   Average Vacancies/Ion         = 0000029.200                         º
+- Interstitials     = 000032.0   Average Interstitials/Ion     = 0000031.700                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00073³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000037³000034³000003³000037³
+======================================================================================================
+- For Ion 0000073:               For All Ions to date :                                              º
+- Displacements     = 000037.0   Average Displacements/Ion     = 0000031.795                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000034.0   Average Vacancies/Ion         = 0000029.200                         º
+- Interstitials     = 000037.0   Average Interstitials/Ion     = 0000031.800                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00074³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000031³000028³000003³000031³
+======================================================================================================
+- For Ion 0000074:               For All Ions to date :                                              º
+- Displacements     = 000031.0   Average Displacements/Ion     = 0000031.784                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000028.0   Average Vacancies/Ion         = 0000029.200                         º
+- Interstitials     = 000031.0   Average Interstitials/Ion     = 0000031.800                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00075³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000038³000033³000005³000038³
+======================================================================================================
+- For Ion 0000075:               For All Ions to date :                                              º
+- Displacements     = 000038.0   Average Displacements/Ion     = 0000031.867                         º
+- Replacements      = 000005.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000033.0   Average Vacancies/Ion         = 0000029.300                         º
+- Interstitials     = 000038.0   Average Interstitials/Ion     = 0000031.900                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00076³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000030³000027³000003³000030³
+======================================================================================================
+- For Ion 0000076:               For All Ions to date :                                              º
+- Displacements     = 000030.0   Average Displacements/Ion     = 0000031.842                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000027.0   Average Vacancies/Ion         = 0000029.200                         º
+- Interstitials     = 000030.0   Average Interstitials/Ion     = 0000031.800                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00077³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000032³000030³000002³000032³
+======================================================================================================
+- For Ion 0000077:               For All Ions to date :                                              º
+- Displacements     = 000032.0   Average Displacements/Ion     = 0000031.844                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000030.0   Average Vacancies/Ion         = 0000029.200                         º
+- Interstitials     = 000032.0   Average Interstitials/Ion     = 0000031.800                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00078³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000032³000027³000005³000032³
+======================================================================================================
+- For Ion 0000078:               For All Ions to date :                                              º
+- Displacements     = 000032.0   Average Displacements/Ion     = 0000031.846                         º
+- Replacements      = 000005.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000027.0   Average Vacancies/Ion         = 0000029.200                         º
+- Interstitials     = 000032.0   Average Interstitials/Ion     = 0000031.800                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00079³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000032³000028³000004³000032³
+======================================================================================================
+- For Ion 0000079:               For All Ions to date :                                              º
+- Displacements     = 000032.0   Average Displacements/Ion     = 0000031.848                         º
+- Replacements      = 000004.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000028.0   Average Vacancies/Ion         = 0000029.200                         º
+- Interstitials     = 000032.0   Average Interstitials/Ion     = 0000031.800                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00080³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000037³000033³000004³000037³
+======================================================================================================
+- For Ion 0000080:               For All Ions to date :                                              º
+- Displacements     = 000037.0   Average Displacements/Ion     = 0000031.913                         º
+- Replacements      = 000004.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000033.0   Average Vacancies/Ion         = 0000029.200                         º
+- Interstitials     = 000037.0   Average Interstitials/Ion     = 0000031.900                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00081³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000032³000030³000002³000032³
+======================================================================================================
+- For Ion 0000081:               For All Ions to date :                                              º
+- Displacements     = 000032.0   Average Displacements/Ion     = 0000031.914                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000030.0   Average Vacancies/Ion         = 0000029.200                         º
+- Interstitials     = 000032.0   Average Interstitials/Ion     = 0000031.900                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00082³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000029³000028³000001³000029³
+======================================================================================================
+- For Ion 0000082:               For All Ions to date :                                              º
+- Displacements     = 000029.0   Average Displacements/Ion     = 0000031.878                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000028.0   Average Vacancies/Ion         = 0000029.200                         º
+- Interstitials     = 000029.0   Average Interstitials/Ion     = 0000031.900                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00083³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000031³000030³000001³000031³
+======================================================================================================
+- For Ion 0000083:               For All Ions to date :                                              º
+- Displacements     = 000031.0   Average Displacements/Ion     = 0000031.867                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000030.0   Average Vacancies/Ion         = 0000029.200                         º
+- Interstitials     = 000031.0   Average Interstitials/Ion     = 0000031.900                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00084³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000036³000035³000001³000036³
+======================================================================================================
+- For Ion 0000084:               For All Ions to date :                                              º
+- Displacements     = 000036.0   Average Displacements/Ion     = 0000031.917                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000035.0   Average Vacancies/Ion         = 0000029.300                         º
+- Interstitials     = 000036.0   Average Interstitials/Ion     = 0000031.900                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00085³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000032³000032³000000³000032³
+======================================================================================================
+- For Ion 0000085:               For All Ions to date :                                              º
+- Displacements     = 000032.0   Average Displacements/Ion     = 0000031.918                         º
+- Replacements      = 000000.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000032.0   Average Vacancies/Ion         = 0000029.300                         º
+- Interstitials     = 000032.0   Average Interstitials/Ion     = 0000031.900                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00086³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000036³000031³000005³000036³
+======================================================================================================
+- For Ion 0000086:               For All Ions to date :                                              º
+- Displacements     = 000036.0   Average Displacements/Ion     = 0000031.965                         º
+- Replacements      = 000005.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000031.0   Average Vacancies/Ion         = 0000029.400                         º
+- Interstitials     = 000036.0   Average Interstitials/Ion     = 0000032.000                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00087³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000033³000030³000003³000033³
+======================================================================================================
+- For Ion 0000087:               For All Ions to date :                                              º
+- Displacements     = 000033.0   Average Displacements/Ion     = 0000031.977                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000030.0   Average Vacancies/Ion         = 0000029.400                         º
+- Interstitials     = 000033.0   Average Interstitials/Ion     = 0000032.000                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00088³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000030³000027³000003³000030³
+======================================================================================================
+- For Ion 0000088:               For All Ions to date :                                              º
+- Displacements     = 000030.0   Average Displacements/Ion     = 0000031.955                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000027.0   Average Vacancies/Ion         = 0000029.300                         º
+- Interstitials     = 000030.0   Average Interstitials/Ion     = 0000032.000                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00089³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000030³000030³000000³000030³
+======================================================================================================
+- For Ion 0000089:               For All Ions to date :                                              º
+- Displacements     = 000030.0   Average Displacements/Ion     = 0000031.933                         º
+- Replacements      = 000000.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000030.0   Average Vacancies/Ion         = 0000029.300                         º
+- Interstitials     = 000030.0   Average Interstitials/Ion     = 0000031.900                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00090³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000035³000033³000002³000035³
+======================================================================================================
+- For Ion 0000090:               For All Ions to date :                                              º
+- Displacements     = 000035.0   Average Displacements/Ion     = 0000031.967                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000033.0   Average Vacancies/Ion         = 0000029.400                         º
+- Interstitials     = 000035.0   Average Interstitials/Ion     = 0000032.000                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00091³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000027³000026³000001³000027³
+======================================================================================================
+- For Ion 0000091:               For All Ions to date :                                              º
+- Displacements     = 000027.0   Average Displacements/Ion     = 0000031.912                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000026.0   Average Vacancies/Ion         = 0000029.400                         º
+- Interstitials     = 000027.0   Average Interstitials/Ion     = 0000031.900                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00092³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000035³000032³000003³000035³
+======================================================================================================
+- For Ion 0000092:               For All Ions to date :                                              º
+- Displacements     = 000035.0   Average Displacements/Ion     = 0000031.946                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000032.0   Average Vacancies/Ion         = 0000029.400                         º
+- Interstitials     = 000035.0   Average Interstitials/Ion     = 0000031.900                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00093³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000040³000034³000006³000040³
+======================================================================================================
+- For Ion 0000093:               For All Ions to date :                                              º
+- Displacements     = 000040.0   Average Displacements/Ion     = 0000032.032                         º
+- Replacements      = 000006.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000034.0   Average Vacancies/Ion         = 0000029.400                         º
+- Interstitials     = 000040.0   Average Interstitials/Ion     = 0000032.000                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00094³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000032³000027³000005³000032³
+======================================================================================================
+- For Ion 0000094:               For All Ions to date :                                              º
+- Displacements     = 000032.0   Average Displacements/Ion     = 0000032.032                         º
+- Replacements      = 000005.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000027.0   Average Vacancies/Ion         = 0000029.400                         º
+- Interstitials     = 000032.0   Average Interstitials/Ion     = 0000032.000                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00095³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000035³000032³000003³000035³
+======================================================================================================
+- For Ion 0000095:               For All Ions to date :                                              º
+- Displacements     = 000035.0   Average Displacements/Ion     = 0000032.063                         º
+- Replacements      = 000003.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000032.0   Average Vacancies/Ion         = 0000029.400                         º
+- Interstitials     = 000035.0   Average Interstitials/Ion     = 0000032.100                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00096³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000037³000035³000002³000037³
+======================================================================================================
+- For Ion 0000096:               For All Ions to date :                                              º
+- Displacements     = 000037.0   Average Displacements/Ion     = 0000032.115                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000035.0   Average Vacancies/Ion         = 0000029.500                         º
+- Interstitials     = 000037.0   Average Interstitials/Ion     = 0000032.100                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00097³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000030³000028³000002³000030³
+======================================================================================================
+- For Ion 0000097:               For All Ions to date :                                              º
+- Displacements     = 000030.0   Average Displacements/Ion     = 0000032.093                         º
+- Replacements      = 000002.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000028.0   Average Vacancies/Ion         = 0000029.500                         º
+- Interstitials     = 000030.0   Average Interstitials/Ion     = 0000032.100                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00098³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000036³000032³000004³000036³
+======================================================================================================
+- For Ion 0000098:               For All Ions to date :                                              º
+- Displacements     = 000036.0   Average Displacements/Ion     = 0000032.133                         º
+- Replacements      = 000004.0   Average Replacements/Ion      = 0000002.600                         º
+- Vacancies         = 000032.0   Average Vacancies/Ion         = 0000029.500                         º
+- Interstitials     = 000036.0   Average Interstitials/Ion     = 0000032.100                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00099³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000039³000032³000007³000039³
+======================================================================================================
+- For Ion 0000099:               For All Ions to date :                                              º
+- Displacements     = 000039.0   Average Displacements/Ion     = 0000032.202                         º
+- Replacements      = 000007.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000032.0   Average Vacancies/Ion         = 0000029.500                         º
+- Interstitials     = 000039.0   Average Interstitials/Ion     = 0000032.200                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------
+³00100³10.00E-01³10000.E-02³ 0000.E+00³ 0000.E+00³0003.49³ Si ³10000.E-01³000033³000032³000001³000033³
+======================================================================================================
+- For Ion 0000100:               For All Ions to date :                                              º
+- Displacements     = 000033.0   Average Displacements/Ion     = 0000032.210                         º
+- Replacements      = 000001.0   Average Replacements/Ion      = 0000002.700                         º
+- Vacancies         = 000032.0   Average Vacancies/Ion         = 0000029.600                         º
+- Interstitials     = 000033.0   Average Interstitials/Ion     = 0000032.200                         º
+- Sputtered Atoms   = 000000.0   Average Sputter Atoms/Ion     = 0000000.000                         º
+- Transmitted Atoms = 000000.0   Average Transmitted Atoms/Ion = 0000000.000                         º
+======================================================================================================
+  Ion    Energy    Depth     Lateral Distance (A)   Se    Atom  Recoil    Target Target Target Target 
+  Numb   (keV)      (A)       Y Axis    Z Axis    (eV/A)  Hit  Energy(eV) DISP.  VAC.   REPLAC INTER  
+------------------------------------------------------------------------------------------------------

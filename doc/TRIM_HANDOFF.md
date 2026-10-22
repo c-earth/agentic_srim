@@ -1,5 +1,7 @@
 # TRIM investigation handoff — 2026-10-21
 
+Current continuation direction is [checkpoint `.sav` recovery](TRIM_DIRECTION.md), confirmed 2026-10-22. Historical F-export/chooser plans below are superseded and must not be resumed. Export-only code has been removed under the approved cleanup; `.sav` result/lifecycle integration remains the next design task.
+
 ## Execution implementation and verification
 
 The user approved [TRIM_EXECUTION_PROPOSAL.md](TRIM_EXECUTION_PROPOSAL.md), including its later event-list annotation, not-calculated NOVAC, normalized-composition and quick-mode aggregate-table amendments. Implementation resumed after the requested pause and is complete for fresh execution, continuation, prepared batches, whole-runtime preservation and summary/profile parsing. Usage and exact contracts are in the [execution guide](guides/trim-execution.md) and [reference](reference/trim-execution-format.md). Implementation was committed as `7d4c780` — `Implement TRIM execution, continuation, batches and profile parsing`.

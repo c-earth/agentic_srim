@@ -1,5 +1,9 @@
 # Handoff - 2026-10-21
 
+## Current TRIM continuation decision — 2026-10-22
+
+Follow [TRIM continuation direction](doc/TRIM_DIRECTION.md): the user selected `.sav` recovery and explicitly abandoned F-button/chooser result exports. Earlier export plans and popup-review next steps below are historical. The approved export-code cleanup is complete; checkpoint-result/lifecycle integration is the next design task.
+
 ## Scientific figure storage update
 
 The user requested and authorized direct edits to the scientific-figures skill, rather than a self-improvement trial. Two existing skill files were updated and `references/artifact-management.md` was added. Future figures use `.cache/scientific-figures/<figure-id>/versions/vNNN/`, with exports, authoring sources, captions, public discussion summaries, design notes, changes, review results, and verification records saved at meaningful checkpoints. Delivered versions remain immutable. The parent saves read-only reviewer reports. No trial or adoption is pending; the unrequested proposal was removed.
