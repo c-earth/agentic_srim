@@ -1,6 +1,6 @@
 # TRIM elemental input defaults: findings of 2026-10-21
 
-[Documentation index](../README.md) · [TRIM handoff](../TRIM_HANDOFF.md) · [Machine-readable table](trim-elemental-defaults.csv)
+[Documentation index](../README.md) · [Native validation](validation.md#trim-native-checks) · [Machine-readable table](trim-elemental-defaults.csv)
 
 This investigation concerns the **displayed TIN input defaults** for displacement energy (Disp), lattice binding energy (Latt) and surface binding energy (Surf). It does not establish physically correct parameters for a particular material or validate transport results. The installed versions inspected were `srim_2008`, `srim_2013_std` and `srim_2013_pro` under `D:/local/srim/`.
 
@@ -70,7 +70,7 @@ No controlled ATOMDATA perturbation was performed. Numerical agreement does not 
 | 2013 Standard | `44c8cfd5372b711ea3ca75493462c6339bfdaaa0b803c64de14ec4979369c91b` |
 | 2013 Pro | `44c8cfd5372b711ea3ca75493462c6339bfdaaa0b803c64de14ec4979369c91b` |
 
-The raw 2008 file spells row 37 `Ru Rubidium`; the comparison used the ordered atomic number, preserving source bytes. This is the existing compatibility issue described in [CAB status](../CAB_HANDOFF.md), not a change made by this investigation.
+The raw 2008 file spells row 37 `Ru Rubidium`; the comparison used the ordered atomic number, preserving source bytes. This is the existing compatibility issue described in [CAB validation](validation.md#cab-native-checks), not a change made by this investigation.
 
 ## Complete elemental table
 
@@ -211,6 +211,6 @@ The approved resume option skips only complete, warning-free, cleaned-up exact c
 
 ## Retained evidence and next work
 
-Raw local evidence is ignored by Git and is not guaranteed to survive cache cleanup. This document, CSV and figure preserve the numerical findings independently of that cache. Detailed paths and pending work are in the [handoff](../TRIM_HANDOFF.md).
+Raw local evidence is ignored by Git and is not guaranteed to survive cache cleanup. This document, CSV and figure preserve the numerical findings independently of that cache. The [validation reference](validation.md#trim-native-checks) summarizes later execution coverage. Original investigation notes and evidence paths are preserved in the local documentation migration archive.
 
 Unfinished work is the full mode, mixture, ion, compound and compound-phase coverage, plus resolution of incomplete captures. Testing whether changing ATOMDATA actually changes TIN defaults would establish causality; it has not been performed. Any production integration or native-behavior amendment still needs its own design and verification. Preserve explicit per-entry user overrides rather than treating the measured defaults as universal physical values.

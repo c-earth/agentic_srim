@@ -1,6 +1,6 @@
 # Local MCP servers
 
-The two independent local servers implement the approved [two-server proposal](../MCP_SERVER_PROPOSAL.md). srim_mcp exposes 38 scientific/discovery tools; project_mcp exposes 32 management/discovery tools.
+The two independent local servers expose the [current MCP interfaces](../reference/mcp-format.md). srim_mcp exposes 38 scientific/discovery tools; project_mcp exposes 32 management/discovery tools.
 
 Both servers use local stdio. Their adapters live under `src/mcp/srim_mcp/` and `src/mcp/project_mcp/`, with shared infrastructure under `src/mcp/common/`. Existing calculation APIs remain separate.
 
@@ -21,7 +21,7 @@ One agent session can create and work with multiple cases. Each operation select
 | project_mcp | Reusable capabilities | collections_list, collection_entries, collection_entry_get, candidates_list, candidate_get, candidate_create, repository_skills_list |
 | project_mcp | Self-improvement evidence | improvement_status, improvement_observe, improvement_proposal_create |
 
-srim_mcp owns native calculation execution and verified result access. project_mcp organizes cases, references and analysis evidence. Initial reusable collections are empty, and analysis recording does not execute an unspecified scientific method. Individual TRIM execution supports cooperative cancellation; active SR execution uses its configured timeout. See the [API contract](../MCP_API_CONTRACT_PROPOSAL.md) and [project contract](../PROJECT_MCP_PROPOSAL.md) for the approved signatures, side effects and limitations.
+srim_mcp owns native calculation execution and verified result access. project_mcp organizes cases, references and analysis evidence. Initial reusable collections are empty, and analysis recording does not execute an unspecified scientific method. Individual TRIM execution supports cooperative cancellation; active SR execution uses its configured timeout. See the [interface reference](../reference/mcp-format.md) and [project guide](project-management.md) for record contracts, side effects and limitations. Use `schema_get` and `capability_get` for exact current tool arguments.
 
 ## Setup and launch
 
@@ -57,6 +57,6 @@ Every mutating call requires a fresh UUID for a new request. Retries of the same
 
 ## Verification
 
-Synthetic tests use temporary workspaces under .cache/mcp-verification and fake native installations/process substitutes. The installed SDK is exercised through both real module/stdin/stdout entry points, including multiple cases in one client session. These checks verify adapters and management contracts; they do not run a new native physics experiment, certify every native mode, or register either server in the user's host.
+Synthetic tests use temporary workspaces under .cache/mcp-verification and fake native installations/process substitutes. The installed SDK is exercised through both real module/stdin/stdout entry points, including multiple cases in one client session. These checks verify adapters and management contracts. They do not run a new native physics experiment or certify every native mode. Host registration is configured separately in `.codex/config.toml` as described above.
 
-The implementation passed 14 MCP tests, 42 backend tests, two case tests, two analysis tests and two reuse/improvement tests with warnings treated as errors. Existing SRIM (273 tests) and knowledge (19 tests) regressions also passed. Checks cover independent case revisions and shared analysis references, durable job behavior, duplicate-server exclusion, input preparation with synthetic installations, verified result paging and uncalculated-profile availability. Source docstring/type/comment checks, documentation links, TOML parsing and dependency consistency passed. Local verification evidence is retained in `.cache/mcp-implementation/verification.json`.
+For current test commands, recorded native coverage and known limitations, see the [verification reference](../reference/validation.md). Historical delivery totals describe their original tested snapshot.

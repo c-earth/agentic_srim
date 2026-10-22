@@ -1,6 +1,6 @@
 # Native input-search APIs and formats
 
-[Usage](../guides/input-search.md) · [Approved contract](../NATIVE_INPUT_SEARCH_PROPOSAL.md)
+[Usage](../guides/input-search.md) · [Schema validators](../../src/knowledge/schema.py)
 
 Only native SR/TRIM input retrieval is implemented. Existing IDs, metadata, runner signatures and worker ownership remain unchanged. No external importer, CLI or output analytics. The catalog starts empty; new terminal records index automatically without historical backfill.
 
@@ -44,7 +44,7 @@ New envelopes schema_version=1; every key required, unavailable values null, unk
 
 References hash exact terminal metadata and canonical sorted input-inventory JSON (sort_keys=True,separators=(',',':'), UTF-8, no final newline). Evidence locators {file,json_pointer} cite saved JSON or a null pointer for exact native bytes. A file listing does not imply available parsed scientific results. No output contents are read to construct search records.
 
-Issue codes unsupported/malformed/missing/integrity/conflicting/stale/ineligible/indexing_error. Update state succeeded/partial/failed, operation update_<uuid>, sorted ID lists, UTC completion time. A report-write failure does not roll back a committed catalog. Full nested input schemas are in the approved contract; searchable settings must reproduce preserved SR.IN/TRIM.IN and applicable events. Resumed TRIM count/events use verified continuation control/checkpoint inputs.
+Issue codes unsupported/malformed/missing/integrity/conflicting/stale/ineligible/indexing_error. Update state succeeded/partial/failed, operation update_<uuid>, sorted ID lists, UTC completion time. A report-write failure does not roll back a committed catalog. Full nested input validation is defined by [schema.py](../../src/knowledge/schema.py) and the saved-input projection in [source.py](../../src/knowledge/source.py); searchable settings must reproduce preserved SR.IN/TRIM.IN and applicable events. Resumed TRIM count/events use verified continuation control/checkpoint inputs.
 
 ## Filters
 

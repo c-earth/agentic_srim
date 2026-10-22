@@ -1,44 +1,42 @@
 # Documentation
 
-Start with the [project README](../README.md) for what the project does and its prerequisites. The current user-facing scope is SR stopping/range calculation, material/coefficient resources, core-and-bond (CAB) corrections, and TRIM input preparation, execution, continuation, batching and summary/profile data.
+Start with [your first SR calculation](guides/getting-started.md), or use the
+[MCP server guide](guides/mcp-servers.md) to work through agent tools. The
+[project README](../README.md) lists prerequisites.
 
 ## Choose a task
 
-For continuation work, first read the [current `.sav` recovery direction](TRIM_DIRECTION.md). The F-button/directory-chooser export branch is abandoned; historical proposals and unfinished export code do not authorize restarting it.
-
-| Task | Documentation |
+| I want to… | Read |
 | --- | --- |
-| Configure the project and run a first calculation | [Getting started](guides/getting-started.md) |
-| Launch the two local MCP servers and inspect grouped tools | [Local MCP servers](guides/mcp-servers.md) |
-| Manage multiple cases, analysis provenance and reusable candidates | [Project management](guides/project-management.md) |
-| Inspect MCP schemas, jobs, ownership and cancellation | [MCP format reference](reference/mcp-format.md) |
-| Resume from the MCP delivery and Codex registration state | [MCP handoff](MCP_HANDOFF.md) |
-| Search verified native SR/TRIM inputs | [Input search](guides/input-search.md) |
-| Inspect input-search APIs, filters and references | [Input-search reference](reference/input-search-format.md) |
-| Search compounds, edit data, create variants or recover CAB entries | [Materials, resources and CAB](guides/resources-and-cab.md) |
-| Find function signatures, return values, side effects and error behavior | [Python API reference](reference/api.md) |
-| Construct request/selection JSON or inspect records and units | [Data formats and layouts](reference/data-formats.md) |
-| Resolve layered TRIM inputs and export a reproducible bundle | [TRIM input guide](guides/trim-inputs.md) |
-| Execute/resume TRIM, schedule batches and parse existing outputs | [TRIM execution guide](guides/trim-execution.md) |
-| Inspect runtime, lifecycle and parsed-result contracts | [TRIM execution reference](reference/trim-execution-format.md) |
-| Inspect TRIM input schemas, resources, APIs and limits policy | [TRIM input format](reference/trim-input-format.md) |
-| Read the code/documentation discrepancy review | [Non-TRIM review](reviews/non-trim-review.md) |
-| Inspect recorded native validation and limitations | [CAB status and evidence](CAB_HANDOFF.md) |
-| Inspect the 92-element TRIM defaults, rules and coverage | [TRIM input defaults](reference/trim-input-defaults.md) |
-| Continue the TRIM default investigation | [TRIM handoff](TRIM_HANDOFF.md) |
+| Configure SRIM and calculate stopping or range | [Getting started](guides/getting-started.md) |
+| Understand calculation inputs, workers and saved evidence | [How calculations and records work](guides/workflow.md) |
+| Launch MCP servers and discover tools | [MCP servers](guides/mcp-servers.md) |
+| Manage cases and record analysis provenance | [Project management](guides/project-management.md) |
+| Search saved native inputs and read verified files | [Input search](guides/input-search.md) |
+| Select materials, create resource variants or recover CAB data | [Materials, resources and CAB](guides/resources-and-cab.md) |
+| Prepare a layered TRIM calculation | [TRIM inputs](guides/trim-inputs.md) |
+| Execute, continue or batch TRIM and inspect outputs | [TRIM execution](guides/trim-execution.md) |
+| Recover profiles from a complete frozen checkpoint | [Checkpoint recovery](guides/trim-checkpoint-recovery.md) |
 
-## Historical design and investigation
+## Look up a contract
 
-These documents preserve decisions, experiments and delivery history. Proposal-era approval language is historical; use the current guides/reference and review for today's behavior.
+| Topic | Reference |
+| --- | --- |
+| SR/resources Python signatures and side effects | [Python API](reference/api.md) |
+| SR requests, units, resource and record layouts | [Data formats](reference/data-formats.md) |
+| TRIM inputs, native mode codes and bundle format | [TRIM input reference](reference/trim-input-format.md) |
+| TRIM runtime, continuation and parsed-report schemas | [TRIM execution reference](reference/trim-execution-format.md) |
+| Elemental damage defaults, measured table and limitations | [TRIM defaults](reference/trim-input-defaults.md) |
+| Native input-search APIs, filters and references | [Input-search reference](reference/input-search-format.md) |
+| MCP discovery, jobs, ownership and record formats | [MCP interface reference](reference/mcp-format.md) |
 
-- [CAB integration proposal](history/CAB_INTEGRATION_PROPOSAL.md): approved design and superseding compatibility amendment.
-- [CAB API catalog](history/CAB_API_CATALOG.md): original implementation contracts and planned test inventory.
-- [CAB integration tracker](history/CAB_INTEGRATION_TRACKER.md): completed delivery checklist.
-- [CAB research notes](history/CAB_RESEARCH_NOTES.md): historical experimental observations and deleted evidence inventory.
-- [Compound comparison](history/COMPOUND_COMPARISON.txt): narrower historical SR/TIN field-value comparison across installations.
+## Check support and known limitations
 
-Historical `.cache/` paths are relative to the repository root. Earlier artifacts were deleted at the user's request on 2026-10-20. New evidence generated afterward is explicitly distinguished in the CAB status page; raw artifacts are ignored and not portable repository contents. Documentation files here are not runtime resources.
+- [Verification commands and recorded native coverage](reference/validation.md)
+- [Current TRIM continuation decision](decisions/trim-continuation.md)
+- [Project review and unresolved findings, 2026-10-22](reviews/project-review-20261022.md)
 
-## Separate investigation outside this review
-
-[TIN findings](TIN_FINDINGS.txt) and [TRIM findings](TRIM_FINDINGS.txt) preserve earlier native investigations. The [2026-10-21 default reference](reference/trim-input-defaults.md) records the complete table and subsequent compound/phase evidence; [TRIM handoff](TRIM_HANDOFF.md) records later implementation and acceptance state. Use the execution guide/reference for current runtime behavior; UI-assisted historical probes do not establish unattended support for every native mode.
+Guides describe how to perform a task; references define exact interfaces and
+formats; decisions state active constraints. Only current material is kept here.
+Agents maintaining these pages must follow the shared
+[documentation instructions](../instructions/documentation.md).

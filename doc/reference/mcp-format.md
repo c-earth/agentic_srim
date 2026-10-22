@@ -1,6 +1,6 @@
 # MCP interfaces and record formats
 
-[Server guide](../guides/mcp-servers.md) · [Project management](../guides/project-management.md) · [Approved API contract](../MCP_API_CONTRACT_PROPOSAL.md)
+[Server guide](../guides/mcp-servers.md) · [Project management](../guides/project-management.md)
 
 Two independent local stdio servers expose the Python APIs. Scientific execution stays in srim_mcp; project organization stays in project_mcp. Their protocol code is grouped under src/mcp. Existing source APIs import no MCP modules. Each server has a separate workspace singleton lock, job journal and tool namespace.
 

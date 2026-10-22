@@ -13,9 +13,14 @@
 
 # Current TRIM continuation direction
 
-- The user selected checkpoint `.sav` recovery for resumed results. Continue with completion/checkpoint-save handling and recovery/parser/lifecycle integration.
+- The user selected checkpoint `.sav` recovery for resumed results. Checkpoint-result and lifecycle integration is implemented; use the current execution guide/reference for behavior and qualifications.
 - The F-button export, export-folder chooser, directory-item reader and 2008 export-button mapping branch was explicitly abandoned on 2026-10-22. Do not revive, implement, test or recommend it from old proposals, handoffs, cache scripts or unfinished code unless the user explicitly reopens that branch.
-- Read `doc/TRIM_DIRECTION.md` for the current decision and remaining checkpoint integration. Resume-export code has been removed; do not restore it from old proposals or Git history. Preserve fresh cascade handling, checkpoint saving, checkpoint recovery, timeout support and the committed startup filter.
+- Read `doc/decisions/trim-continuation.md` for the current decision. Resume-export code has been removed; do not restore it from old proposals or Git history. Preserve fresh cascade handling, checkpoint saving, checkpoint recovery, timeout support and the committed startup filter.
+
+# Documentation
+
+- Before creating, editing, moving or removing project documentation, read and follow [the shared documentation instructions](instructions/documentation.md). They define user-documentation layout, instruction versus subagent placement, historical preservation and link verification.
+- Start project usage documentation at [doc/README.md](doc/README.md). Keep the root README concise and keep obsolete proposals, logs and completed handoffs out of the active documentation.
 
 # Auxiliary files
 

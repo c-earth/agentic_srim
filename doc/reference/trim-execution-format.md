@@ -1,6 +1,6 @@
 # TRIM execution APIs and record formats
 
-[Execution guide](../guides/trim-execution.md) · [Input format](trim-input-format.md) · [Approved contract](../TRIM_EXECUTION_PROPOSAL.md)
+[Execution guide](../guides/trim-execution.md) · [Input format](trim-input-format.md) · [Continuation decision](../decisions/trim-continuation.md)
 
 This reference covers the Windows runner, continuation, in-memory scheduling, preservation and summary/depth-profile parsing. Existing SR signatures and legacy records remain supported. Import modules from the repository root. New APIs use existing `Config`, `ProjectPaths`, `CreatedDirectory`, `JSONObject`, `ResolvedTRIMInputs` and cleanup report types.
 
@@ -83,7 +83,7 @@ JSON uses UTF-8, sorted keys, two-space indentation, finite JSON values and term
 
 ## Report schemas
 
-The [approved contract](../TRIM_EXECUTION_PROPOSAL.md#exact-report-schemas) specifies the full nested field catalogue. The implementation's principal objects are:
+The principal report objects are listed below. Nested native-parser fields are defined in [trim_outputs.py](../../src/srim/trim_outputs.py), runtime controls in [trim_runtime.py](../../src/srim/trim_runtime.py), and resumed result adaptation in [trim_results.py](../../src/srim/trim_results.py).
 
 | Object | Exact top-level keys |
 | --- | --- |
@@ -137,4 +137,4 @@ Cleanup is explicit, verifies terminal permanent inventories and working/preserv
 
 Standalone import requires a quiescent runtime directory and a new disjoint destination. It stream-copies every file into `raw/runtime`, writes `parsed/results.json`, optionally preserves an explicit request and publishes a hash manifest with `kind="trim-output-import"`. No request, engine executable identity or simulation success is inferred when absent. Native parser issues return a report; unsafe I/O, source mutation and publication failures raise with retained staging paths.
 
-The execution.json timeout_seconds field records the effective per-attempt timeout as a positive number, or null for unlimited. An unlimited execution deadline does not disable save/readiness/shutdown bounds. Existing records are not rewritten. No automatic retry or continuation is performed. The shared checkpoint-first design supersedes event acknowledgment/default-save behavior; see [current direction](../TRIM_DIRECTION.md) for measured regression and native verification. Stable snapshots and stopped-copy validation do not prove atomic saving or independent scientific accuracy.
+The execution.json timeout_seconds field records the effective per-attempt timeout as a positive number, or null for unlimited. An unlimited execution deadline does not disable save/readiness/shutdown bounds. Existing records are not rewritten. No automatic retry or continuation is performed. The shared checkpoint-first design supersedes event acknowledgment/default-save behavior; see [current direction](../decisions/trim-continuation.md) for measured regression and native verification. Stable snapshots and stopped-copy validation do not prove atomic saving or independent scientific accuracy.

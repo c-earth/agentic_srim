@@ -2,7 +2,7 @@
 
 [Documentation index](../README.md) · [First calculation](../guides/getting-started.md) · [API reference](api.md)
 
-This page describes the current non-TRIM formats and their boundaries. Source validators remain the executable definitions. The [review](../reviews/non-trim-review.md) identifies differences between the historical design and implementation.
+This page describes the current non-TRIM formats and their boundaries. Source validators remain the executable definitions. The [validation reference](validation.md#resolved-correctness-review) records resolved findings; [the project review](../reviews/project-review-20261022.md) tracks additional known defects.
 
 ## Numeric and identity conventions
 

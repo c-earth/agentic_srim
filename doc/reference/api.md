@@ -1,6 +1,6 @@
 # Python API reference
 
-[Documentation index](../README.md) · [First calculation](../guides/getting-started.md) · [Data formats](data-formats.md) · [Review findings](../reviews/non-trim-review.md)
+[Documentation index](../README.md) · [First calculation](../guides/getting-started.md) · [Data formats](data-formats.md) · [Current findings](../reviews/project-review-20261022.md)
 
 This reference describes the shared backend and SR APIs, with links to TRIM's input and execution references. Import from `src.backend.<module>` or `src.srim.<module>` while running from the repository root. The historical CAB proposal/catalog record design decisions; they are not the current user entry point.
 
@@ -30,7 +30,7 @@ get_project_paths(root: Path) -> ProjectPaths
 create_base_directories(paths: ProjectPaths) -> DirectoryReport
 ```
 
-- `load_config` reads TOML afresh; timezone defaults to UTC, while SRIM root is required and absolute. Optional `[srim]` keys `hide_sr_window` and `hide_trim_window` accept only actual booleans and both default to true. Unknown keys/tables/types fail. It performs no discovery, expansion, directory creation or installation preflight. Malformed TOML and file-access exceptions propagate. Config stores both immutable flags; existing two-argument construction retains hidden defaults. The TRIM flag controls initial display; native popups are still reported without a response.
+- `load_config` reads TOML afresh; timezone defaults to UTC, while SRIM root is required and absolute. Optional `[srim]` keys `hide_sr_window` and `hide_trim_window` accept only actual booleans and both default to true. Unknown keys/tables/types fail. It performs no discovery, expansion, directory creation or installation preflight. Malformed TOML and file-access exceptions propagate. Config stores both immutable flags; existing two-argument construction retains hidden defaults. The TRIM flag controls initial display; the default `cascade_output=None` reports native popups without a response. Explicit reviewed policies are described in the [TRIM execution reference](trim-execution-format.md).
 - `get_project_paths` derives the agreed layout without I/O; relative roots raise `ValueError`.
 - `create_base_directories` creates missing directories and reports created/existing paths in encounter order. It rejects symlinks/junctions, preserves partial creation on error and has no locking/rollback.
 
@@ -291,11 +291,23 @@ publish_cab_entry(paths: ProjectPaths, dataset: ResourceReference,
 
 `find_cab_entry` returns a fully verified matching reference or `None` for genuine absence. Missing/corrupt evidence for a published entry raises. `load_cab_entry` verifies descriptor, exact bytes, dependency graph, capture/simulation files and arithmetic, returning independent JSON without native execution. `publish_cab_entry` validates, stages/synchronizes and publishes under a version lock; an equal semantic result reuses its existing identity, unequal results conflict. Alternative evidence/staging is retained.
 
-These are advanced evidence-bearing APIs. A discovered core dependency-identity validation defect can publish an invalid immutable entry before a subsequent load rejects it; see [finding R1](../reviews/non-trim-review.md#r1-core-publication-checks-element-identity-after-publication). Prefer the orchestrated resolvers for calculation publication; no implementation fix was made in this documentation change.
+These are advanced evidence-bearing APIs. Publication validates elemental dependency identity before publishing an immutable entry; the earlier ordering defect is closed. Prefer the orchestrated resolvers for calculation publication. See [resolved correctness findings](validation.md#resolved-correctness-review) and the current source contracts.
+
+## Shared material correction
+
+Source: [resolution.py](../../src/srim/resolution.py).
+
+`resolve_material_correction` is the common SR/TRIM correction resolver. It
+retains SR's correction formulas, omitted-entry fallback behavior, fixed reference
+conditions and evidence checks. Derived correction may recover missing CAB
+dependencies; `none` and `supplied` do not execute dependencies. Its source
+docstring defines the complete typed arguments and return contract. TRIM layers
+resolve sequentially and copy the shared evidence into each layer's provenance;
+see [TRIM API effects](trim-input-format.md#apis-and-effects).
 
 ## Low-level simulation lifecycle
 
-For TRIM's validators, renderers, versioned damage resources, resolver and bundle export, see the [TRIM input API reference](trim-input-format.md#apis-and-effects). Main staging, execution, continuation, prepared batches and summary/profile parsing are documented in the [TRIM execution reference](trim-execution-format.md) and [execution guide](../guides/trim-execution.md). The shared resolve_material_correction signature and effects are recorded in the [approved correction extraction](../TRIM_INPUT_PROPOSAL.md#shared-cab-extraction-in-resolutionpy).
+For TRIM's validators, renderers, versioned damage resources, resolver and bundle export, see the [TRIM input API reference](trim-input-format.md#apis-and-effects). Main staging, execution, continuation, prepared batches and summary/profile parsing are documented in the [TRIM execution reference](trim-execution-format.md) and [execution guide](../guides/trim-execution.md). The shared correction API is described in [shared material correction](#shared-material-correction).
 
 Source: [metadata.py](../../src/srim/metadata.py).
 

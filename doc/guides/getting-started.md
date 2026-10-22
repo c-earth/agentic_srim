@@ -6,7 +6,7 @@ This walkthrough uses the implemented stopping/range workflow. It uses correctio
 
 ## Configure this checkout
 
-Use a Python 3.13+ virtual environment at `.venv`. The existing checkout's interpreter is `D:\projects\agentic_srim\.venv\Scripts\python.exe`. Run the example from `D:\projects\agentic_srim` so `src` imports resolve. There is no `pyproject.toml`, `setup.py`, CLI entry point or third-party Python dependency to install.
+Use a Python 3.13+ virtual environment at `.venv`. The existing checkout's interpreter is `D:\projects\agentic_srim\.venv\Scripts\python.exe`. Run the example from `D:\projects\agentic_srim` so `src` imports resolve. There is no packaged installer (`pyproject.toml` or `setup.py`). This SR walkthrough uses the standard library. Optional MCP servers and management schemas require the dependencies in `requirements-mcp.txt`; see the [MCP server guide](mcp-servers.md).
 
 Set the installation path in `settings.toml`, for example:
 
@@ -22,7 +22,7 @@ hide_trim_window = true
 
 TOML literal strings above preserve backslashes. With double-quoted TOML strings, double each backslash. Configuration accepts only these tables/keys. `srim.root` is required and absolute; `time.timezone` accepts `UTC`, `system`, or `UTC±HH:MM` with hours 00–23 and minutes 00–59. Signed zero becomes `UTC`. Loading checks the path syntax; installation files are checked when defaults are imported.
 
-Both window settings are optional booleans and default to `true`. `hide_sr_window = true` requests hidden SRModule GUI startup for main calculations and Bragg dependencies; `false` uses the executable's normal display behavior. This setting is read from the `Config` passed to execution, so reload the TOML after changing it. It does not make execution asynchronous. `hide_trim_window` is independent and reserved for the future TRIM runner; it currently launches or hides nothing. CAB recovery's separate SR GUI automation remains visible and unchanged.
+Both window settings are optional booleans and default to `true`. `hide_sr_window = true` requests hidden SRModule GUI startup for main calculations and Bragg dependencies; `false` uses the executable's normal display behavior. This setting is read from the `Config` passed to execution, so reload the TOML after changing it. It does not make execution asynchronous. `hide_trim_window` independently controls initial TRIM display; native windows and dialogs can appear later. See the [TRIM execution guide](trim-execution.md). CAB recovery's separate SR GUI automation remains visible and unchanged.
 
 Initialization reads `SR Module/SRModule.exe`, `SR Module/VERSION` (or `_VERSION` if `VERSION` is absent), `SR.exe`, and `Data/{VERSION,ATOMDATA,SCOEF03.dat,SNUC03.dat,Compound.dat}`. Windows filename matching is case insensitive. Known installation defects are normalized in memory and recorded; the installation is not edited. Arbitrary malformed files are rejected.
 

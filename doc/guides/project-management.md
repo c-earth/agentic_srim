@@ -1,6 +1,6 @@
 # Cases, analyses and reusable capabilities
 
-[Server/tool guide](mcp-servers.md) · [Record/interface reference](../reference/mcp-format.md) · [Approved project contract](../PROJECT_MCP_PROPOSAL.md)
+[Server/tool guide](mcp-servers.md) · [Record/interface reference](../reference/mcp-format.md)
 
 Use project_mcp to organize evidence and srim_mcp to prepare/run calculations. An agent session can create multiple cases for different tasks, interleave updates to them, and attach the same run or analysis to several cases. Every update names its case ID and expected revision explicitly. There is no session-wide current-case pointer or exclusive session owner.
 

@@ -1,6 +1,7 @@
 .codex/rules/
 .venv/
 .cache/
+.local/
 __pycache__/
 *.py[cod]
 /memory/NERSC_TRIM_20k/
