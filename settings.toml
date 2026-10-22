@@ -10,5 +10,5 @@ root = "D:\\local\\srim\\srim_2013_std"
 # Also applies to Bragg runs. Defaults to true; CAB capture GUI is unaffected.
 hide_sr_window = true
 # true: request hidden TRIM windows; false: use normal window display.
-# Defaults to true. Native popups are reported without an automatic response.
+# Defaults to true. Report-only execution leaves native popups unanswered.
 hide_trim_window = true
