@@ -6,7 +6,7 @@ The current continuation-results route is [checkpoint `.sav` recovery](doc/TRIM_
 
 Python APIs for reproducible SRIM stopping/range and layered TRIM calculations on Windows. The system resolves material and coefficient choices into pinned inputs, runs native SRIM executables in isolated workers, preserves calculation evidence, and makes saved simulation inputs searchable.
 
-The current project is a Python library used from the repository root. There is no CLI application, packaged installer, model integration, or agent orchestration service. Case and postprocessing directories can be allocated, but their analysis workflows are not implemented.
+The project provides Python APIs and two optional local stdio MCP servers: `srim_mcp` for scientific execution/discovery and `project_mcp` for cases, run references, analysis provenance and improvement evidence. MCP-specific code is grouped under `src/mcp/`. One agent session can manage multiple independent cases. Reusable workflow/analysis/skill collections start empty; no general scientific analysis executor or autonomous agent orchestrator is included. See the [server/tool guide](doc/guides/mcp-servers.md).
 
 ## What the system does
 
@@ -26,7 +26,7 @@ Offline [TRIM checkpoint recovery](doc/guides/trim-checkpoint-recovery.md) provi
 
 You need Windows, Python 3.13+, and an existing working SRIM installation with its numerical data and native runtime dependencies. Executables and installation data are not distributed here. Default CAB recovery additionally requires Windows PowerShell 5.1 and an interactive desktop for the SR GUI.
 
-The current Python code uses only the standard library. There is no `pyproject.toml`, `setup.py`, or pip dependency installation step. Use a Python 3.13+ virtual environment at `.venv`; in this checkout, run all project Python commands through `D:\projects\agentic_srim\.venv\Scripts\python.exe`. Run commands from `D:\projects\agentic_srim` so `src` imports resolve.
+The existing SR/TRIM calculation APIs use the standard library. Optional MCP and new management schema features declare their dependencies in `requirements-mcp.txt`; install them with `D:\projects\agentic_srim\.venv\Scripts\python.exe -m pip install -r requirements-mcp.txt`. There is no packaged installer. Use a Python 3.13+ virtual environment at `.venv`; in this checkout, run all project Python commands through `D:\projects\agentic_srim\.venv\Scripts\python.exe`. Run commands from `D:\projects\agentic_srim` so `src` imports resolve.
 
 Edit `settings.toml` to point to your installation:
 
@@ -197,7 +197,8 @@ memory/resources/             Immutable resource versions and calculated entries
 memory/srim/<simulation_id>/   Permanent SR, TRIM, and CAB capture records
 memory/knowledge/             Input-search catalog and update reports
 worker/worker_N/               Isolated working runtimes
-memory/post/ and case/         Allocatable directories; analysis not implemented
+memory/post/ and case/         Revisioned analysis provenance and research-case records
+src/mcp/                      Two separate adapters and shared protocol/job infrastructure
 .cache/                       Auxiliary examples, exports, probes, and renders
 ```
 
@@ -224,6 +225,8 @@ The four findings in the [non-TRIM review](doc/reviews/non-trim-review.md) are r
 | Need | Read |
 | --- | --- |
 | Browse all documentation | [Documentation index](doc/README.md) |
+| MCP servers, launch configuration and grouped tools | [Local MCP servers](doc/guides/mcp-servers.md) |
+| Multiple cases, analysis provenance and reusable candidates | [Project management](doc/guides/project-management.md) |
 | SR examples and batches | [Getting started](doc/guides/getting-started.md) |
 | Compound search, resource variants, CAB and retention | [Materials, resources and CAB](doc/guides/resources-and-cab.md) |
 | Function signatures and error behavior | [API reference](doc/reference/api.md) |

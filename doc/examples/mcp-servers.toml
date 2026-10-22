@@ -1,0 +1,9 @@
+[mcp_servers.srim_mcp]
+command = 'D:\projects\agentic_srim\.venv\Scripts\python.exe'
+args = ['-m', 'src.mcp.srim_mcp', '--root', 'D:\projects\agentic_srim']
+cwd = 'D:\projects\agentic_srim'
+
+[mcp_servers.project_mcp]
+command = 'D:\projects\agentic_srim\.venv\Scripts\python.exe'
+args = ['-m', 'src.mcp.project_mcp', '--root', 'D:\projects\agentic_srim']
+cwd = 'D:\projects\agentic_srim'

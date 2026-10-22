@@ -1,0 +1,19 @@
+schema_version = 1
+
+[srim_mcp]
+max_parallel = 4
+max_pending = 64
+max_request_bytes = 16777216
+max_response_bytes = 1048576
+max_result_bytes = 67108864
+file_chunk_bytes = 262144
+allowed_input_roots = []
+
+[project_mcp]
+max_parallel = 1
+max_pending = 64
+max_request_bytes = 16777216
+max_response_bytes = 1048576
+max_result_bytes = 67108864
+file_chunk_bytes = 262144
+allowed_input_roots = []

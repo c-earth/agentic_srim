@@ -9,6 +9,10 @@ For continuation work, first read the [current `.sav` recovery direction](TRIM_D
 | Task | Documentation |
 | --- | --- |
 | Configure the project and run a first calculation | [Getting started](guides/getting-started.md) |
+| Launch the two local MCP servers and inspect grouped tools | [Local MCP servers](guides/mcp-servers.md) |
+| Manage multiple cases, analysis provenance and reusable candidates | [Project management](guides/project-management.md) |
+| Inspect MCP schemas, jobs, ownership and cancellation | [MCP format reference](reference/mcp-format.md) |
+| Resume from the MCP delivery and Codex registration state | [MCP handoff](MCP_HANDOFF.md) |
 | Search verified native SR/TRIM inputs | [Input search](guides/input-search.md) |
 | Inspect input-search APIs, filters and references | [Input-search reference](reference/input-search-format.md) |
 | Search compounds, edit data, create variants or recover CAB entries | [Materials, resources and CAB](guides/resources-and-cab.md) |

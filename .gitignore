@@ -4,3 +4,4 @@
 __pycache__/
 *.py[cod]
 /memory/NERSC_TRIM_20k/
+/memory/mcp/*/server.lock
