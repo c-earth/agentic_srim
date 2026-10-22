@@ -76,14 +76,12 @@ def build_trim_dialog_policy(inputs: ResolvedTRIMInputs, control: JSONObject, ca
 
     None preserves report-only behavior. Raise ValueError for unknown engines,
     modes, choices, conflicting collision flags or invalid target counts.
-    Automatic continuation raises ValueError pending checkpoint .sav integration.
+    Continuation uses verified checkpoint saving and recovery in the pipeline.
     """
     if cascade_output is None:
         return None
     if cascade_output not in ("none", "statistics", "detailed"):
         raise ValueError("cascade_output must be none, statistics, detailed or None")
-    if control.get("kind") == "resume":
-        raise ValueError("Automatic continuation awaits checkpoint .sav integration; GUI exports were removed")
     p = inputs.effective_request["parameters"]
     digest = hashlib.sha256(dict(inputs.engine_files)["TRIM.exe"]).hexdigest()
     family = p["engine_family"]
@@ -96,21 +94,23 @@ def build_trim_dialog_policy(inputs: ResolvedTRIMInputs, control: JSONObject, ca
         raise ValueError("cascade_output conflicts with outputs.collisions")
     if control["kind"] not in ("fresh", "resume") or type(control["initial_count"]) is not int or type(control["total_ions"]) is not int or not 0 <= control["initial_count"] < control["total_ions"]:
         raise ValueError("Invalid TRIM response counts/kind")
-    return {"schema_version": 2, "engine_sha256": digest, "engine_family": family, "input_mode": MODES[family][p["mode"]], "kind": control["kind"], "initial_count": control["initial_count"], "expected_count": control["total_ions"], "cascade_output": cascade_output, "checkpoint_directory": "SRIM Restore", "ascii_directory": "SRIM Outputs", "response_transition_seconds": 2.0}
+    if type(control.get("autosave_ions")) is not int:
+        raise ValueError("Invalid TRIM autosave count")
+    return {"schema_version": 4, "engine_sha256": digest, "engine_family": family, "input_mode": MODES[family][p["mode"]], "kind": control["kind"], "initial_count": control["initial_count"], "expected_count": control["total_ions"], "autosave_ions": control["autosave_ions"], "cascade_output": cascade_output, "checkpoint_directory": "SRIM Restore", "ascii_directory": "SRIM Outputs", "response_transition_seconds": 2.0, "checkpoint_save_seconds": 10.0, "checkpoint_stable_seconds": 1.0, "shutdown_seconds": 10.0}
 
 
 def initial_trim_dialog_state(policy: JSONObject) -> JSONObject:
     """Validate policy and return independent initial state without effects.
 
     Raise ValueError for unsupported or legacy schema, engine, selectors or controls.
-    Resume policies support pure checkpoint selectors, not native execution.
+    Resume policies distinguish verified checkpoint saves from generic completion.
     """
-    if isinstance(policy, dict) and policy.get("schema_version") == 1:
-        raise ValueError("Legacy export dialog policies are unsupported; prepare a new runtime")
-    keys = {"schema_version", "engine_sha256", "engine_family", "input_mode", "kind", "initial_count", "expected_count", "cascade_output", "checkpoint_directory", "ascii_directory", "response_transition_seconds"}
-    if not isinstance(policy, dict) or set(policy) != keys or type(policy["schema_version"]) is not int or policy["schema_version"] != 2 or policy["engine_sha256"] != ENGINES.get(policy["engine_family"]) or policy["input_mode"] not in MODES[policy["engine_family"]].values() or policy["kind"] not in ("fresh", "resume") or policy["cascade_output"] not in ("none", "statistics", "detailed") or type(policy["initial_count"]) is not int or type(policy["expected_count"]) is not int or not 0 <= policy["initial_count"] < policy["expected_count"] or policy["checkpoint_directory"] != "SRIM Restore" or policy["ascii_directory"] != "SRIM Outputs" or policy["response_transition_seconds"] != 2.0:
+    if isinstance(policy, dict) and policy.get("schema_version") in (1, 2, 3):
+        raise ValueError("Legacy dialog policies are unsupported; prepare a new runtime")
+    keys = {"schema_version", "engine_sha256", "engine_family", "input_mode", "kind", "initial_count", "expected_count", "autosave_ions", "cascade_output", "checkpoint_directory", "ascii_directory", "response_transition_seconds", "checkpoint_save_seconds", "checkpoint_stable_seconds", "shutdown_seconds"}
+    if not isinstance(policy, dict) or set(policy) != keys or type(policy["schema_version"]) is not int or policy["schema_version"] != 4 or policy["engine_family"] not in ENGINES or policy["engine_sha256"] != ENGINES.get(policy["engine_family"]) or type(policy["input_mode"]) is not int or policy["input_mode"] not in MODES[policy["engine_family"]].values() or policy["kind"] not in ("fresh", "resume") or policy["cascade_output"] not in ("none", "statistics", "detailed") or type(policy["initial_count"]) is not int or type(policy["expected_count"]) is not int or type(policy["autosave_ions"]) is not int or not 0 <= policy["initial_count"] < policy["expected_count"] or policy["checkpoint_directory"] != "SRIM Restore" or policy["ascii_directory"] != "SRIM Outputs" or any(type(policy[key]) is not float or policy[key] != value for key, value in (("response_transition_seconds", 2.0), ("checkpoint_save_seconds", 10.0), ("checkpoint_stable_seconds", 1.0), ("shutdown_seconds", 10.0))):
         raise ValueError("Invalid TRIM dialog policy")
-    return {"stage": "running", "pending_sequence": None, "expected_count": policy["expected_count"], "limitations": []}
+    return {"stage": "running", "pending_sequence": None, "expected_count": policy["expected_count"], "limitations": [], "checkpoint_probe": None, "checkpoint_save_started": None, "checkpoint_completion": None, "checkpoint_started": None, "checkpoint_fallback_attempted": False}
 
 
 def classify_trim_dialog(window: JSONObject, policy: JSONObject, state: JSONObject) -> JSONObject:
@@ -123,19 +123,19 @@ def classify_trim_dialog(window: JSONObject, policy: JSONObject, state: JSONObje
     reject: JSONObject = {"decision": "reject", "reason": "Unrecognized TRIM dialog or sequence", "next_stage": state["stage"], "command": None}
     if state["pending_sequence"] is not None:
         return {**reject, "decision": "wait", "reason": None}
-    if window.get("capture_errors") or not window.get("visible") or not window.get("enabled"):
+    if window.get("capture_errors") or not window.get("visible") or not window.get("enabled") or type(window.get("pid")) is not int or window["pid"] <= 0 or type(window.get("handle")) is not int or window["handle"] <= 0:
         return reject
     stage = state["stage"]
     count = policy["expected_count"]
     recoil = policy["input_mode"] in ((6, 7) if policy["engine_family"] == "2008" else (6, 8))
     completion = "resume-complete" if policy["kind"] == "resume" else "event-complete"
     choice = policy["cascade_output"]
-    if stage == "resume-save" and window.get("class") == "ThunderRT5Form" and window.get("title") == "Form1":
+    if stage == "resume-save" and policy["kind"] == "resume" and policy["input_mode"] in (1, 2, 3) and state.get("checkpoint_fallback_attempted") is True and window.get("class") == "ThunderRT5Form" and window.get("title") == "Form1":
         controls = window.get("controls", [])
         expected_save = {1: "Continue without Saving TRIM", 2: "Store in another Directory / Disk", 3: "Store in SRIM directory (default)"}
         if len(controls) == 3 and all(c.get("class") == "ThunderRT5CommandButton" and c.get("text") == expected_save.get(c.get("control_id")) and c.get("pid") == window.get("pid") and c.get("enabled") and c.get("visible") for c in controls) and {c["control_id"] for c in controls} == set(expected_save):
             button = next(c for c in controls if c["control_id"] == 3)
-            return {"decision": "respond", "reason": None, "next_stage": "done", "command": {"action": "button", "target_handle": button["handle"], "control_id": 3, "response": expected_save[3]}}
+            return {"decision": "respond", "reason": None, "next_stage": "checkpoint-saved", "command": {"action": "button", "target_handle": button["handle"], "control_id": 3, "response": expected_save[3]}}
         return reject
     rules = []
     if stage == "running" and recoil:
@@ -148,10 +148,13 @@ def classify_trim_dialog(window: JSONObject, policy: JSONObject, state: JSONObje
             rules.append(("TRIM", KP, {"OK"}, "OK", completion))
     if stage == "detail-active":
         rules.append((SPECIAL, DETAIL_ACTIVE, {"OK"}, "OK", completion))
-    if stage == completion or stage == "running" and not recoil:
-        rules.append(("End of TRIM.DAT calculation", f"Calculation Complete ({count} Ions)", {"OK"}, "OK", "done"))
-        if policy["kind"] == "resume":
-            rules.append(("End of calculation", f"Calculation Complete ({count} Ions) Yes = Save data No = Increase number of ions", {"Yes", "No"}, "Yes", "resume-save"))
+    if stage == completion or stage == "running" and not recoil or policy["kind"] == "resume" and stage in ("checkpoint-check", "checkpoint-save-required"):
+        if (policy["kind"] == "fresh" or policy["input_mode"] not in (1, 2, 3)) and not (policy["kind"] == "resume" and policy["engine_family"] == "2008" and policy["input_mode"] == 5):
+            if stage != "checkpoint-save-required":
+                rules.append(("End of TRIM.DAT calculation", f"Calculation Complete ({count} Ions)", {"OK"}, "OK", "checkpoint-check" if policy["kind"] == "resume" else "done"))
+        if policy["kind"] == "resume" and (policy["input_mode"] in (1, 2, 3) or policy["engine_family"] == "2008" and policy["input_mode"] == 5):
+            if stage != "checkpoint-save-required" or policy["input_mode"] in (1, 2, 3) and state.get("checkpoint_fallback_attempted") is True:
+                rules.append(("End of calculation", f"Calculation Complete ({count} Ions) Yes = Save data No = Increase number of ions", {"Yes", "No"}, "Yes", "resume-save" if stage == "checkpoint-save-required" else "checkpoint-check"))
     if window.get("class") != "#32770" or any(c.get("class") not in ("Static", "Button") for c in window.get("controls", [])):
         return reject
     message = normalize_trim_dialog_text(" ".join(c["text"] for c in window["controls"] if c["class"] == "Static"))
@@ -163,6 +166,10 @@ def classify_trim_dialog(window: JSONObject, policy: JSONObject, state: JSONObje
             control_id = {"Yes": 6, "No": 7, "OK": 2}[response]
             if target.get("control_id") != control_id or not target.get("enabled") or not target.get("visible") or target.get("pid") != window.get("pid"):
                 return reject
+            if any(c.get("pid") != window.get("pid") or not c.get("enabled") or not c.get("visible") or c.get("control_id") != {"Yes": 6, "No": 7, "OK": 2}[label] for c, label in zip(buttons, labels)):
+                return reject
+            if next_stage == "checkpoint-check":
+                return {"decision": "inspect-checkpoint", "reason": None, "next_stage": next_stage, "command": None}
             return {"decision": "respond", "reason": None, "next_stage": next_stage, "command": {"action": "button", "target_handle": target["handle"], "control_id": control_id, "response": response}}
     return reject
 

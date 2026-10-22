@@ -7,15 +7,91 @@ import ctypes
 from copy import deepcopy
 from ctypes import wintypes
 import math
+import hashlib
 import os
 from pathlib import Path
 import struct
 import subprocess
 from time import monotonic, sleep
 
-from src.srim.metadata import JSONObject
+from src.srim.metadata import JSONObject, _inventory
 from src.srim.runtime import _read_regular_bytes
 from src.srim.trim_dialogs import advance_trim_dialog_state, classify_trim_dialog, initial_trim_dialog_state
+from src.srim.trim_recovery import BASE_FILES, EXTRA_FILES, recover_trim_checkpoint
+from src.srim.trim_outputs import parse_trim_checkpoint, saved_trim_mode
+
+
+def _read_trim_checkpoint_snapshot(runtime: Path) -> dict[str, bytes]:
+    """Read flat regular checkpoint files under absolute runtime without writes.
+
+    Return original-case filenames and bytes after matching before/after hashes.
+    Reject links, directories and case collisions with ValueError or OSError;
+    changing sources raise ValueError and filesystem failures propagate.
+    Stable reads do not establish atomic native saving.
+    """
+    if not isinstance(runtime, Path) or not runtime.is_absolute() or ".." in runtime.parts:
+        raise ValueError("Invalid checkpoint runtime")
+    source = runtime / "SRIM Restore"
+    for ancestor in (*reversed(source.parents), source):
+        if ancestor.is_symlink() or ancestor.is_junction():
+            raise OSError("Unsafe checkpoint source")
+    entries = list(source.iterdir())
+    if any(not item.is_file() or item.is_symlink() or item.is_junction() for item in entries):
+        raise ValueError("Checkpoint must contain flat regular files")
+    before = _inventory(source, source)
+    files = {entry["path"]: _read_regular_bytes(source / entry["path"]) for entry in before}
+    if len({name.casefold() for name in files}) != len(files):
+        raise ValueError("Case-colliding checkpoint files")
+    observed = [{"path": name, "sha256": hashlib.sha256(data).hexdigest(), "size_bytes": len(data)} for name, data in sorted(files.items())]
+    if before != observed or _inventory(source, source) != before or any(not item.is_file() or item.is_symlink() or item.is_junction() for item in source.iterdir()):
+        raise ValueError("Checkpoint changed during snapshot")
+    return files
+
+
+def _probe_trim_saved_checkpoint(runtime: Path, policy: JSONObject, previous: JSONObject | None, elapsed_seconds: float) -> JSONObject:
+    """Probe runtime's checkpoint under policy using a prior successful candidate.
+
+    elapsed_seconds is finite nonnegative monotonic native time. Return readiness,
+    ready/waiting/unavailable/invalid status, candidate elapsed time/hashes,
+    sources and last_error without writes. Require
+    two valid matching full sets a sealed second apart and exact identity/counts.
+    Expected read/recovery failures reset candidates; malformed controls raise
+    ValueError. File stability is not a checkpoint atomicity guarantee.
+    """
+    initial_trim_dialog_state(policy)
+    if not isinstance(runtime, Path) or not runtime.is_absolute() or ".." in runtime.parts:
+        raise ValueError("Invalid checkpoint probe runtime")
+    if type(elapsed_seconds) not in (int, float) or not math.isfinite(elapsed_seconds) or elapsed_seconds < 0:
+        raise ValueError("Invalid checkpoint probe time")
+    if previous is not None:
+        if not isinstance(previous, dict) or set(previous) != {"elapsed_seconds", "sources"} or type(previous["elapsed_seconds"]) not in (int, float) or not math.isfinite(previous["elapsed_seconds"]) or not 0 <= previous["elapsed_seconds"] <= elapsed_seconds or not isinstance(previous["sources"], list):
+            raise ValueError("Invalid checkpoint probe candidate")
+        for item in previous["sources"]:
+            if not isinstance(item, dict) or set(item) != {"path", "sha256", "size_bytes"} or not isinstance(item["path"], str) or not isinstance(item["sha256"], str) or len(item["sha256"]) != 64 or any(c not in "0123456789abcdef" for c in item["sha256"]) or type(item["size_bytes"]) is not int or item["size_bytes"] < 0:
+                raise ValueError("Invalid checkpoint probe sources")
+    try:
+        files = _read_trim_checkpoint_snapshot(runtime)
+        mapping = {name.casefold(): data for name, data in files.items()}
+        if not {"tdata.sav", "trimin.sav"} <= mapping.keys():
+            return {"ready": False, "status": "unavailable", "candidate": None, "sources": [], "last_error": "Checkpoint textual metadata is missing"}
+        checkpoint = parse_trim_checkpoint(mapping["tdata.sav"], mapping["trimin.sav"])
+        version = {"2008": "SRIM-2008.04", "2013": "SRIM-2013.00"}[policy["engine_family"]]
+        if checkpoint["counts"]["total"] != policy["expected_count"] or checkpoint["counts"]["autosave"] != policy["autosave_ions"] or checkpoint["version"] != version or checkpoint["native_input"]["mode"] != policy["input_mode"] or checkpoint["mode"] != saved_trim_mode(version, policy["input_mode"]):
+            raise ValueError("Saved checkpoint identity/counts differ from sealed policy")
+        if checkpoint["counts"]["current"] < policy["expected_count"]:
+            return {"ready": False, "status": "unavailable", "candidate": None, "sources": [], "last_error": "Checkpoint does not cover the requested final ion count"}
+        required = BASE_FILES | (EXTRA_FILES if policy["engine_family"] == "2013" else frozenset())
+        if not required <= mapping.keys():
+            return {"ready": False, "status": "unavailable", "candidate": None, "sources": [], "last_error": "Checkpoint required files are missing: " + ", ".join(sorted(required - mapping.keys()))}
+        recovered = recover_trim_checkpoint(files)
+        sources = recovered["provenance"]["sources"]
+        candidate = previous if previous is not None and previous["sources"] == sources else {"elapsed_seconds": elapsed_seconds, "sources": sources}
+        ready = elapsed_seconds - candidate["elapsed_seconds"] >= policy["checkpoint_stable_seconds"]
+        return {"ready": ready, "status": "ready" if ready else "waiting", "candidate": candidate, "sources": sources, "last_error": None}
+    except FileNotFoundError as error:
+        return {"ready": False, "status": "unavailable", "candidate": None, "sources": [], "last_error": str(error)}
+    except (ValueError, OSError) as error:
+        return {"ready": False, "status": "waiting" if str(error) == "Checkpoint changed during snapshot" else "invalid", "candidate": None, "sources": [], "last_error": str(error)}
 
 
 def _read_trim_window_text(window_handle: int) -> JSONObject:
@@ -191,7 +267,9 @@ def _observe_trim_dialogs(process_id: int, runtime: Path, policy: JSONObject, st
     elapsed_seconds bounds pending responses.
     Optional startup_state stores per-attempt startup candidate deadlines;
     None retains direct-call behavior without startup deferral.
-    Return state, events, unhandled windows and errors. Send at most one command,
+    Return state, events, unhandled windows and errors, plus checkpoint_prompt
+    only for a currently verified completion. Record its first observation and
+    initial deadline without issuing a completion response. Send at most one command,
     never retry. Invalid arguments raise ValueError; native failures are returned.
     """
     initial_trim_dialog_state(policy)
@@ -207,9 +285,16 @@ def _observe_trim_dialogs(process_id: int, runtime: Path, policy: JSONObject, st
     pending = state.get("pending_sequence")
     if pending is not None:
         previous = state["events"][pending - 1]
+        if previous["process_id"] != process_id:
+            result["unhandled"] = popups
+            return result
         same = any(w["handle"] == previous["window"]["handle"] and w["title"] == previous["window"]["title"] and [(c["class"], c["text"]) for c in w["controls"]] == [(c["class"], c["text"]) for c in previous["window"]["controls"]] for w in popups)
         if same:
-            if elapsed_seconds - previous["elapsed_seconds"] >= policy["response_transition_seconds"]:
+            if any(w["handle"] != previous["window"]["handle"] for w in dialogs + candidates):
+                result["unhandled"] = popups
+                return result
+            bound = policy["checkpoint_save_seconds"] if previous["stage_after"] == "checkpoint-saved" else policy["response_transition_seconds"]
+            if elapsed_seconds - previous["elapsed_seconds"] >= bound:
                 result["errors"].append("Posted TRIM command did not advance; no retry")
                 result["state"]["events"][pending - 1]["transition"] = "failed"
                 result["state"]["events"][pending - 1]["error"] = result["errors"][-1]
@@ -217,6 +302,8 @@ def _observe_trim_dialogs(process_id: int, runtime: Path, policy: JSONObject, st
             return result
         result["state"] = advance_trim_dialog_state(result["state"], {"transition": "verified"}, None)
         result["state"]["events"][pending - 1]["transition"] = "verified"
+        if previous["stage_after"] == "checkpoint-saved":
+            result["state"]["checkpoint_save_started"] = elapsed_seconds
     if len(dialogs) + len(candidates) > 1:
         result["unhandled"] = popups
         return result
@@ -234,12 +321,29 @@ def _observe_trim_dialogs(process_id: int, runtime: Path, policy: JSONObject, st
     if classified["decision"] == "reject":
         result["unhandled"] = popups
         return result
+    if classified["decision"] == "inspect-checkpoint":
+        completion = result["state"]["checkpoint_completion"]
+        if completion is not None and (completion["process_id"] != process_id or completion["window"] != window):
+            result["unhandled"] = popups
+            return result
+        if completion is None:
+            result["state"]["checkpoint_completion"] = {"process_id": process_id, "window": deepcopy(window), "elapsed_seconds": elapsed_seconds}
+            result["state"]["checkpoint_started"] = elapsed_seconds
+        result["state"]["stage"] = "checkpoint-check"
+        result["checkpoint_prompt"] = deepcopy(window)
     if classified["decision"] == "respond":
+        if result["state"]["stage"] in ("resume-save", "checkpoint-save-required") and result["state"]["checkpoint_started"] is not None and elapsed_seconds - result["state"]["checkpoint_started"] >= policy["checkpoint_save_seconds"]:
+            return result
+        if classified["next_stage"] == "resume-save" and (result["state"]["checkpoint_completion"] is None or result["state"]["checkpoint_completion"]["process_id"] != process_id or result["state"]["checkpoint_completion"]["window"] != window):
+            result["unhandled"] = popups
+            return result
         command = classified["command"]
         event: JSONObject = {"sequence": len(result["state"]["events"]) + 1, "elapsed_seconds": elapsed_seconds, "process_id": process_id, "window": deepcopy(window), "stage_before": result["state"]["stage"], "stage_after": classified["next_stage"], **command, "message": "WM_COMMAND/BN_CLICKED", "queued": False, "transition": "pending", "error": None}
         try:
             event.update(_post_trim_command(process_id, window, command))
             result["state"] = advance_trim_dialog_state(result["state"], classified, event)
+            if classified["next_stage"] == "resume-save":
+                result["state"]["checkpoint_started"] = elapsed_seconds
         except (ValueError, OSError) as error:
             event.update({"error": str(error), "transition": "failed"})
             result["errors"].append(str(error))
@@ -255,9 +359,11 @@ def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, 
     or None to disable the overall execution deadline.
     Write exact diagnostics exclusively to stdout_path/stderr_path; cancel may
     request termination. Return exit/popup/timeout/cancellation/monitor evidence.
-    dialog_policy opts into sealed reviewed fresh responses; None only reports
-    popups. Automatic continuation raises ValueError pending checkpoint .sav
-    integration, before creating a job or launching a process.
+    dialog_policy opts into sealed fresh or resume responses; None only reports
+    popups. Resume first probes while completion remains verified, then permits
+    one ordinary save fallback only for unavailable checkpoints. Event completion
+    requires a final-covering autosave. Stable complete probes permit owned-job
+    stopping with actual exit code and origin-specific checkpoint-stop evidence.
     Never kill unrelated processes. Validation/I/O errors raise;
     BaseException closes the owned job and waits before propagating.
     """
@@ -293,7 +399,8 @@ def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, 
     result: JSONObject = {"pid": None, "exit_code": None, "elapsed_seconds": 0.0, "termination": "launch-error", "popups": [], "monitor_errors": []}
     dialog_state = initial_trim_dialog_state(dialog_policy) if dialog_policy is not None else None
     if dialog_policy is not None and dialog_policy["kind"] == "resume":
-        raise ValueError("Automatic continuation awaits checkpoint .sav integration; GUI exports were removed")
+        result["checkpoint_stop"] = None
+        result["checkpoint_failure"] = None
     if dialog_state is not None:
         dialog_state["events"] = []
     job = kernel.CreateJobObjectW(None, None)
@@ -302,6 +409,8 @@ def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, 
         result["elapsed_seconds"] = monotonic() - started
         return result
     process: subprocess.Popen[bytes] | None = None
+    active_count: int | None = None
+    process_list: ctypes.Array[ctypes.c_char] | None = None
     try:
         limits = ctypes.create_string_buffer(144 if ctypes.sizeof(ctypes.c_void_p) == 8 else 112)
         struct.pack_into("I", limits, 16, 0x2000)
@@ -343,6 +452,28 @@ def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, 
                     active_count = struct.unpack_from("I", process_list, 4)[0]
                     pointer_size = ctypes.sizeof(ctypes.c_void_p)
                     pids = [int.from_bytes(process_list.raw[8 + i * pointer_size:8 + (i + 1) * pointer_size], "little") for i in range(active_count)]
+                    checkpoint_prompt = None
+                    if dialog_state is not None and len(pids) > 1:
+                        current_candidates = []
+                        for pid in pids:
+                            owned = kernel.OpenProcess(0x1000, False, pid)
+                            if not owned:
+                                if ctypes.get_last_error() not in (87, 1168):
+                                    raise ctypes.WinError(ctypes.get_last_error())
+                                continue
+                            try:
+                                member = wintypes.BOOL()
+                                if not kernel.IsProcessInJob(owned, job, ctypes.byref(member)):
+                                    raise ctypes.WinError(ctypes.get_last_error())
+                                if member.value:
+                                    windows = _filter_trim_startup_windows(_read_trim_windows(pid), startup_state, elapsed)
+                                    current_candidates.extend(window for window in windows if window["detection_reason"] in ("dialog", "owned-popup") and window["visible"] and window["enabled"])
+                            finally:
+                                kernel.CloseHandle(owned)
+                        if len(current_candidates) > 1:
+                            result["popups"].extend(current_candidates)
+                            result["termination"] = "popup"
+                            break
                     for pid in pids:
                         owned = kernel.OpenProcess(0x1000, False, pid)
                         if not owned:
@@ -363,6 +494,8 @@ def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, 
                                 dialog_state = observation["state"]
                                 result["popups"].extend(observation["unhandled"])
                                 result["monitor_errors"].extend(observation["errors"])
+                                if observation.get("checkpoint_prompt") is not None:
+                                    checkpoint_prompt = observation["checkpoint_prompt"]
                         finally:
                             kernel.CloseHandle(owned)
                     if result["monitor_errors"]:
@@ -390,30 +523,92 @@ def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, 
                     if process.poll() is not None and active_count == 0:
                         result["termination"] = "exit"
                         break
+                    if dialog_state is not None and dialog_policy["kind"] == "resume" and dialog_state["stage"] in ("resume-save", "checkpoint-save-required") and elapsed - dialog_state["checkpoint_started"] >= dialog_policy["checkpoint_save_seconds"]:
+                        result["checkpoint_failure"] = {"status": "unavailable", "phase": "save-transition", "message": "Ordinary checkpoint save form did not appear before its deadline"}
+                        result["termination"] = "checkpoint-unavailable"
+                        break
+                    if dialog_state is not None and dialog_policy["kind"] == "resume" and dialog_state["stage"] in ("checkpoint-check", "checkpoint-saved") and dialog_state["pending_sequence"] is None:
+                        initial = dialog_state["stage"] == "checkpoint-check"
+                        phase = "initial" if initial else "post-save"
+                        phase_started = dialog_state["checkpoint_started"] if initial else dialog_state["checkpoint_save_started"]
+                        if phase_started is None:
+                            raise ValueError("Checkpoint phase lacks a verified transition")
+                        probe = _probe_trim_saved_checkpoint(runtime, dialog_policy, dialog_state["checkpoint_probe"], elapsed)
+                        dialog_state["checkpoint_probe"] = probe["candidate"]
+                        elapsed = monotonic() - started
+                        if cancel is not None and cancel():
+                            result["termination"] = "cancelled"
+                            break
+                        if timeout_seconds is not None and elapsed >= timeout_seconds:
+                            result["termination"] = "timeout"
+                            break
+                        if probe["status"] == "invalid":
+                            result["checkpoint_failure"] = {"status": "invalid", "phase": phase, "message": probe["last_error"]}
+                            raise OSError(probe["last_error"])
+                        if elapsed - phase_started >= dialog_policy["checkpoint_save_seconds"]:
+                            if initial and checkpoint_prompt is not None and probe["status"] == "unavailable" and dialog_policy["input_mode"] in (1, 2, 3) and not dialog_state["checkpoint_fallback_attempted"]:
+                                dialog_state["checkpoint_fallback_attempted"] = True
+                                dialog_state["stage"] = "checkpoint-save-required"
+                                dialog_state["checkpoint_started"] = elapsed
+                                dialog_state["checkpoint_probe"] = None
+                                continue
+                            message = "Completion prompt disappeared before checkpoint readiness" if initial and checkpoint_prompt is None else probe["last_error"] or "Checkpoint files did not stabilize before the deadline"
+                            if initial and dialog_policy["input_mode"] not in (1, 2, 3) and probe["status"] == "unavailable":
+                                message += "; event continuation requires an autosave schedule covering the final ion count"
+                            result["checkpoint_failure"] = {"status": probe["status"] if probe["status"] != "ready" else "waiting", "phase": phase, "message": message}
+                            result["termination"] = "checkpoint-unavailable"
+                            break
+                        if probe["ready"] and (not initial or checkpoint_prompt is not None):
+                            result["checkpoint_stop"] = {"origin": "completed-checkpoint" if initial else "explicit-save", "completion_observed": True, "completion_prompt": deepcopy(dialog_state["checkpoint_completion"]["window"]), "save_verified": not initial, "stable_seconds": elapsed - probe["candidate"]["elapsed_seconds"], "sources": probe["sources"], "job_empty": False}
+                            result["termination"] = "checkpoint-stop"
+                            break
                 except Exception as error:
                     result["monitor_errors"].append(str(error))
                     result["termination"] = "monitor-error"
                     break
                 sleep(0.1)
     finally:
-        if process is not None:
-            if process.poll() is None:
-                kernel.TerminateJobObject(job, 1)
-                if process.poll() is None:
-                    process.kill()
-            kernel.CloseHandle(job)
-            process.wait(timeout=10)
-            result["exit_code"] = process.returncode
-        else:
+        try:
+            if process is not None:
+                if active_count != 0 or process.poll() is None:
+                    if not kernel.TerminateJobObject(job, 1):
+                        raise ctypes.WinError(ctypes.get_last_error())
+                    if process.poll() is None:
+                        process.kill()
+                    shutdown_started = monotonic()
+                    shutdown_seconds = dialog_policy["shutdown_seconds"] if dialog_policy is not None else 10.0
+                    if process_list is None:
+                        process_list = ctypes.create_string_buffer(1024)
+                    while True:
+                        ctypes.memset(process_list, 0, len(process_list))
+                        if not kernel.QueryInformationJobObject(job, 3, process_list, len(process_list), None):
+                            if ctypes.get_last_error() != 234:
+                                raise ctypes.WinError(ctypes.get_last_error())
+                            process_list = ctypes.create_string_buffer(len(process_list) * 2)
+                        elif struct.unpack_from("I", process_list, 4)[0] == 0:
+                            break
+                        if monotonic() - shutdown_started >= shutdown_seconds:
+                            raise OSError("Owned TRIM job did not stop before shutdown deadline")
+                        sleep(0.1)
+                process.wait(timeout=10)
+                result["exit_code"] = process.returncode
+                if result.get("checkpoint_stop") is not None:
+                    result["checkpoint_stop"]["job_empty"] = True
+        except BaseException as error:
+            error.add_note("TRIM owned-job quiescence was not established; runtime is not frozen")
+            error.trim_job_stopped = False
+            raise
+        finally:
             kernel.CloseHandle(job)
         result["elapsed_seconds"] = monotonic() - started
         if dialog_state is not None:
             result["dialog_events"] = dialog_state.pop("events")
             dialog_state.pop("transient_since", None)
             if result["termination"] == "exit":
-                if dialog_state["pending_sequence"] is not None:
+                if dialog_state["pending_sequence"] is not None and dialog_policy["kind"] != "resume":
                     result["dialog_events"][dialog_state["pending_sequence"] - 1]["transition"] = "verified"
                     dialog_state["pending_sequence"] = None
-                dialog_state["stage"] = "done"
+                if dialog_state["stage"] != "checkpoint-saved":
+                    dialog_state["stage"] = "done"
             result["dialog_state"] = dialog_state
     return result

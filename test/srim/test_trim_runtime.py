@@ -29,8 +29,8 @@ CACHE.mkdir(parents=True, exist_ok=True)
 class TestTRIMRuntime(unittest.TestCase):
     """Build owned cache fixtures without launching any native process."""
 
-    def test_opt_in_resume_rejected_without_staging(self: TestTRIMRuntime) -> None:
-        """Reject automatic continuation of a sealed parent without writes or launches; return None."""
+    def test_opt_in_resume_sealed_without_launch(self: TestTRIMRuntime) -> None:
+        """Stage automatic continuation without parent mutation or native launch; return None."""
         with TemporaryDirectory(dir=CACHE) as directory:
             paths, config, worker = make_test_project(Path(directory))
             for name, data in TRIM_INSTALLATION_FILES.items():
@@ -49,15 +49,13 @@ class TestTRIMRuntime(unittest.TestCase):
                 self.assertEqual(run_trim_simulation(paths, config, created.path.name, runtime)["status"], "succeeded")
             original = {p.relative_to(created.path).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in created.path.rglob("*") if p.is_file()}
             child = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
-            before_runtimes = sorted(p.name for p in (worker.path / "trim").iterdir())
-            with patch("src.srim.trim_runtime.mkdtemp") as staging, patch("src.srim.trim_native.subprocess.Popen") as launch:
-                with self.assertRaisesRegex(ValueError, "checkpoint .sav integration"):
-                    prepare_trim_continuation(paths, config, child, worker, created.path.name, total_ions=10, autosave_ions=1, cascade_output="none")
-                staging.assert_not_called()
+            with patch.dict(ENGINES, {"2013": hashlib.sha256(TRIM_INSTALLATION_FILES["TRIM.exe"]).hexdigest()}), patch("src.srim.trim_native.subprocess.Popen") as launch:
+                resumed = prepare_trim_continuation(paths, config, child, worker, created.path.name, total_ions=10, autosave_ions=1, cascade_output="none")
+                verify_trim_runtime(paths, child.path.name, resumed)
                 launch.assert_not_called()
-            self.assertEqual(sorted(p.name for p in (worker.path / "trim").iterdir()), before_runtimes)
             self.assertEqual({p.relative_to(created.path).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in created.path.rglob("*") if p.is_file()}, original)
-            self.assertFalse((child.path / "input").exists())
+            policy = json.loads((child.path / "input/execution/control.json").read_bytes())["dialog_policy"]
+            self.assertEqual((policy["schema_version"], policy["kind"], policy["expected_count"]), (4, "resume", 10))
 
     def test_policy_sealed_and_replayed(self: TestTRIMRuntime) -> None:
         """Seal opt-in controls and independently replay pinned policy; return None."""
@@ -74,7 +72,7 @@ class TestTRIMRuntime(unittest.TestCase):
             control = json.loads((created.path / "input/execution/control.json").read_bytes())
             self.assertEqual(control["schema_version"], 2)
             self.assertEqual(control["dialog_policy"]["cascade_output"], "none")
-            self.assertEqual(control["dialog_policy"]["schema_version"], 2)
+            self.assertEqual(control["dialog_policy"]["schema_version"], 4)
             self.assertNotIn("resume_export_order", control["dialog_policy"])
 
     def test_policy_tampering(self: TestTRIMRuntime) -> None:

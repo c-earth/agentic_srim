@@ -1,4 +1,10 @@
-# TRIM investigation handoff — 2026-10-21
+# TRIM integration handoff — 2026-10-22
+
+The approved checkpoint-first continuation integration is complete. Final behavior, schemas and native outcomes are recorded in [TRIM_DIRECTION.md](TRIM_DIRECTION.md); the sections below are historical investigation notes, not the current task list.
+
+Verification: 151 TRIM tests passed with warnings as errors in the mixed working tree. Twelve intended native scenarios across 2008/Standard/Pro were verified in fourteen attempts; the two original 2008 prompt failures remain preserved. Local evidence index: `.cache/trim-sav-live/checkpoint-first-verification.json`. No live verification process or approved implementation work remains outstanding. Existing automated runtimes require fresh preparation for policy version 4.
+
+Commit boundary: checkpoint-first control, resumed result adapter, config qualification, preparation contracts, their tests and documentation. Separate native-parser mode/signed-energy changes in `trim_outputs.py`, `test_trim_outputs.py`, their two fixture directories and the signed-energy availability addition in `trim_dialogs.py` remain outside this commit. Unrelated NERSC data, Python caches and interrupted-test residue remain untouched. Cache evidence is local and Git-ignored; durable conclusions are in the direction document. The isolated staged snapshot passed all 146 TRIM tests with warnings as errors (147.138 seconds), without the five pending parser tests or their fixtures. Staged checks passed for 12 Python files and 11 Markdown files, including annotations, docstrings, no implementation comments, relative links, code fences and diff whitespace.
 
 Current continuation direction is [checkpoint `.sav` recovery](TRIM_DIRECTION.md), confirmed 2026-10-22. Historical F-export/chooser plans below are superseded and must not be resumed. Export-only code has been removed under the approved cleanup; `.sav` result/lifecycle integration remains the next design task.
 

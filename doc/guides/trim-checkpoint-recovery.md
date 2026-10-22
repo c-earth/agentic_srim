@@ -1,6 +1,6 @@
 # Recovering TRIM checkpoint profiles
 
-`recover_trim_checkpoint` and `export_trim_checkpoint_recovery` recover cumulative numerical profiles from a complete, frozen checkpoint. Native `.txt` outputs are not inputs to recovery. This is an offline Python API; it does not launch TRIM or change execution/lifecycle success.
+`recover_trim_checkpoint` and `export_trim_checkpoint_recovery` recover cumulative numerical profiles from a complete, frozen checkpoint. Native `.txt` outputs are not inputs to recovery. These offline APIs do not launch TRIM or change lifecycle status. The [execution pipeline](trim-execution.md) now calls recovery explicitly for resumed runs after owned processes stop, with independent completion and provenance checks.
 
 ## Supported cases
 
@@ -70,7 +70,7 @@ Saved numeric Variant records use Empty, Single, Double and Decimal encodings in
 
 ## Precision and validation
 
-**These files are recovered artifacts, not native TRIM exports.** Their headers, layout and summary differ from the native format. Do not feed them to the existing native-output parser or use them to satisfy native lifecycle output checks. No automatic fallback from missing native text outputs has been added.
+**These files are recovered artifacts, not native TRIM exports.** Their headers, layout and summary differ from the native format. Do not feed rendered recovery text to the native-output parser. Resumed execution explicitly selects structured checkpoint results; fresh runs retain native lifecycle output checks. There is no fallback from missing fresh native text. `parse_trim_checkpoint_results(files)` in `src.srim.trim_results` provides the pure adapter, preserving the recovery-v2 object and separate native diagnostics without certifying execution success.
 
 The 23 native fixture cases compare **48,800 table cells**. Of these, **48,181** are within half a native final printed digit and **619** are outside that strict threshold. Regression tests measure and retain those discrepancies; they do not loosen tolerance to claim native equality. Saved summary moments are rounded, so some native statistics cannot be reconstructed at their original printed precision. Exact native-only statistics are explicitly unavailable rather than fabricated.
 
@@ -82,4 +82,4 @@ Committed native fixtures and their SHA-256 manifests are under `test/srim/fixtu
 D:\projects\agentic_srim\.venv\Scripts\python.exe -m unittest discover -s test/srim -p test_trim_recovery.py -q
 ```
 
-The NERSC dataset archived locally has no `.sav` files and cannot supply recovery inputs. Further native evidence can strengthen the inferred-layout rules; exact native-format compatibility and lifecycle integration remain outside this offline API.
+The NERSC dataset archived locally has no `.sav` files and cannot supply recovery inputs. Further native evidence can strengthen the inferred-layout rules. Exact native-format compatibility remains outside recovery; lifecycle verification belongs to execution. A live 2013 Standard ion-full 100-to-200 continuation passed on 2026-10-22, with direct frozen recovery equal to pipeline recovery. This adds evidence for that lifecycle, not general native equality or physics validation; see the [recorded check](../TRIM_DIRECTION.md).

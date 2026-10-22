@@ -36,7 +36,7 @@ print(metadata["status"], metadata["failure"])
 print(results["issues"])
 ```
 
-Inspect `metadata["status"]`: expected native failures return `failed` metadata. A clean exit alone is insufficient. Success also requires consistent summary/profile data, the requested saved ion count and no detected parameter substitution. Some preflight failures have only execution/raw evidence, so read parsed files only when present.
+Inspect `metadata["status"]`: expected native failures return `failed` metadata. A clean exit alone is insufficient. Fresh success requires consistent native summary/profile data; resumed success requires complete recovered checkpoint data. Both require the requested saved ion count and no detected parameter substitution. Some preflight failures have only execution/raw evidence, so read parsed files only when present.
 
 `hide_trim_window` controls initial display, independently of SR's setting. TRIM can display windows later. With the default cascade_output=None, every detected interactive popup is recorded without a response; the runner terminates its owned process job, preserves the runtime and returns a popup failure. Fresh runs may explicitly opt into reviewed button responses through cascade_output, subject to the [execution reference](../reference/trim-execution-format.md). This includes native completion questions. Popup text, classes, ownership and capture errors are in `execution["process"]["popups"]`. Startup progress forms and the ordinary calculation window are distinguished from interactive dialogs. No parameter is silently changed and no failed run is retried automatically.
 
@@ -62,9 +62,47 @@ Quick-mode NOVAC may explicitly state that replacement collisions were not calcu
 
 TRIM writes files in the working root, `SRIM Outputs` and `SRIM Restore`. All locations, including generated data files, optional particle histories, binary arrays and empty directories, are preserved under `output/raw/runtime`. The first parser does not interpret individual collision/particle/EXYZ histories or binary accumulated arrays.
 
+## Core results versus optional collision histories
+
+The popup investigation completed 35 isolated, UI-assisted runs covering all 23 supported version/mode combinations: 2008 input modes 1-7 and 2013 Standard/Pro input modes 1-8. Every run exited with code 0 and saved Current=Total=100. Each tested mode produced its core summary and the seven profile-file families. Quick-mode estimates do not supply full recoil trajectories, and NOVAC can explicitly report replacement data as not calculated; an unavailable quantity is not a zero result. These checks establish core-output availability for the tested workload, not independent physics validity or every possible material, energy, mode/output combination.
+
+Core damage/profile results do not require optional individual collision histories. A completed core calculation must not be described as providing detailed histories when those histories were not produced:
+
+| Version and input mode | Core result | Optional detailed recoil history through the reviewed popup path |
+| --- | --- | --- |
+| 2008 mode 6: quick recoil | Summary and quick-damage profiles produced | No detail choice; native message says details are unavailable with KP damage. Full recoil trajectories are outside the quick approximation. |
+| 2008 mode 7: full recoil | Summary and full-cascade profiles produced | Available: choosing every collision adds recoil energy/position tables; 409,452 bytes versus 137,036 bytes for cascade statistics in this workload. |
+| 2013 Standard/Pro mode 6: full recoil | Summary, full-cascade profiles and requested cascade statistics produced | Gap: no detail choice was offered. The native message says "No cascade details available with KP Damage" despite the established full-recoil mapping. |
+| 2013 Standard/Pro mode 8: quick recoil | Summary and quick-damage profiles produced | The detail question appeared, but Yes/No produced byte-identical 137,264-byte files. This does not establish detailed recoil histories. |
+| Other supported modes | Core summary/profile files produced | Cascade questions were not offered with the tested optional-output flags set to zero; these choice branches were inapplicable. |
+
+For each tested pair of Yes-branch runs, the seven profile files and TDATA.txt were byte-identical. Selecting No at the first cascade-file question produced no COLLISON.txt; selecting Yes produced a nonempty file. In modes without a detail choice, the second planned branch was a repeat of the same available path, not a successful request for an unavailable option. The 2013 full-recoil history gap is limited to this reviewed path; alternative collision-output controls were not investigated here.
+
+The 2013 popup inconsistency may reflect an incomplete update after input modes were renumbered (2008 quick/full 6/7; 2013 quick/full/monolayer 8/6/7). That is an inference, not a source-code diagnosis, and must not be used to relabel the actual calculation. The 2013 full-recoil input code 6 saved runtime code 7, consistent with the established mapping.
+
+The tests used a 1000-Angstrom silicon layer, seed 12345 and 100 particles/events: 50 keV argon for ordinary/specified-ion modes and 1 keV silicon recoils for recoil modes. Event inputs began 100 Angstrom deep with direction (1,0,0). Full settings, hashes, comparison results and links to each independent environment are retained locally in `.cache/popup-review/mode-version-matrix/README.md`. This Git-ignored evidence is absent from fresh checkouts and may be removed; the conclusions and limitations above are retained in this guide.
+
+These investigations used explicitly authorized UI responses. The experiment itself did not implement or approve a production popup-response handler. Report-only execution stops its owned job and reports failed/popup when an interactive dialog is detected; UI-assisted core-output coverage does not establish unattended completion. Later fresh opt-in handling and checkpoint continuation integration are separate implementation behavior.
+
 ## Resume into a new simulation
 
-Continuation currently requires `cascade_output=None` (the default), retaining report-only popup behavior. Explicit automatic choices raise ValueError before creating a runtime: automatic continuation awaits checkpoint `.sav` result/lifecycle integration. The GUI result-export route has been removed. [Checkpoint recovery](trim-checkpoint-recovery.md) exists separately; recovered data is not currently substituted for required native text outputs or used to waive execution completion checks. See the [current direction](../TRIM_DIRECTION.md).
+Continuation defaults to `cascade_output=None`, retaining report-only popup behavior. Explicit `"none"`, `"statistics"` or `"detailed"` enables the reviewed responses subject to existing mode/engine/collision restrictions. New automated policies use nested schema 4; prepare a new runtime for older automated policies. Historical records are not rewritten.
+
+Every resumed run selects [checkpoint recovery](trim-checkpoint-recovery.md) explicitly. `output/parsed/results.json` is schema 2 with `result_source="checkpoint-recovery"`, unchanged recovery-v2 data in `recovery`, and native-text diagnostics in `native`. Results are cumulative through the child's absolute total. Missing or stale native profiles do not invalidate checkpoint results. Requested collision histories remain a separate output requirement.
+
+Automatic ordinary and event continuation first inspects the exact completion prompt without responding. Two valid final checkpoint snapshots with identical hashes at least one second apart permit an owned-job stop with `origin="completed-checkpoint"`. Initial inspection is bounded at ten seconds. Only an unavailable ordinary checkpoint permits one verified Yes/default-save fallback, recorded as `origin="explicit-save"`. Event continuation with no final checkpoint fails with `checkpoint-required`; explicitly select an autosave schedule covering the final count before preparing a new attempt. Invalid or unstable checkpoints never authorize saving as a repair. Fresh completion and report-only handling remain unchanged.
+
+The ordinary save-form wait, default-save transition, post-save readiness and job shutdown each have separate ten-second bounds; the Yes transition retains two seconds. A clean natural exit can succeed with complete frozen final checkpoint data and no pending/error evidence. Controlled stops retain the actual exit code, the verified completion prompt and matching live/preserved hashes. No chooser interaction is supported.
+
+The measured 2008 specified-ion-full continuation uses the same `End of calculation` Yes/No prompt as ordinary mode. Its version/mode-specific selector recognizes this only for checkpoint inspection; it never authorizes an event Save response. Standard/Pro specified-ion-full use `End of TRIM.DAT calculation`. This distinction does not broaden unmeasured 2008 modes.
+
+The pipeline checks job shutdown before freezing the runtime, recovers from the permanent copy, compares live/preserved hashes for controlled stops, and verifies requested values and exact total/autosave counts. Popup, timeout, cancellation and monitor failures still fail even with recoverable checkpoints. If shutdown cannot be verified, failure evidence remains in the record and working runtime; no frozen-runtime claim is made.
+
+Native continuation can rewrite staged `Data/TRIM.cfg` presentation fields. Resumed runs write `output/parsed/config-integrity.json` with original/final hashes, `equal`/`qualified`/`different` status and observed changes. Qualification requires a pinned known engine and the strict observed config layout: only colours, two known help-text spellings and numeric spacing/LF/CRLF serialization may change. Label size and the maximum-secondary-recoil setting must match their own sealed original values; 20,000 and 200,000 are not interchangeable. Unknown content, changed protected settings or a mismatched baseline still fail integrity. Both config byte versions remain preserved. Fresh runs and all other inputs retain exact hash checks.
+
+Recovery retains stored precision, availability and inferred-geometry warnings. Stable snapshots do not establish atomic native array saves or independent physics validation. The approved shared checkpoint-first design and verification evidence are recorded in the [current direction](../TRIM_DIRECTION.md).
+
+The isolated integration commit passes all 146 TRIM regressions with warnings as errors. The mixed development tree also passed 151, including five tests for separate pending parser work. Native checks in that mixed tree verified the twelve intended ion-full/specified-ion-full scenarios across 2008, Standard and Pro: six final-autosave no-response successes, three ordinary explicit-save successes and three expected event checkpoint-required failures. Fourteen attempts were retained because the first two 2008 event prompt failures were preserved before the approved selector correction and two additional checks. Source installations, settings and parent records remained unchanged.
 
 Resume accepts a sealed terminal project record. Successful parents are eligible; failed parents must have ended through popup, timeout or cancellation and have a complete verified saved-state set. A missing/inconsistent checkpoint is rejected. The parent is never edited.
 
@@ -90,7 +128,7 @@ TRIM saves target composition as fractions. A requested Si:O ratio of `1:2` is c
 
 Event-driven continuation additionally requires `events: list[JSONObject]`: the complete original ordered event list followed by appended records. Changed, removed or reordered earlier records are rejected. Native event-count interpretation is verified during execution; the runner never replaces the requested total with the event-list length.
 
-Resume uses the complete preserved save set, not TDATA.sav alone. File/hash and textual identity checks do not establish that TRIM wrote every binary array atomically at one instant, or prove numerical equivalence with an uninterrupted calculation. A native save/increase-count dialog after reaching the target is still a reported popup failure; progress and clean unattended completion remain separate facts.
+Resume uses the complete preserved save set, not TDATA.sav alone. File/hash and textual identity checks do not establish that TRIM wrote every binary array atomically at one instant, or prove numerical equivalence with an uninterrupted calculation. Report-only continuation still reports the completion dialog as a popup failure. Automatic completion requires the verified checkpoint-first lifecycle described above.
 
 ## Schedule prepared simulations
 

@@ -238,9 +238,9 @@ def prepare_trim_continuation(paths: ProjectPaths, config: Config, created: Crea
     """Prepare a new record continuing parent_id to explicit total/autosave counts.
 
     events is a list of structured appended-prefix-preserving events for event
-    modes, otherwise None. cascade_output must be None for report-only
-    continuation; other choices raise ValueError before staging until checkpoint
-    .sav result integration is available. Preserve terminal parent bytes/physics.
+    modes, otherwise None. cascade_output is None for report-only continuation
+    or an explicit reviewed response choice. Resumed results use cumulative
+    checkpoint recovery after owned processes stop. Preserve parent bytes/physics.
     Return new runtime; reject ineligible/incomplete/changed checkpoints with
     ValueError, propagate safe I/O/lease errors and never modify the parent.
     """
