@@ -4,17 +4,78 @@ from __future__ import annotations
 
 from pathlib import Path
 import ctypes
+from copy import deepcopy
 import struct
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
 
 from test_trim_runtime import CACHE
-from src.srim.trim_native import _read_trim_window_text, _read_trim_windows, execute_trim_process
+from src.srim.trim_native import _filter_trim_startup_windows, _read_trim_window_text, _read_trim_windows, execute_trim_process
 
 
 class TestTRIMNative(unittest.TestCase):
     """Mock Windows job APIs and owned children in cache-only test directories."""
+
+    def test_startup_candidate_transitions(self: TestTRIMNative) -> None:
+        """Check synthetic disappearance, hiding and readable transitions without mutation; return None."""
+        candidate = {"pid": 42, "handle": 12, "owner_handle": 11, "class": "ThunderRT5Form", "title": "", "visible": True, "enabled": True, "rectangle": [645, 406, 891, 457], "controls": [], "capture_errors": ["Text length unavailable"], "detection_reason": "owned-popup"}
+        for transition in ([], [{**candidate, "visible": False, "capture_errors": [], "detection_reason": None}], [{**candidate, "title": "Starting TRIM...", "capture_errors": [], "detection_reason": None}]):
+            with self.subTest(transition=transition):
+                state: dict[tuple[int, int], float] = {}
+                original = deepcopy(candidate)
+                self.assertIsNone(_filter_trim_startup_windows([candidate], state, 1.0)[0]["detection_reason"])
+                self.assertEqual(_filter_trim_startup_windows(transition, state, 1.1), transition)
+                self.assertEqual(candidate, original)
+                self.assertEqual(state, {(42, 12): 1.0})
+
+    def test_startup_boundaries_and_identity(self: TestTRIMNative) -> None:
+        """Bound synthetic candidate lifetime and native startup time independently per PID; return None."""
+        candidate = {"pid": 42, "handle": 12, "owner_handle": 11, "class": "ThunderRT5Form", "title": "", "visible": True, "enabled": True, "rectangle": [645, 406, 891, 457], "controls": [], "capture_errors": ["unavailable"], "detection_reason": "owned-popup"}
+        state: dict[tuple[int, int], float] = {}
+        for elapsed in (1.0, 1.2, 1.49):
+            self.assertIsNone(_filter_trim_startup_windows([candidate], state, elapsed)[0]["detection_reason"])
+        self.assertEqual(_filter_trim_startup_windows([candidate], state, 1.5)[0]["detection_reason"], "owned-popup")
+        self.assertIsNone(_filter_trim_startup_windows([{**candidate, "pid": 43}], state, 1.5)[0]["detection_reason"])
+        self.assertEqual(state, {(42, 12): 1.0, (43, 12): 1.5})
+        self.assertIsNone(_filter_trim_startup_windows([candidate], {}, 4.9)[0]["detection_reason"])
+        self.assertEqual(_filter_trim_startup_windows([candidate], {}, 5.0)[0]["detection_reason"], "owned-popup")
+        for invalid in (-1.0, float("nan"), float("inf"), True):
+            with self.assertRaises(ValueError):
+                _filter_trim_startup_windows([], {}, invalid)
+
+    def test_startup_real_dialogs_remain_reported(self: TestTRIMNative) -> None:
+        """Preserve changed and simultaneous dialogs and reject broader candidate matches; return None."""
+        candidate = {"pid": 42, "handle": 12, "owner_handle": 11, "class": "ThunderRT5Form", "title": "", "visible": True, "enabled": True, "rectangle": [645, 406, 891, 457], "controls": [], "capture_errors": ["unavailable"], "detection_reason": "owned-popup"}
+        dialog = {**candidate, "handle": 13, "class": "#32770", "title": "Error", "detection_reason": "dialog"}
+        result = _filter_trim_startup_windows([candidate, dialog], {}, 1.0)
+        self.assertIsNone(result[0]["detection_reason"])
+        self.assertEqual(result[1], dialog)
+        for change in ({"title": "Error"}, {"capture_errors": []}, {"owner_handle": None}, {"enabled": False}, {"rectangle": [0, 0, 246, 51]}, {"controls": [{"class": "Button", "text": "OK"}]}):
+            window = {**candidate, **change}
+            self.assertEqual(_filter_trim_startup_windows([window], {}, 1.0), [window])
+
+    def test_startup_wait_preserves_timeout_and_cancellation(self: TestTRIMNative) -> None:
+        """Defer a synthetic owned form then honor timeout or cancellation and cleanup; return None."""
+        candidate = {"pid": 43, "handle": 12, "owner_handle": 11, "class": "ThunderRT5Form", "title": "", "visible": True, "enabled": True, "rectangle": [645, 406, 891, 457], "controls": [], "capture_errors": ["unavailable"], "detection_reason": "owned-popup"}
+        for cancelled in (False, True):
+            with self.subTest(cancelled=cancelled), TemporaryDirectory(dir=CACHE) as directory:
+                root = Path(directory)
+                (root / "TRIM.exe").write_bytes(b"fixture")
+                api = MagicMock()
+                api.NtResumeProcess.return_value = 0
+                api.CreateJobObjectW.return_value = 12
+                process_list = ctypes.create_string_buffer(1024)
+                struct.pack_into("IIQ", process_list, 0, 1, 1, 43)
+                buffers = [ctypes.create_string_buffer(144), process_list]
+                process = MagicMock(pid=43, returncode=1, _handle=44)
+                process.poll.side_effect = [None, None, 1]
+                with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.subprocess.Popen", return_value=process), patch("src.srim.trim_native._read_trim_windows", return_value=[candidate]), patch("src.srim.trim_native.ctypes.create_string_buffer", side_effect=buffers), patch("src.srim.trim_native.wintypes.BOOL", return_value=ctypes.c_long(1)), patch("src.srim.trim_native.ctypes.POINTER", return_value=ctypes.c_void_p), patch("src.srim.trim_native.monotonic", side_effect=[0, 0.1, 0.3, 0.3]), patch("src.srim.trim_native.sleep"):
+                    report = execute_trim_process(root / "TRIM.exe", root, hide_window=True, timeout_seconds=0.2, stdout_path=root / "stdout", stderr_path=root / "stderr", cancel=MagicMock(side_effect=[False, True]) if cancelled else None)
+                self.assertEqual(report["termination"], "cancelled" if cancelled else "timeout")
+                self.assertEqual(report["popups"], [])
+                api.TerminateJobObject.assert_called_once_with(12, 1)
+                process.wait.assert_called_once()
 
     def test_job_ownership_before_start(self: TestTRIMNative) -> None:
         """Require assignment before resume and clean exit job closure; return None."""

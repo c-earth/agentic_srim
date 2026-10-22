@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 import ctypes
+from copy import deepcopy
 from ctypes import wintypes
 import math
 import os
@@ -116,6 +117,28 @@ def _read_trim_windows(process_id: int) -> list[JSONObject]:
     return windows
 
 
+def _filter_trim_startup_windows(windows: list[JSONObject], state: dict[tuple[int, int], float], elapsed_seconds: float) -> list[JSONObject]:
+    """Copy windows and briefly defer only the observed unreadable startup form.
+
+    windows contains job-vetted observations; state stores first-seen elapsed
+    times by PID/handle for this attempt. elapsed_seconds is finite nonnegative
+    native time. Return copied observations, updating only state and sending no
+    messages. Defer for less than 0.5 seconds, only before native second five.
+    Raise ValueError for invalid elapsed time; malformed observations propagate
+    errors to the caller's monitoring-failure handling. Never reset deadlines.
+    """
+    if type(elapsed_seconds) not in (int, float) or not math.isfinite(elapsed_seconds) or elapsed_seconds < 0:
+        raise ValueError("Invalid startup observation time")
+    result = deepcopy(windows)
+    for window in result:
+        if window.get("detection_reason") == "owned-popup" and window.get("class") == "ThunderRT5Form" and window.get("owner_handle") and window.get("visible") and window.get("enabled") and window.get("rectangle") == [645, 406, 891, 457] and window.get("title") == "" and window.get("capture_errors") and not any(control["text"] or control["class"] not in ("ThunderRT5PictureBox", "Static") for control in window.get("controls", [])):
+            identity = (window["pid"], window["handle"])
+            first_seen = state.setdefault(identity, elapsed_seconds)
+            if elapsed_seconds < 5.0 and elapsed_seconds - first_seen < 0.5:
+                window["detection_reason"] = None
+    return result
+
+
 def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, timeout_seconds: float | None, stdout_path: Path, stderr_path: Path, cancel: Callable[[], bool] | None = None) -> JSONObject:
     """Run executable in runtime under a Windows kill-on-close job with bounded monitoring.
 
@@ -154,6 +177,7 @@ def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, 
     native.NtResumeProcess.argtypes = [wintypes.HANDLE]
     native.NtResumeProcess.restype = wintypes.LONG
     started = monotonic()
+    startup_state: dict[tuple[int, int], float] = {}
     result: JSONObject = {"pid": None, "exit_code": None, "elapsed_seconds": 0.0, "termination": "launch-error", "popups": [], "monitor_errors": []}
     job = kernel.CreateJobObjectW(None, None)
     if not job:
@@ -184,6 +208,13 @@ def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, 
                 return result
             while True:
                 try:
+                    if cancel is not None and cancel():
+                        result["termination"] = "cancelled"
+                        break
+                    elapsed = monotonic() - started
+                    if timeout_seconds is not None and elapsed >= timeout_seconds:
+                        result["termination"] = "timeout"
+                        break
                     process_list_size = 1024
                     while True:
                         process_list = ctypes.create_string_buffer(process_list_size)
@@ -207,7 +238,7 @@ def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, 
                                 raise ctypes.WinError(ctypes.get_last_error())
                             if not member.value:
                                 continue
-                            windows = _read_trim_windows(pid)
+                            windows = _filter_trim_startup_windows(_read_trim_windows(pid), startup_state, elapsed)
                             result["popups"].extend(window for window in windows if window["detection_reason"])
                         finally:
                             kernel.CloseHandle(owned)
@@ -229,12 +260,6 @@ def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, 
                                 finally:
                                     kernel.CloseHandle(owned)
                         result["termination"] = "popup"
-                        break
-                    if cancel is not None and cancel():
-                        result["termination"] = "cancelled"
-                        break
-                    if timeout_seconds is not None and monotonic() - started >= timeout_seconds:
-                        result["termination"] = "timeout"
                         break
                     if process.poll() is not None and active_count == 0:
                         result["termination"] = "exit"
