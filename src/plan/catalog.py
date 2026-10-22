@@ -59,6 +59,7 @@ def list_capabilities(paths: ProjectPaths, collection: Literal["workflow", "anal
 def read_capability(paths: ProjectPaths, reference: JSONObject) -> JSONObject:
     """Verify reference's exact immutable manifest, files and adoption evidence in paths.
 
+    Read approval/proposal evidence from paths' .local/workflow-improvement store.
     Return manifest/reference without executing its procedure. Invalid identity,
     approval/hash/schema/source evidence raises ValueError/OSError.
     """
@@ -77,14 +78,14 @@ def read_capability(paths: ProjectPaths, reference: JSONObject) -> JSONObject:
         if len(content) != file["size_bytes"] or hashlib.sha256(content).hexdigest() != file["sha256"]:
             raise ValueError("integrity: capability file mismatch")
     approval = manifest["approval_reference"]
-    event_path = paths.root / ".cache" / "workflow-improvement" / "events" / (approval["approval_event_id"] + ".json")
+    event_path = paths.root / ".local" / "workflow-improvement" / "events" / (approval["approval_event_id"] + ".json")
     event_bytes = _read_regular_bytes(event_path)
     from src.plan.improvement import validate_improvement_event
     event = _read_json(event_path)
     validate_improvement_event(event)
     if hashlib.sha256(event_bytes).hexdigest() != approval["approval_event_sha256"] or event["kind"] != "approval" or event["proposal_id"] != approval["proposal_id"] or event["details"]["gate"] != "adoption" or event["details"]["decision"] != "approved" or event["details"]["revision"] != approval["proposal_revision_sha256"]:
         raise ValueError("integrity: capability adoption evidence mismatch")
-    proposal = paths.root / ".cache" / "workflow-improvement" / "proposals" / approval["proposal_id"] / ("proposal-" + approval["proposal_revision_sha256"] + ".md")
+    proposal = paths.root / ".local" / "workflow-improvement" / "proposals" / approval["proposal_id"] / ("proposal-" + approval["proposal_revision_sha256"] + ".md")
     if not proposal.exists():
         proposal = proposal.with_name("proposal.md")
     proposal_bytes = _read_regular_bytes(proposal)
@@ -281,7 +282,7 @@ def read_candidate(paths: ProjectPaths, candidate_id: str) -> JSONObject:
 def publish_capability(paths: ProjectPaths, config: Config, candidate_id: str, approval_reference: JSONObject, *, expected_candidate_sha256: str) -> JSONObject:
     """Publish candidate_id as a new immutable vN under explicit approved evidence.
 
-    Verify expected_candidate_sha256 and adoption evidence mechanically; the
+    Verify expected_candidate_sha256 and local adoption evidence mechanically; the
     coordinating human-authorized workflow remains responsible for real consent.
     Return version reference, never edit skills or execute procedures; errors retain data.
     """
@@ -298,7 +299,7 @@ def publish_capability(paths: ProjectPaths, config: Config, candidate_id: str, a
     matching = [event for event in status["events"] if event["event_id"] == approval_reference["approval_event_id"] and event["kind"] == "approval" and event["details"]["gate"] == "adoption" and event["details"]["decision"] == "approved" and event["details"]["revision"] == approval_reference["proposal_revision_sha256"]]
     if len(matching) != 1:
         raise ValueError("Matching explicit adoption approval is required")
-    evidence_root = paths.root / ".cache" / "workflow-improvement"
+    evidence_root = paths.root / ".local" / "workflow-improvement"
     approval_bytes = _read_regular_bytes(evidence_root / "events" / (approval_reference["approval_event_id"] + ".json"))
     if hashlib.sha256(approval_bytes).hexdigest() != approval_reference["approval_event_sha256"]:
         raise ValueError("integrity: approval event hash mismatch")

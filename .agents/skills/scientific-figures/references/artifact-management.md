@@ -1,6 +1,8 @@
 # Figure artifacts and records
 
-Use repository-root `.cache/scientific-figures/` for this skill's auxiliary work. This is local, Git-ignored working storage, not a durable backup. Deliver ZIPs when requested; do not automatically clear any records.
+Use repository-root `.local/scientific-figures/` for this skill's artifacts and records. This is persistent local, Git-ignored storage, not a durable backup. Deliver ZIPs when requested; do not automatically clear any records.
+
+Preserved cache dependencies live under `.local/.cache/`, which is protected persistent storage rather than routine scratch. Historical packages and records retain their original bytes, embedded paths and hashes. Consult `.local/migrations/` inventories and reports for old-to-new paths; these mappings do not redirect reads automatically. Legacy scripts may require mapped inputs and outputs before separately authorized reuse. Do not recreate missing evidence or treat a preserved historical helper as authorization to run it.
 
 ## Identity and layout
 
@@ -9,7 +11,7 @@ Give each figure a descriptive lowercase ASCII kebab-case ID independent of publ
 Use this layout, creating optional directories only when needed:
 
 ```text
-.cache/scientific-figures/<figure-id>/
+.local/scientific-figures/<figure-id>/
   README.md
   references/
   versions/v001/

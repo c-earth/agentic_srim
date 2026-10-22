@@ -14,6 +14,16 @@ environment_get reports installation.sr and installation.trim readiness and file
 
 project_mcp exposes 32 tools. It records multiple independent cases, terminal native evidence, analysis provenance, unapproved capability candidates and improvement evidence. Active reusable workflow/analysis/skill collections start empty. It has no native execution, generic code executor, trial-approval or candidate-promotion tool.
 
+Improvement events, proposals and trial snapshots use `.local/workflow-improvement/`.
+This is persistent Git-ignored worktree state, not a backup. Preserved historical
+cache dependencies use protected `.local/.cache/`; figure records use
+`.local/scientific-figures/`. Migration inventories under `.local/migrations/`
+map historical paths without rewriting evidence bytes or automatically redirecting
+filesystem/MCP reads. New references use `.local/`; old saved `.cache/` references
+are not aliases. Obtain current references by reading the current records.
+Restart the project MCP server through its owning session after updating the
+implementation; already-running processes may retain the old storage behavior.
+
 The wire tool result uses structuredContent; SDK 2.3.0 Python clients access result.structured_content. Every structured tool response has:
 
 ```text

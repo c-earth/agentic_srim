@@ -7,6 +7,11 @@ description: Review efficiency evidence for this repository's agent skills, work
 
 Improve working methods within this repository using evidence. Follow existing repository instructions and the user's current task scope.
 
+Store supporting records under repository-root `.local/workflow-improvement/`.
+Keep preserved cache dependencies under protected `.local/.cache/` and consult
+`.local/migrations/` inventories for historical path mappings. Skill definitions
+remain tracked; these persistent local stores are Git-ignored, not a durable backup.
+
 Read [the protocol](references/protocol.md) before recording evidence, preparing proposals, or managing trials.
 
 At task completion, briefly review meaningful efficiency observations and relevant accumulated evidence. Evidence recording and review are authorized. Do not record every action or manufacture evidence. Suggest a change only for a recurring pattern across comparable tasks or one substantial avoidable inefficiency with a clear cause. Explain why evidence is sufficient; consolidate duplicates and avoid repeating addressed suggestions without new evidence.

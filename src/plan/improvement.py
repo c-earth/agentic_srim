@@ -19,14 +19,14 @@ from src.srim.runtime import _read_regular_bytes
 
 
 def read_improvement_status(paths: ProjectPaths, *, proposal_id: str | None = None) -> JSONObject:
-    """Inspect validated event graphs and snapshot/proposal hashes under paths.
+    """Inspect validated event graphs and hashes in paths' local improvement store.
 
     Optional proposal_id filters a UUID. Return observed states/events/issues;
     preserve malformed/conflicting evidence and never mutate lifecycle state.
     """
     if proposal_id is not None and str(UUID(proposal_id)) != proposal_id:
         raise ValueError("Invalid proposal UUID")
-    root = paths.root / ".cache" / "workflow-improvement"
+    root = paths.root / ".local" / "workflow-improvement"
     events, issues, hashes = [], [], {}
     for path in sorted((root / "events").glob("*.json")):
         try:
@@ -131,32 +131,36 @@ def read_improvement_status(paths: ProjectPaths, *, proposal_id: str | None = No
 
 
 def record_observation(paths: ProjectPaths, config: Config, details: JSONObject, request_id: str) -> JSONObject:
-    """Preserve caller details as one immutable observation using config time/request_id.
+    """Preserve details as a local observation using paths, config and request_id.
 
     Return exact event/reference; validate protocol fields without judging evidence
-    sufficiency. No approvals/transitions or every-call telemetry are produced.
+    sufficiency. Reference paths use .local/workflow-improvement; invalid fields
+    raise ValueError and filesystem errors propagate. No approvals/transitions
+    or every-call telemetry are produced.
     """
     if str(UUID(request_id)) != request_id:
         raise ValueError("Invalid request UUID")
     event = {"schema_version": 1, "event_id": str(uuid4()), "recorded_at": _record_time(config, None).isoformat(), "kind": "observation", "proposal_id": None, "task_ref": "MCP observation " + request_id, "details": details}
     validate_improvement_event(event)
-    path = paths.root / ".cache" / "workflow-improvement" / "events" / (event["event_id"] + ".json")
+    path = paths.root / ".local" / "workflow-improvement" / "events" / (event["event_id"] + ".json")
     evidence = write_record_json(path, event)
     return {"event": event, "reference": {"kind": "improvement-event", "id": event["event_id"], "revision": None, "path": path.relative_to(paths.root).as_posix(), "sha256": evidence["sha256"], "size_bytes": evidence["size_bytes"]}}
 
 
 def create_improvement_proposal(paths: ProjectPaths, config: Config, proposal_id: str, observation_ids: list[str], markdown: str, request_id: str) -> JSONObject:
-    """Preserve exact markdown and a linked proposal event for supplied observations.
+    """Preserve exact markdown and a local event for the supplied proposal inputs.
 
     Validate UUIDs/sections/references and use config time. Return both references;
-    no overwrite, approval, skill edit or trial. Partial publication survives errors.
+    reference paths under paths' .local/workflow-improvement store. Invalid inputs
+    raise ValueError and filesystem errors propagate. No overwrite, approval,
+    skill edit or trial occurs. Partial publication survives errors.
     """
     if str(UUID(request_id)) != request_id or str(UUID(proposal_id)) != proposal_id or not isinstance(observation_ids, list) or not observation_ids or len(set(observation_ids)) != len(observation_ids) or not isinstance(markdown, str):
         raise ValueError("Invalid proposal request")
     required = ("identity", "evidence", "change", "tradeoff", "trial", "restor", "decision")
     if any(term not in markdown.casefold() for term in required) or proposal_id not in markdown:
         raise ValueError("Proposal lacks required protocol sections/identity")
-    root = paths.root / ".cache" / "workflow-improvement"
+    root = paths.root / ".local" / "workflow-improvement"
     for identity in observation_ids:
         if str(UUID(identity)) != identity:
             raise ValueError("Invalid observation UUID")

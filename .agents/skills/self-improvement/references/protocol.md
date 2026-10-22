@@ -2,7 +2,9 @@
 
 ## Storage and time
 
-Instructions are versioned under `.agents/skills/self-improvement/`. Supporting records belong under repository-root `.cache/workflow-improvement/`, which is Git-ignored and local to this checkout. It is not a durable backup. Create directories only as needed; never automatically clear evidence, proposals, or snapshots.
+Instructions are versioned under `.agents/skills/self-improvement/`. Supporting records belong under repository-root `.local/workflow-improvement/`, which is persistent, Git-ignored state local to this checkout. It is not a durable backup. Create directories only as needed; never automatically clear evidence, proposals, or snapshots.
+
+Preserved cache dependencies belong under `.local/.cache/`, protected from routine cache cleanup. Migration inventories and reports under `.local/migrations/` record historical path mappings and missing evidence. Preserve existing record bytes, timestamps, embedded paths and hashes. Mappings do not redirect reads automatically; new API references use `.local/`, and old saved MCP references must be replaced by current references. Locate old observation sources through the migration inventory without rewriting immutable events. Legacy helpers need separately authorized reuse and may require explicit mapped paths. Do not fabricate absent dependencies or approval evidence.
 
 Use UTF-8 JSON for records and UTF-8 Markdown for proposals. Proposal and event IDs are UUID strings. Events use `events/<event-id>.json`; proposals use `proposals/<proposal-id>/proposal.md`. Record paths are repository-relative with forward slashes. Reject traversal, symlinks, or redirected paths escaping the repository.
 

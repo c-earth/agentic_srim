@@ -47,6 +47,25 @@ Do not reset, overwrite or discard unrelated changes.
 Merging, publishing and permanent adoption require their applicable approval.
 A coding delegation does not itself authorize any of them.
 
+## Cache retention
+
+Cache is local, Git-ignored storage, not a durable backup. Do not assume
+another worktree contains the same cache. Preserve replay inputs, unique
+scripts, custom tables, human notes, approval records and workspace-role
+configuration. SRIM/TRIM-regenerable outputs are eligible for reviewed cleanup.
+Do not automatically clear self-improvement evidence, proposals or snapshots.
+
+Scientific-figure artifacts belong under `.local/scientific-figures/` and
+self-improvement records under `.local/workflow-improvement/`. Their preserved
+cache dependencies belong under `.local/.cache/`, which is protected persistent
+storage despite its name. Routine cleanup of repository-root `.cache/` must not
+touch these stores. They remain local ignored state, not a durable backup.
+
+For historical paths, consult the inventories and reports under
+`.local/migrations/`. Mappings do not redirect filesystem or MCP reads
+automatically. Preserve historical evidence bytes and hashes; legacy scripts
+may require explicit mapped paths before separately authorized reuse.
+
 # Python environment
 
 - Run all project Python code through `D:\projects\agentic_srim\.venv\Scripts\python.exe`.
@@ -75,6 +94,7 @@ A coding delegation does not itself authorize any of them.
 
 - Create files and artifacts that are only indirectly related to the project under the repository-root `.cache/` directory. This includes auxiliary document extractions, page renders, temporary scripts, and other supporting work products.
 - Do not create repository-root `tmp/` or `output/` directories for this auxiliary work. Use descriptive subdirectories within `.cache/` instead.
+- The scientific-figure and self-improvement artifact stores and their protected dependencies use the `.local/` locations specified above instead. Figure-version checks remain within their figure records as required by the figure skill.
 
 # Git command execution
 

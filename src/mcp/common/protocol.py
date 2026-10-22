@@ -72,6 +72,7 @@ class ProtocolAdapter:
         """Validate and serve params using trusted context and bounded structured output.
 
         Reads/waits run off-loop; accepted mutations outlive request cancellation.
+        Improvement-event reads require .local/workflow-improvement ownership.
         Return SDK error envelopes for domain failures, never raw exception stacks.
         """
         try:
@@ -153,7 +154,7 @@ class ProtocolAdapter:
                         owned = reference == candidate["reference"] or any(path == base / "files" / file["path"] and reference["sha256"] == file["sha256"] and reference["size_bytes"] == file["size_bytes"] for file in candidate["candidate"]["files"])
                     elif reference["kind"] == "improvement-event":
                         from src.plan.improvement import validate_improvement_event
-                        if re.fullmatch(r"[0-9a-f-]{36}", reference["id"]) and path == self.context.paths.root / ".cache" / "workflow-improvement" / "events" / (reference["id"] + ".json"):
+                        if re.fullmatch(r"[0-9a-f-]{36}", reference["id"]) and path == self.context.paths.root / ".local" / "workflow-improvement" / "events" / (reference["id"] + ".json"):
                             validate_improvement_event(load_json(_read_regular_bytes(path)))
                             owned = True
                     elif reference["kind"] == "proposal":
