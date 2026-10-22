@@ -9,8 +9,8 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 
 from src.mcp.common.contracts import COMMON_PARAMETERS, HASH_SCHEMA, JOB_SCHEMA, LIMIT_SCHEMA, NATIVE_FILE_SCHEMA, NATIVE_SOURCE_SCHEMA, OFFSET_SCHEMA, REFERENCE_SCHEMA, RESPONSE_SCHEMA, UUID_SCHEMA, ServerContext, canonical_bytes
-from src.srim.metadata import JSONObject
-from src.srim.trim_inputs import MODES, PLOTS
+from src.srim.common.types import JSONObject
+from src.srim.trim.inputs import MODES, PLOTS
 
 
 def build_catalog(context: ServerContext) -> JSONObject:

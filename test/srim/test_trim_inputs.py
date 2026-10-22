@@ -5,7 +5,7 @@ from __future__ import annotations
 from copy import deepcopy
 import unittest
 
-from src.srim.trim_inputs import ENERGIES, MODES, flatten_trim_target, render_trim_events, render_trim_input, validate_trim_engine_request, validate_trim_request
+from src.srim.trim.inputs import ENERGIES, MODES, flatten_trim_target, render_trim_events, render_trim_input, validate_trim_engine_request, validate_trim_request
 
 
 TRIM_REQUEST = {

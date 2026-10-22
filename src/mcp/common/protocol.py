@@ -19,8 +19,8 @@ from mcp.types import CallToolRequestParams, CallToolResult, ListResourcesResult
 from src.mcp.common.contracts import ServerContext, canonical_bytes, error_response, load_json, make_response, validate_document
 from src.mcp.common.files import read_verified_chunk, safe_path
 from src.mcp.common.jobs import Cancel, JobManager, Progress, WriteOperation
-from src.srim.metadata import JSONObject, JSONValue
-from src.srim.runtime import _read_regular_bytes
+from src.srim.common.types import JSONObject, JSONValue
+from src.srim.common.files import _read_regular_bytes
 
 
 ReadOperation = Callable[[str, JSONObject, ServerContext], JSONObject]

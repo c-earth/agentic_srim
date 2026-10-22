@@ -9,8 +9,8 @@ from unittest.mock import patch
 
 from _fixtures import make_test_installation, make_test_project
 from src.backend.resources import ResourceReference, verify_resource
-from src.srim.cab import load_cab
-from src.srim.defaults import read_sr_defaults, switch_sr_defaults
+from src.srim.cab.strengths import load_cab
+from src.srim.resources.defaults import read_sr_defaults, switch_sr_defaults
 
 
 class TestSRDefaults(unittest.TestCase):
@@ -48,7 +48,7 @@ class TestSRDefaults(unittest.TestCase):
         pointer = self.paths.resources / "defaults.json"
         before = pointer.read_bytes()
         (self.config.srim_root / "SR.exe").write_bytes(b"changed")
-        with patch("src.srim.defaults._write_json", side_effect=PermissionError("pointer blocked")):
+        with patch("src.srim.resources.defaults._write_json", side_effect=PermissionError("pointer blocked")):
             with self.assertRaises(PermissionError) as caught:
                 switch_sr_defaults(self.paths, self.config)
         self.assertEqual(pointer.read_bytes(), before)

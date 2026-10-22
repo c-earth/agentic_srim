@@ -17,7 +17,9 @@ from src.mcp.common.contracts import ServerContext
 from src.mcp.common.files import safe_path
 from src.plan.catalog import create_candidate, inventory_repository_skills, list_candidates, list_capabilities, list_collections, read_candidate, read_capability
 from src.plan.improvement import create_improvement_proposal, read_improvement_status, record_observation
-from src.srim.metadata import JSONObject, _read_json, read_simulation
+from src.srim.common.types import JSONObject
+from src.srim.common.files import _read_json
+from src.srim.common.records import read_simulation
 
 
 def read_operation(name: str, arguments: JSONObject, context: ServerContext) -> JSONObject:

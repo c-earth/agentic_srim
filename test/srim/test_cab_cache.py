@@ -14,12 +14,13 @@ from unittest.mock import patch
 from _fixtures import fake_bragg_run, make_test_project, make_test_request, make_test_selections
 from src.backend.records import CreateRequest, _lock_parent, create_directories
 from src.backend.resources import _hash_file, verify_resource
-from src.srim.bragg import resolve_bragg
-from src.srim.cab_cache import _dependency_key, find_cab_entry, load_cab_entry, publish_cab_entry
-from src.srim.material import parse_atomdata
-from src.srim.metadata import _inventory, _read_json, _write_json
-from src.srim.outputs import parse_sr_output
-from src.srim.resolution import _make_dependency_inputs, resolve_sr_inputs
+from src.srim.cab.bragg import resolve_bragg
+from src.srim.cab.cache import _dependency_key, find_cab_entry, load_cab_entry, publish_cab_entry
+from src.srim.resources.materials import parse_atomdata
+from src.srim.common.files import _inventory, _read_json, _write_json
+from src.srim.sr.outputs import parse_sr_output
+from src.srim.resources.resolution import _make_dependency_inputs
+from src.srim.sr.resolution import resolve_sr_inputs
 
 
 class TestCABEntries(unittest.TestCase):
@@ -34,7 +35,7 @@ class TestCABEntries(unittest.TestCase):
         request["parameters"]["target"]["bonds"] = {}
         bundle = resolve_sr_inputs(self.paths, self.config, self.worker, request, make_test_selections())
         self.inputs = _make_dependency_inputs(bundle.resolved["defaults"], bundle.resolved["resources"], parse_atomdata(dict(bundle.snapshots)["resources/atomdata/effective"]), dict(bundle.engine_files))
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run):
             self.reference = resolve_bragg(self.paths, self.config, self.worker, self.inputs, 6).reference
         self.entry = load_cab_entry(self.paths, self.reference)
 
@@ -44,7 +45,7 @@ class TestCABEntries(unittest.TestCase):
         before = {"payload": payload.read_bytes(), "manifest": (payload.parent / "manifest.json").read_bytes()}
         path = payload.parent / "entries" / self.reference.dependency_key / "z006.json"
         entry_bytes = path.read_bytes()
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run):
             other = resolve_bragg(self.paths, self.config, self.worker, self.inputs, 8)
         self.assertEqual(other.reference.dataset, self.reference.dataset)
         self.assertEqual(path.read_bytes(), entry_bytes)

@@ -13,12 +13,12 @@ from unittest.mock import patch
 from _fixtures import make_test_project
 from test_trim_inputs import TRIM_INSTALLATION_FILES
 from src.backend.resources import verify_resource
-from src.srim.trim_defaults import apply_trim_damage_overrides, create_trim_damage_variant, parse_trim_damage, read_trim_defaults, read_trim_installation, switch_trim_defaults
+from src.srim.trim.defaults import apply_trim_damage_overrides, create_trim_damage_variant, parse_trim_damage, read_trim_defaults, read_trim_installation, switch_trim_defaults
 
 
 CACHE = Path(".cache/trim-tests").resolve()
 CACHE.mkdir(parents=True, exist_ok=True)
-SEED = Path("src/srim/data/trim-damage-defaults.json").read_bytes()
+SEED = Path("src/srim/trim/data/trim-damage-defaults.json").read_bytes()
 
 
 class TestTRIMDefaults(unittest.TestCase):
@@ -96,11 +96,11 @@ class TestTRIMDefaults(unittest.TestCase):
             pointer = paths.resources / "trim-damage-defaults.json"
             before = pointer.read_bytes()
             variant = create_trim_damage_variant(paths, config, source=SEED)
-            with patch("src.srim.trim_defaults._write_json", side_effect=PermissionError("blocked")):
+            with patch("src.srim.trim.defaults._write_json", side_effect=PermissionError("blocked")):
                 with self.assertRaises(PermissionError):
                     switch_trim_defaults(paths, config, damage_version=variant.version)
             self.assertEqual(pointer.read_bytes(), before)
-            with patch("src.srim.trim_defaults._hash_file", side_effect=[("a" * 64, 1), ("b" * 64, 1)]):
+            with patch("src.srim.trim.defaults._hash_file", side_effect=[("a" * 64, 1), ("b" * 64, 1)]):
                 with self.assertRaisesRegex(ValueError, "concurrently"):
                     switch_trim_defaults(paths, config, damage_version=variant.version)
             self.assertEqual(read_trim_defaults(paths), original)

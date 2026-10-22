@@ -18,12 +18,12 @@ from unittest.mock import MagicMock, Mock, patch
 from _fixtures import fake_bragg_run, make_test_project
 from src.backend.records import CreateRequest, create_directories
 from src.backend.resources import _hash_file, _write_json
-from src.srim.cab_cache import load_cab_entry, publish_cab_entry
-from src.srim.cab_constants import SR_BONDS
-from src.srim.cab_recovery import _capture_correction, _estimate_bond_count, _prepare_capture_runtime, _recover_core_value, _render_mock_compound, populate_default_cab, resolve_default_bond, resolve_default_core
-from src.srim.defaults import read_sr_defaults, switch_sr_defaults
-from src.srim.storage import cleanup_sr_batch
-from src.srim.metadata import read_simulation
+from src.srim.cab.cache import load_cab_entry, publish_cab_entry
+from src.srim.cab.constants import SR_BONDS
+from src.srim.cab.recovery import _capture_correction, _estimate_bond_count, _prepare_capture_runtime, _recover_core_value, _render_mock_compound, populate_default_cab, resolve_default_bond, resolve_default_core
+from src.srim.resources.defaults import read_sr_defaults, switch_sr_defaults
+from src.srim.sr.storage import cleanup_sr_batch
+from src.srim.common.records import read_simulation
 
 
 class TestCABRecovery(unittest.TestCase):
@@ -33,7 +33,7 @@ class TestCABRecovery(unittest.TestCase):
         """Reject self's equal-value oxygen dependency before publishing a carbon entry; return None."""
         sequence = [self.captures[(1, bond, count)] for bond in SR_BONDS for count in (1, 3, 2)]
         sequence.extend(self.captures[(z, bond, 1)] for z in (6, 8) for bond in SR_BONDS)
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery._capture_mock", side_effect=sequence):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab.recovery._capture_mock", side_effect=sequence):
             carbon = resolve_default_core(self.paths, self.config, self.worker, self.defaults, 6)
             oxygen = resolve_default_core(self.paths, self.config, self.worker, self.defaults, 8)
         original = load_cab_entry(self.paths, carbon.reference)
@@ -53,7 +53,7 @@ class TestCABRecovery(unittest.TestCase):
         executable.write_bytes(b"different generation")
         switch_sr_defaults(self.paths, self.config)
         executable.write_bytes(original)
-        with patch("src.srim.cab_recovery.resolve_bragg") as bragg, patch("src.srim.cab_recovery._capture_mock") as capture:
+        with patch("src.srim.cab.recovery.resolve_bragg") as bragg, patch("src.srim.cab.recovery._capture_mock") as capture:
             with self.assertRaisesRegex(ValueError, "inactive default generation"):
                 resolve_default_bond(self.paths, self.config, self.worker, self.defaults, SR_BONDS[0])
             with self.assertRaisesRegex(ValueError, "inactive default generation"):
@@ -65,12 +65,12 @@ class TestCABRecovery(unittest.TestCase):
         """Reuse self's inactive verified core/bond/H cache without recovery; return None."""
         sequence = [self.captures[(1, bond, count)] for bond in SR_BONDS for count in (1, 3, 2)]
         sequence.extend(self.captures[(6, bond, 1)] for bond in SR_BONDS)
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery._capture_mock", side_effect=sequence):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab.recovery._capture_mock", side_effect=sequence):
             core = resolve_default_core(self.paths, self.config, self.worker, self.defaults, 6)
             bond = resolve_default_bond(self.paths, self.config, self.worker, self.defaults, SR_BONDS[0])
         (self.config.srim_root / "SR.exe").write_bytes(b"different generation")
         switch_sr_defaults(self.paths, self.config)
-        with patch("src.srim.cab_recovery.resolve_bragg") as bragg, patch("src.srim.cab_recovery._capture_mock") as capture:
+        with patch("src.srim.cab.recovery.resolve_bragg") as bragg, patch("src.srim.cab.recovery._capture_mock") as capture:
             self.assertEqual(resolve_default_core(self.paths, self.config, self.worker, self.defaults, 6).reference, core.reference)
             self.assertEqual(resolve_default_bond(self.paths, self.config, self.worker, self.defaults, SR_BONDS[0]).reference, bond.reference)
             self.assertFalse(resolve_default_core(self.paths, self.config, self.worker, self.defaults, 1).calculated)
@@ -81,7 +81,7 @@ class TestCABRecovery(unittest.TestCase):
         """Stop self's second capture after a simulated generation switch, retaining the first; return None."""
         newer = deepcopy(self.defaults)
         newer["baseline_id"] = "0" * 64
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery._capture_correction", side_effect=self._fake_capture) as capture, patch("src.srim.cab_recovery.read_sr_defaults", side_effect=[self.defaults, self.defaults, self.defaults, newer]):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab.recovery._capture_correction", side_effect=self._fake_capture) as capture, patch("src.srim.cab.recovery.read_sr_defaults", side_effect=[self.defaults, self.defaults, self.defaults, newer]):
             with self.assertRaisesRegex(ValueError, "inactive default generation") as caught:
                 resolve_default_bond(self.paths, self.config, self.worker, self.defaults, SR_BONDS[0])
         self.assertEqual(capture.call_count, 1)
@@ -92,7 +92,7 @@ class TestCABRecovery(unittest.TestCase):
         """Stop self's missing nested bond after core dependency admission when defaults switch; return None."""
         newer = deepcopy(self.defaults)
         newer["baseline_id"] = "0" * 64
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery.read_sr_defaults", side_effect=[self.defaults, self.defaults, newer]), patch("src.srim.cab_recovery._capture_mock") as capture:
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab.recovery.read_sr_defaults", side_effect=[self.defaults, self.defaults, newer]), patch("src.srim.cab.recovery._capture_mock") as capture:
             with self.assertRaisesRegex(ValueError, "inactive default generation"):
                 resolve_default_core(self.paths, self.config, self.worker, self.defaults, 6)
         capture.assert_not_called()
@@ -117,7 +117,7 @@ class TestCABRecovery(unittest.TestCase):
 
     def test_permanent_capture_evidence(self: TestCABRecovery) -> None:
         """Reload self's new bond entry after clearing its worker runtimes, then reject corrupted permanent evidence; return None."""
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery._capture_correction", side_effect=self._fake_capture):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab.recovery._capture_correction", side_effect=self._fake_capture):
             result = resolve_default_bond(self.paths, self.config, self.worker, self.defaults, SR_BONDS[0])
         entry = load_cab_entry(self.paths, result.reference)
         self.assertTrue(entry["captures"])
@@ -135,7 +135,7 @@ class TestCABRecovery(unittest.TestCase):
 
     def test_failed_capture_record(self: TestCABRecovery) -> None:
         """Preserve self's failed GUI capture as a terminal record eligible for verified cleanup; return None."""
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery._capture_correction", side_effect=RuntimeError("controlled GUI failure")):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab.recovery._capture_correction", side_effect=RuntimeError("controlled GUI failure")):
             with self.assertRaises(RuntimeError):
                 resolve_default_bond(self.paths, self.config, self.worker, self.defaults, SR_BONDS[0])
         captures = [read_simulation(self.paths, runtime.name) for runtime in (self.worker.path / "sr").iterdir() if read_simulation(self.paths, runtime.name)["engine"]["name"] == "sr-capture"]
@@ -145,7 +145,7 @@ class TestCABRecovery(unittest.TestCase):
 
     def test_permanent_core_evidence(self: TestCABRecovery) -> None:
         """Reload self's carbon core and its 18 bond dependencies after worker cleanup; return None."""
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery._capture_correction", side_effect=self._fake_capture):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab.recovery._capture_correction", side_effect=self._fake_capture):
             result = resolve_default_core(self.paths, self.config, self.worker, self.defaults, 6)
         entry = load_cab_entry(self.paths, result.reference)
         self.assertEqual(len(entry["captures"]), 18)
@@ -193,11 +193,11 @@ class TestCABRecovery(unittest.TestCase):
     def test_bond_threshold_recovery(self: TestCABRecovery) -> None:
         """Check self's count-one reuse, exact threshold/formula and failure without retry; return None."""
         bond = SR_BONDS[0]
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery._capture_mock", side_effect=[self.captures[(1, bond, count)] for count in (1, 3, 2)]) as capture:
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab.recovery._capture_mock", side_effect=[self.captures[(1, bond, count)] for count in (1, 3, 2)]) as capture:
             result = resolve_default_bond(self.paths, self.config, self.worker, self.defaults, bond)
         self.assertEqual([call.args[6] for call in capture.call_args_list], [1, 3, 2])
         self.assertEqual(Decimal(load_cab_entry(self.paths, result.reference)["value"]), Decimal("10"))
-        with patch("src.srim.cab_recovery._capture_mock", side_effect=AssertionError("must reuse")):
+        with patch("src.srim.cab.recovery._capture_mock", side_effect=AssertionError("must reuse")):
             again = resolve_default_bond(self.paths, self.config, self.worker, self.defaults, bond)
         self.assertEqual(result.reference, again.reference)
         self.assertFalse(again.calculated)
@@ -205,7 +205,7 @@ class TestCABRecovery(unittest.TestCase):
         self.assertEqual(_estimate_bond_count("0.333333333333333333333333333333333333"), 4)
         failed = deepcopy(self.captures[(1, bond, 3)])
         failed["correction"] = "0.9"
-        with patch("src.srim.cab_recovery._capture_mock", side_effect=[self.captures[(1, bond, 1)], failed, self.captures[(1, bond, 2)]]) as capture:
+        with patch("src.srim.cab.recovery._capture_mock", side_effect=[self.captures[(1, bond, 1)], failed, self.captures[(1, bond, 2)]]) as capture:
             with self.assertRaisesRegex(ValueError, "threshold failed"):
                 resolve_default_bond(self.paths, self.config, self.worker, self.defaults, SR_BONDS[1])
         self.assertEqual(capture.call_count, 3)
@@ -213,7 +213,7 @@ class TestCABRecovery(unittest.TestCase):
     def test_zero_initial_capture(self: TestCABRecovery) -> None:
         """Check self's zero reading is retained and raises before further captures; return None."""
         bond = SR_BONDS[0]
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery._capture_mock", return_value=self.captures[(1, bond, 1)]) as capture:
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab.recovery._capture_mock", return_value=self.captures[(1, bond, 1)]) as capture:
             with self.assertRaises(ValueError) as caught:
                 resolve_default_bond(self.paths, self.config, self.worker, self.defaults, bond)
         self.assertEqual(capture.call_count, 1)
@@ -224,7 +224,7 @@ class TestCABRecovery(unittest.TestCase):
         """Check self's 18 distinct captured estimates, mean/spread, H convention and negative rejection; return None."""
         sequence = [self.captures[(1, bond, count)] for bond in SR_BONDS for count in (1, 3, 2)]
         sequence.extend(self.captures[(6, bond, 1)] for bond in SR_BONDS)
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery._capture_mock", side_effect=sequence) as capture:
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab.recovery._capture_mock", side_effect=sequence) as capture:
             result = resolve_default_core(self.paths, self.config, self.worker, self.defaults, 6)
         self.assertEqual(capture.call_count, 72)
         entry = load_cab_entry(self.paths, result.reference)
@@ -255,7 +255,7 @@ class TestCABRecovery(unittest.TestCase):
         class_name.value = "TreeViewWndClass"
         class_name.__len__.return_value = 256
         user32 = MagicMock()
-        with patch("src.srim.cab_recovery.subprocess.Popen", return_value=process) as launch, patch("src.srim.cab_recovery.subprocess.run", side_effect=[prepare, reading, closed]), patch("src.srim.cab_recovery.ctypes.WinDLL", return_value=user32), patch("src.srim.cab_recovery.wintypes.DWORD", return_value=owner), patch("src.srim.cab_recovery.wintypes.RECT", return_value=bounds), patch("src.srim.cab_recovery.ctypes.POINTER", return_value=ctypes.c_void_p), patch("src.srim.cab_recovery.ctypes.create_unicode_buffer", return_value=class_name):
+        with patch("src.srim.cab.recovery.subprocess.Popen", return_value=process) as launch, patch("src.srim.cab.recovery.subprocess.run", side_effect=[prepare, reading, closed]), patch("src.srim.cab.recovery.ctypes.WinDLL", return_value=user32), patch("src.srim.cab.recovery.wintypes.DWORD", return_value=owner), patch("src.srim.cab.recovery.wintypes.RECT", return_value=bounds), patch("src.srim.cab.recovery.ctypes.POINTER", return_value=ctypes.c_void_p), patch("src.srim.cab.recovery.ctypes.create_unicode_buffer", return_value=class_name):
             correction = _capture_correction(runtime, "Custom", runtime / "owned.json")
         self.assertEqual(correction, "0")
         self.assertEqual(launch.call_args.kwargs["cwd"], runtime)
@@ -263,7 +263,7 @@ class TestCABRecovery(unittest.TestCase):
         process.terminate.assert_not_called()
         process.poll.side_effect = [None, None]
         process.reset_mock()
-        with patch("src.srim.cab_recovery.subprocess.Popen", return_value=process), patch("src.srim.cab_recovery.subprocess.run", side_effect=[KeyboardInterrupt, closed]):
+        with patch("src.srim.cab.recovery.subprocess.Popen", return_value=process), patch("src.srim.cab.recovery.subprocess.run", side_effect=[KeyboardInterrupt, closed]):
             with self.assertRaises(KeyboardInterrupt):
                 _capture_correction(runtime, "Custom", runtime / "interrupted.json")
         process.terminate.assert_called_once()
@@ -273,13 +273,13 @@ class TestCABRecovery(unittest.TestCase):
         hydrogen = resolve_default_core(self.paths, self.config, self.worker, self.defaults, 1)
         results = [replace(hydrogen, reference=replace(hydrogen.reference, entry_id=f"z{z:03d}"), calculated=z != 1) for z in range(1, 93)]
         events = []
-        with patch("src.srim.cab_recovery.resolve_default_core", side_effect=results) as resolve:
+        with patch("src.srim.cab.recovery.resolve_default_core", side_effect=results) as resolve:
             references = populate_default_cab(self.paths, self.config, self.worker, "core", progress=events.append)
         self.assertEqual(resolve.call_count, 92)
         self.assertEqual(len(references), 92)
         self.assertEqual(events[0]["state"], "cached")
         self.assertEqual(events[-1]["completed"], 92)
-        with patch("src.srim.cab_recovery.resolve_default_bond", return_value=hydrogen) as resolve:
+        with patch("src.srim.cab.recovery.resolve_default_bond", return_value=hydrogen) as resolve:
             self.assertEqual(len(populate_default_cab(self.paths, self.config, self.worker, "bond")), 18)
         self.assertEqual([call.args[4] for call in resolve.call_args_list], list(SR_BONDS))
         with patch("builtins.print", side_effect=RuntimeError("callback failure")):

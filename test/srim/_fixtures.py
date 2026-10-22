@@ -8,8 +8,8 @@ from typing import BinaryIO
 from src.backend.config import Config
 from src.backend.paths import ProjectPaths, create_base_directories, get_project_paths
 from src.backend.records import CreateRequest, CreatedDirectory, create_directories
-from src.srim.cab import _SYMBOLS
-from src.srim.metadata import JSONObject
+from src.srim.cab.strengths import _SYMBOLS
+from src.srim.common.types import JSONObject
 
 
 def make_test_installation(root: Path) -> Config:
@@ -47,7 +47,7 @@ def make_test_project(root: Path) -> tuple[ProjectPaths, Config, CreatedDirector
     Write only root, register no cleanup automatically and propagate setup errors.
     The calling test owns its temporary root and cleanup lifetime.
     """
-    from src.srim.defaults import switch_sr_defaults
+    from src.srim.resources.defaults import switch_sr_defaults
     paths = get_project_paths(root)
     create_base_directories(paths)
     config = make_test_installation(root / "installation")

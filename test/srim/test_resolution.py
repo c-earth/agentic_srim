@@ -14,12 +14,12 @@ from unittest.mock import patch
 from _fixtures import fake_bragg_run, make_test_project, make_test_request, make_test_selections
 from src.backend.records import CreateRequest, create_directories
 from src.backend.resources import ResourceReference, verify_resource
-from src.srim.cab import _encode_payload
-from src.srim.defaults import read_sr_defaults, switch_sr_defaults
-from src.srim.execution import run_sr_simulation, verify_sr_runtime
-from src.srim.metadata import read_simulation
-from src.srim.resolution import resolve_sr_inputs, verify_sr_resolution
-from src.srim.runtime import prepare_sr_simulation
+from src.srim.cab.strengths import _encode_payload
+from src.srim.resources.defaults import read_sr_defaults, switch_sr_defaults
+from src.srim.sr.execution import run_sr_simulation, verify_sr_runtime
+from src.srim.common.records import read_simulation
+from src.srim.sr.resolution import resolve_sr_inputs, verify_sr_resolution
+from src.srim.sr.runtime import prepare_sr_simulation
 
 
 class TestSRResolution(unittest.TestCase):
@@ -42,7 +42,7 @@ class TestSRResolution(unittest.TestCase):
                 elif core_mode == "removed":
                     selections["core"]["overrides"] = [{"operation": "remove", "key": "H"}]
                 events: list[dict] = []
-                with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run):
+                with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run):
                     bundle = resolve_sr_inputs(self.paths, self.config, self.worker, request, selections, progress=events.append)
                 self.assertEqual([event["kind"] for event in events], ["bond", "bragg", "core"])
                 self.assertEqual([event["completed"] for event in events], [1, 2, 3])
@@ -54,7 +54,7 @@ class TestSRResolution(unittest.TestCase):
         from test_cab_recovery import TestCABRecovery
         for expected in ("calculated", "cached"):
             events = []
-            with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery._capture_correction", side_effect=partial(TestCABRecovery._fake_capture, self)):
+            with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab.recovery._capture_correction", side_effect=partial(TestCABRecovery._fake_capture, self)):
                 bundle = resolve_sr_inputs(self.paths, self.config, self.worker, request, self.selections, progress=events.append)
             self.assertEqual([event["state"] for event in events], [expected, "cached", "cached"])
             self.assertEqual(events[-1]["completed"], 3)
@@ -68,7 +68,7 @@ class TestSRResolution(unittest.TestCase):
                 request["parameters"]["target"]["bonds"] = bonds
                 selections["bond"] = {"source": {"kind": "inline", "data": json.loads(_encode_payload("bond", {}))}, "overrides": [], "create_version": False}
                 events: list[dict] = []
-                with patch("src.srim.bragg.resolve_bragg", side_effect=AssertionError("unneeded dependency")):
+                with patch("src.srim.cab.bragg.resolve_bragg", side_effect=AssertionError("unneeded dependency")):
                     bundle = resolve_sr_inputs(self.paths, self.config, self.worker, request, selections, progress=events.append)
                 total = len(bonds) + 4
                 self.assertEqual([event["completed"] for event in events], list(range(1, total + 1)))
@@ -92,7 +92,7 @@ class TestSRResolution(unittest.TestCase):
         request["parameters"]["target"]["bonds"] = {"H-H": "1"}
         selections["bond"] = {"source": {"kind": "inline", "data": json.loads(_encode_payload("bond", {"H-H": "10"}))}, "overrides": [], "create_version": False}
         callback = unittest.mock.Mock(side_effect=[None, RuntimeError("callback failure")])
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run):
             with self.assertRaisesRegex(RuntimeError, "callback failure"):
                 resolve_sr_inputs(self.paths, self.config, self.worker, request, selections, progress=callback)
         self.assertTrue(list(self.paths.simulation_memory.glob("*/output/parsed/result.json")))
@@ -118,10 +118,10 @@ class TestSRResolution(unittest.TestCase):
 
     def test_shared_correction_preserves_sr_result(self: TestSRResolution) -> None:
         """Verify self's existing SR path calls shared correction without changing replay; return None."""
-        from src.srim.resolution import resolve_material_correction
+        from src.srim.resources.resolution import resolve_material_correction
         request = deepcopy(self.request)
         request["parameters"]["target"]["bonds"] = {}
-        with patch("src.srim.resolution.resolve_material_correction", wraps=resolve_material_correction) as shared:
+        with patch("src.srim.sr.resolution.resolve_material_correction", wraps=resolve_material_correction) as shared:
             bundle = resolve_sr_inputs(self.paths, self.config, self.worker, request, self.selections)
         self.assertEqual(shared.call_count, 1)
         self.assertEqual(bundle.resolved["cab"]["applied_factor"], "1.0")
@@ -147,7 +147,7 @@ class TestSRResolution(unittest.TestCase):
         created = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
         runtime = prepare_sr_simulation(self.paths, self.config, created, self.worker, request, selections)
         self.assertEqual(verify_sr_runtime(self.paths, created.path.name, runtime), again.effective_request)
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run):
             metadata = run_sr_simulation(self.paths, self.config, created.path.name, runtime)
         self.assertEqual(metadata["status"], "succeeded")
         self.assertEqual(metadata["schema_version"], 2)
@@ -165,7 +165,7 @@ class TestSRResolution(unittest.TestCase):
         selections = deepcopy(self.selections)
         selections["bond"] = {"source": {"kind": "inline", "data": json.loads(_encode_payload("bond", {"H-H": "10"}))}, "overrides": [], "create_version": False}
         selections["core"]["overrides"] = [{"operation": "remove", "key": "H"}]
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run):
             removed = resolve_sr_inputs(self.paths, self.config, self.worker, request, selections)
         self.assertEqual(Decimal(removed.resolved["cab"]["applied_factor"]), Decimal("1.4"))
         self.assertEqual(removed.resolved["cab"]["core_entries"][0]["origin"], "bragg-fallback")
@@ -183,7 +183,7 @@ class TestSRResolution(unittest.TestCase):
         """Check self's zero selected strengths and zero counts short-circuit without calculations; return None."""
         selections = deepcopy(self.selections)
         selections["bond"] = {"source": {"kind": "inline", "data": json.loads(_encode_payload("bond", {}))}, "overrides": [], "create_version": False}
-        with patch("src.srim.bragg.resolve_bragg", side_effect=AssertionError("unnecessary Bragg")), patch("src.srim.cab_recovery.resolve_default_core", side_effect=AssertionError("unnecessary core")), patch("src.srim.cab_recovery.resolve_default_bond", side_effect=AssertionError("unnecessary bond")):
+        with patch("src.srim.cab.bragg.resolve_bragg", side_effect=AssertionError("unnecessary Bragg")), patch("src.srim.cab.recovery.resolve_default_core", side_effect=AssertionError("unnecessary core")), patch("src.srim.cab.recovery.resolve_default_bond", side_effect=AssertionError("unnecessary bond")):
             bundle = resolve_sr_inputs(self.paths, self.config, self.worker, self.request, selections)
             request = deepcopy(self.request)
             request["parameters"]["target"]["bonds"] = {"H-O": "0"}
@@ -204,7 +204,7 @@ class TestSRResolution(unittest.TestCase):
         request = deepcopy(self.request)
         request["parameters"]["target"]["elements"] = [{"atomic_number": 6, "stoichiometry": "1"}]
         request["parameters"]["target"]["bonds"] = {"H-C": "1"}
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery.resolve_default_core", side_effect=AssertionError("must not extend inactive defaults")):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab.recovery.resolve_default_core", side_effect=AssertionError("must not extend inactive defaults")):
             with self.assertRaisesRegex(ValueError, "inactive default core"):
                 resolve_sr_inputs(self.paths, self.config, self.worker, request, selections)
         self.assertEqual(len(list(verify_resource(self.paths, ResourceReference(**old)).parent.glob("entries/*/*.json"))), 1)
@@ -217,7 +217,7 @@ class TestSRResolution(unittest.TestCase):
         (self.config.srim_root / "SR.exe").write_bytes(b"new baseline")
         newer = switch_sr_defaults(self.paths, self.config)
         self.assertNotEqual(bundle.resolved["defaults"]["generation"]["baseline_id"], newer["baseline_id"])
-        with patch("src.srim.resolution.read_sr_defaults", side_effect=AssertionError("must not resolve aliases again")):
+        with patch("src.srim.sr.resolution.read_sr_defaults", side_effect=AssertionError("must not resolve aliases again")):
             self.assertEqual(verify_sr_resolution(self.paths, request, self.selections, bundle.resolved, dict(bundle.snapshots)), bundle.effective_request)
 
     def test_resolution_reconstruction(self: TestSRResolution) -> None:

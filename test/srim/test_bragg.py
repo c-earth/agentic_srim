@@ -11,11 +11,12 @@ import unittest
 from unittest.mock import patch
 
 from _fixtures import fake_bragg_run, make_test_project, make_test_request, make_test_selections
-from src.srim.bragg import _make_bragg_inputs, populate_bragg, resolve_bragg
-from src.srim.cab_cache import load_cab_entry
-from src.srim.defaults import read_sr_defaults
-from src.srim.material import parse_atomdata
-from src.srim.resolution import _make_dependency_inputs, resolve_sr_inputs
+from src.srim.cab.bragg import _make_bragg_inputs, populate_bragg, resolve_bragg
+from src.srim.cab.cache import load_cab_entry
+from src.srim.resources.defaults import read_sr_defaults
+from src.srim.resources.materials import parse_atomdata
+from src.srim.resources.resolution import _make_dependency_inputs
+from src.srim.sr.resolution import resolve_sr_inputs
 
 
 class TestBragg(unittest.TestCase):
@@ -40,7 +41,7 @@ class TestBragg(unittest.TestCase):
         self.assertEqual(parameters["target"]["elements"][0]["mass_amu"], "12.011")
         self.assertEqual(parameters["target"]["phase"], "gas")
         self.assertEqual(parameters["stopping_units"], 7)
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run) as run:
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run) as run:
             result = resolve_bragg(self.paths, self.config, self.worker, self.inputs, 6)
         self.assertEqual(run.call_count, 1)
         entry = load_cab_entry(self.paths, result.reference)
@@ -58,7 +59,7 @@ class TestBragg(unittest.TestCase):
         for z, hidden in ((6, True), (8, False)):
             with self.subTest(hidden=hidden):
                 config = replace(self.config, hide_sr_window=hidden, hide_trim_window=not hidden)
-                with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run) as launched:
+                with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run) as launched:
                     result = resolve_bragg(self.paths, config, self.worker, self.inputs, z)
                 self.assertTrue(result.calculated)
                 startupinfo = launched.call_args.kwargs["startupinfo"]
@@ -73,7 +74,7 @@ class TestBragg(unittest.TestCase):
     def test_automatic_versions(self: TestBragg) -> None:
         """Check self's same/changed effective dependencies, local edits and unchanged aliases; return None."""
         before = read_sr_defaults(self.paths)
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run) as run:
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run) as run:
             first = resolve_bragg(self.paths, self.config, self.worker, self.inputs, 6)
             again = resolve_bragg(self.paths, self.config, self.worker, self.inputs, 6)
             second_element = resolve_bragg(self.paths, self.config, self.worker, self.inputs, 8)
@@ -93,30 +94,30 @@ class TestBragg(unittest.TestCase):
 
     def test_bulk_reuse_progress(self: TestBragg) -> None:
         """Check self's all-92 dispatch, ordered progress and retained callback completion; return None."""
-        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run):
             first = resolve_bragg(self.paths, self.config, self.worker, self.inputs, 1)
         results = [replace(first, reference=replace(first.reference, entry_id=f"z{z:03d}"), calculated=z != 1) for z in range(1, 93)]
         events = []
-        with patch("src.srim.bragg.resolve_bragg", side_effect=results) as resolve:
+        with patch("src.srim.cab.bragg.resolve_bragg", side_effect=results) as resolve:
             references = populate_bragg(self.paths, self.config, self.worker, self.inputs, progress=events.append)
         self.assertEqual(resolve.call_count, 92)
         self.assertEqual([call.args[4] for call in resolve.call_args_list], list(range(1, 93)))
         self.assertEqual(events[0]["state"], "cached")
         self.assertEqual(events[-1]["completed"], 92)
         self.assertEqual(len(references), 92)
-        with patch("src.srim.bragg.resolve_bragg", return_value=first), patch("builtins.print", side_effect=RuntimeError("callback failed")):
+        with patch("src.srim.cab.bragg.resolve_bragg", return_value=first), patch("builtins.print", side_effect=RuntimeError("callback failed")):
             with self.assertRaises(RuntimeError) as caught:
                 populate_bragg(self.paths, self.config, self.worker, self.inputs, atomic_numbers=[1], progress=print)
         self.assertTrue(any("completed entries retained" in note for note in caught.exception.__notes__))
 
     def test_dependency_failure(self: TestBragg) -> None:
         """Check self's timeout/interruption evidence, no publication and invalid preflight; return None."""
-        with patch("src.srim.execution.subprocess.run", side_effect=subprocess.TimeoutExpired("SRModule", 0.01)):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=subprocess.TimeoutExpired("SRModule", 0.01)):
             with self.assertRaises(RuntimeError):
                 resolve_bragg(self.paths, self.config, self.worker, self.inputs, 6, timeout_seconds=0.01)
         directory = self.paths.resources / "cab" / "bragg" / "v1"
         self.assertEqual(list(directory.glob("entries/*/*.json")), [])
-        with patch("src.srim.execution.subprocess.run", side_effect=KeyboardInterrupt):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=KeyboardInterrupt):
             with self.assertRaises(KeyboardInterrupt):
                 resolve_bragg(self.paths, self.config, self.worker, self.inputs, 6)
         with self.assertRaises(ValueError):

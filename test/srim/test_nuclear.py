@@ -11,9 +11,9 @@ from src.backend.config import Config
 from src.backend.paths import create_base_directories, get_project_paths
 from src.backend.records import _lock_parent
 from src.backend.resources import ResourceReference, verify_resource
-from src.srim.defaults import read_sr_defaults, switch_sr_defaults
+from src.srim.resources.defaults import read_sr_defaults, switch_sr_defaults
 from _fixtures import make_test_project
-from src.srim.nuclear import create_nuclear_variant
+from src.srim.resources.nuclear import create_nuclear_variant
 
 
 class TestNuclear(unittest.TestCase):
@@ -130,7 +130,7 @@ class TestNuclear(unittest.TestCase):
             with self.assertRaises(ValueError):
                 create_nuclear_variant(paths, config, base_version="v1", replacements={(1, 1): b"x"})
             payload.write_bytes(b"original")
-            with patch("src.srim.nuclear.verify_resource", return_value=payload), patch.object(Path, "read_bytes", return_value=b"changed after verification"):
+            with patch("src.srim.resources.nuclear.verify_resource", return_value=payload), patch.object(Path, "read_bytes", return_value=b"changed after verification"):
                 with self.assertRaises(ValueError):
                     create_nuclear_variant(paths, config, base_version="v1", replacements={(1, 1): b"x"})
             for method in ("is_symlink", "is_junction"):

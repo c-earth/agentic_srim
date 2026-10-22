@@ -14,12 +14,12 @@ from unittest.mock import patch
 from _fixtures import make_test_project
 from test_trim_inputs import TRIM_INSTALLATION_FILES, TRIM_REQUEST, TRIM_SELECTIONS
 from src.backend.records import CreateRequest, create_directories
-from src.srim.trim_defaults import switch_trim_defaults
-from src.srim.trim_resolution import resolve_trim_inputs
-from src.srim.trim_runtime import load_trim_input_bundle, prepare_trim_continuation, prepare_trim_simulation, verify_trim_runtime
-from src.srim.trim_execution import run_trim_simulation
-from src.srim.trim_storage import write_trim_input_bundle
-from src.srim.trim_dialogs import ENGINES
+from src.srim.trim.defaults import switch_trim_defaults
+from src.srim.trim.resolution import resolve_trim_inputs
+from src.srim.trim.runtime import load_trim_input_bundle, prepare_trim_continuation, prepare_trim_simulation, verify_trim_runtime
+from src.srim.trim.execution import run_trim_simulation
+from src.srim.trim.storage import write_trim_input_bundle
+from src.srim.trim.dialogs import ENGINES
 
 
 CACHE = Path(".cache/trim-execution/tests").resolve()
@@ -45,11 +45,11 @@ class TestTRIMRuntime(unittest.TestCase):
             shutil.copytree(Path(__file__).parent / "fixtures/trim/2013", runtime, dirs_exist_ok=True)
             for name in ("E2RECOIL", "IONIZ", "NOVAC", "PHONON", "SPUTTER", "STOPPING", "VACANCY", "XRANGE", "YZRADIAL#", "YZRANGE#", "Ioniz3D", "NoVac3D", "Phonon3D", "Range3D", "Recoil3D", "Vac3D"):
                 (runtime / "SRIM Restore" / (name + ".sav")).write_bytes(b"opaque native array fixture")
-            with patch("src.srim.trim_execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim_execution.execute_trim_process", return_value={"pid": 42, "exit_code": 0, "elapsed_seconds": 0.1, "termination": "exit", "popups": [], "monitor_errors": []}):
+            with patch("src.srim.trim.execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim.execution.execute_trim_process", return_value={"pid": 42, "exit_code": 0, "elapsed_seconds": 0.1, "termination": "exit", "popups": [], "monitor_errors": []}):
                 self.assertEqual(run_trim_simulation(paths, config, created.path.name, runtime)["status"], "succeeded")
             original = {p.relative_to(created.path).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in created.path.rglob("*") if p.is_file()}
             child = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
-            with patch.dict(ENGINES, {"2013": hashlib.sha256(TRIM_INSTALLATION_FILES["TRIM.exe"]).hexdigest()}), patch("src.srim.trim_native.subprocess.Popen") as launch:
+            with patch.dict(ENGINES, {"2013": hashlib.sha256(TRIM_INSTALLATION_FILES["TRIM.exe"]).hexdigest()}), patch("src.srim.trim.native.subprocess.Popen") as launch:
                 resumed = prepare_trim_continuation(paths, config, child, worker, created.path.name, total_ions=10, autosave_ions=1, cascade_output="none")
                 verify_trim_runtime(paths, child.path.name, resumed)
                 launch.assert_not_called()
@@ -208,7 +208,7 @@ class TestTRIMRuntime(unittest.TestCase):
             data_path.write_bytes(data_path.read_bytes().replace(b"  2 1 1 1 1 1 0 ", b"  4 1 1 1 1 1 0 "))
             native_path = runtime / "SRIM Restore/TRIMIN.sav"
             native_path.write_bytes(native_path.read_bytes().replace(b"2 12345 0", b"4 12345 0"))
-            with patch("src.srim.trim_execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim_execution.execute_trim_process", return_value={"pid": 42, "exit_code": 1, "elapsed_seconds": 0.1, "termination": "timeout", "popups": [], "monitor_errors": []}):
+            with patch("src.srim.trim.execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim.execution.execute_trim_process", return_value={"pid": 42, "exit_code": 1, "elapsed_seconds": 0.1, "termination": "timeout", "popups": [], "monitor_errors": []}):
                 self.assertEqual(run_trim_simulation(paths, config, parent.path.name, runtime)["status"], "failed")
             second = deepcopy(event)
             second["id"] = "T0002"
@@ -234,7 +234,7 @@ class TestTRIMRuntime(unittest.TestCase):
             inputs = resolve_trim_inputs(paths, config, worker, TRIM_REQUEST, TRIM_SELECTIONS)
             parent = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
             runtime = prepare_trim_simulation(paths, config, parent, worker, inputs)
-            with patch("src.srim.trim_execution.execute_trim_process", return_value={"pid": 42, "exit_code": 1, "elapsed_seconds": 0.1, "termination": "timeout", "popups": [], "monitor_errors": []}):
+            with patch("src.srim.trim.execution.execute_trim_process", return_value={"pid": 42, "exit_code": 1, "elapsed_seconds": 0.1, "termination": "timeout", "popups": [], "monitor_errors": []}):
                 run_trim_simulation(paths, config, parent.path.name, runtime)
             child = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
             with self.assertRaisesRegex(ValueError, "incomplete saved-state"):

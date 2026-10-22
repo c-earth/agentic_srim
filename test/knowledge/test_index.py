@@ -10,7 +10,7 @@ import uuid
 import test_source as fixtures
 from src.knowledge.index import collect_index_updates, initialize_index, notify_simulation_finished, rebuild_index, update_index
 from src.knowledge.search import search_inputs
-from src.srim.metadata import read_simulation
+from src.srim.common.records import read_simulation
 
 
 class TestIndex(fixtures.NativeFixture):

@@ -16,7 +16,7 @@ from src.backend.config import Config
 from src.backend.paths import create_base_directories, get_project_paths
 from src.backend.records import CreateRequest, DeleteRequest, _lock_parent, create_directories, delete_directories
 from src.backend.resources import register_resource, verify_resource
-from src.srim.metadata import _validate_document, finish_simulation, initialize_simulation, read_simulation, start_simulation
+from src.srim.common.records import _validate_document, finish_simulation, initialize_simulation, read_simulation, start_simulation
 
 
 class TestMetadata(unittest.TestCase):
@@ -39,7 +39,7 @@ class TestMetadata(unittest.TestCase):
     def test_index_notification_failure_is_independent(self: TestMetadata) -> None:
         """Do not reclassify published terminal state on notification errors; return None."""
         initialize_simulation(self.paths, self.created, self.engine, self.request, self.resolved)
-        with patch("src.knowledge.index.notify_simulation_finished", side_effect=OSError("index disk")), self.assertLogs("src.srim.metadata", level="ERROR"):
+        with patch("src.knowledge.index.notify_simulation_finished", side_effect=OSError("index disk")), self.assertLogs("src.srim.common.records", level="ERROR"):
             result = finish_simulation(self.paths, self.config, self.created.path.name, {"message": "native failure", "exit_code": 7})
         self.assertEqual(result["failure"], {"message": "native failure", "exit_code": 7})
         self.assertEqual(read_simulation(self.paths, self.created.path.name), result)
@@ -49,9 +49,9 @@ class TestMetadata(unittest.TestCase):
         from _fixtures import make_test_project
         from test_trim_inputs import TRIM_INSTALLATION_FILES, TRIM_REQUEST, TRIM_SELECTIONS
         from test_trim_runtime import CACHE
-        from src.srim.trim_defaults import switch_trim_defaults
-        from src.srim.trim_resolution import resolve_trim_inputs
-        from src.srim.trim_runtime import prepare_trim_simulation
+        from src.srim.trim.defaults import switch_trim_defaults
+        from src.srim.trim.resolution import resolve_trim_inputs
+        from src.srim.trim.runtime import prepare_trim_simulation
         with TemporaryDirectory(dir=CACHE) as td:
             paths, config, worker = make_test_project(Path(td))
             for name, payload in TRIM_INSTALLATION_FILES.items():
@@ -256,7 +256,7 @@ class TestMetadata(unittest.TestCase):
 
     def test_atomic_failure_and_partial_initialization(self: TestMetadata) -> None:
         """Check self's failed initialization reports retained files and failed start preserves created metadata; return None and use fixture cleanup."""
-        from src.srim.metadata import _write_json
+        from src.srim.common.files import _write_json
 
         def write_document(path: Path, document: dict[str, object]) -> None:
             """Write document at path except resolved.json, which raises PermissionError; return None otherwise."""
@@ -264,7 +264,7 @@ class TestMetadata(unittest.TestCase):
                 raise PermissionError("blocked")
             _write_json(path, document)
 
-        with patch("src.srim.metadata._write_json", side_effect=write_document):
+        with patch("src.srim.common.records._write_json", side_effect=write_document):
             with self.assertRaises(PermissionError) as caught:
                 initialize_simulation(self.paths, self.created, self.engine, self.request, self.resolved)
         self.assertTrue((self.created.path / "input" / "request.json").exists())
@@ -299,7 +299,7 @@ class TestMetadata(unittest.TestCase):
         engine_inputs["SR.IN"] = b"caller mutation"
         self.assertEqual((self.created.path / "input" / "engine" / "SR.IN").read_bytes(), b"prepared\r\n")
         fresh = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
-        with patch("src.srim.metadata._write_input_file", side_effect=PermissionError("engine write blocked")):
+        with patch("src.srim.common.records._write_input_file", side_effect=PermissionError("engine write blocked")):
             with self.assertRaises(PermissionError) as caught:
                 initialize_simulation(self.paths, fresh, self.engine, self.request, self.resolved, engine_inputs={"SR.IN": b"input"})
         self.assertTrue((fresh.path / "input" / "request.json").exists())

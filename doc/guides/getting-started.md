@@ -39,9 +39,9 @@ from pathlib import Path
 from src.backend.config import load_config
 from src.backend.paths import create_base_directories, get_project_paths
 from src.backend.records import CreateRequest, create_directories
-from src.srim.defaults import switch_sr_defaults
-from src.srim.execution import run_sr_simulation
-from src.srim.runtime import prepare_sr_simulation
+from src.srim.resources.defaults import switch_sr_defaults
+from src.srim.sr.execution import run_sr_simulation
+from src.srim.sr.runtime import prepare_sr_simulation
 
 config = load_config(Path("settings.toml"))
 paths = get_project_paths(Path.cwd())
@@ -142,7 +142,7 @@ The batch API accepts existing prepared simulations. Allocation, resource select
 ```python
 """Execute previously prepared simulations and inspect task and cleanup outcomes."""
 
-from src.srim.queue import PreparedSRTask, run_sr_batch
+from src.srim.sr.queue import PreparedSRTask, run_sr_batch
 
 tasks = [PreparedSRTask(simulation_id, runtime) for simulation_id, runtime in prepared_runs]
 batch = run_sr_batch(paths, config, tasks, max_workers=4)

@@ -20,8 +20,10 @@ from src.backend.paths import ProjectPaths
 from src.backend.records import _lock_parent, _validate_paths
 from src.knowledge.schema import validate_search_document
 from src.knowledge.source import project_simulation_inputs
-from src.srim.metadata import JSONObject, _inventory, _read_json, _simulation_path, _write_json
-from src.srim.runtime import _read_regular_bytes
+from src.srim.common.types import JSONObject
+from src.srim.common.files import _inventory, _read_json, _write_json
+from src.srim.common.records import _simulation_path
+from src.srim.common.files import _read_regular_bytes
 
 
 PROJECTOR_VERSION = "native-input-search-v1"

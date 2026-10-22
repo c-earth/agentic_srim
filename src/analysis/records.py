@@ -19,8 +19,8 @@ from src.backend.config import Config
 from src.backend.paths import ProjectPaths
 from src.backend.project_records import initialize_record, list_records, read_record, revise_record
 from src.knowledge.source import read_source_record, read_source_file
-from src.srim.metadata import JSONObject
-from src.srim.runtime import _read_regular_bytes
+from src.srim.common.types import JSONObject
+from src.srim.common.files import _read_regular_bytes
 
 
 def create_analysis(paths: ProjectPaths, config: Config, spec: JSONObject, request_id: str, *, allocated_id: str | None = None) -> JSONObject:

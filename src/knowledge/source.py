@@ -9,12 +9,14 @@ import json
 
 from src.backend.paths import ProjectPaths
 from src.knowledge.schema import convert_quantity, validate_search_document
-from src.srim.inputs import render_sr_input, validate_sr_engine_request
-from src.srim.metadata import JSONObject, _inventory, _read_json, _simulation_path, read_simulation
-from src.srim.runtime import _read_regular_bytes
-from src.srim.trim_inputs import MODES, render_trim_events, render_trim_input, validate_trim_engine_request
-from src.srim.trim_outputs import compare_trim_saved_values, parse_trim_checkpoint
-from src.srim.trim_resolution import ResolvedTRIMInputs
+from src.srim.sr.inputs import render_sr_input, validate_sr_engine_request
+from src.srim.common.types import JSONObject
+from src.srim.common.files import _inventory, _read_json
+from src.srim.common.records import _simulation_path, read_simulation
+from src.srim.common.files import _read_regular_bytes
+from src.srim.trim.inputs import MODES, render_trim_events, render_trim_input, validate_trim_engine_request
+from src.srim.trim.outputs import compare_trim_saved_values, parse_trim_checkpoint
+from src.srim.trim.models import ResolvedTRIMInputs
 
 
 def project_simulation_inputs(paths: ProjectPaths, simulation_id: str) -> JSONObject:

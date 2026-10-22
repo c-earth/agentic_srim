@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from src.srim.trim_outputs import PROFILES, SIGNED_ENERGY_NOTE, compare_trim_saved_values, parse_trim_checkpoint, parse_trim_outputs, parse_trim_profile, parse_trim_summary, saved_trim_mode, saved_trim_mode_name
+from src.srim.trim.outputs import PROFILES, SIGNED_ENERGY_NOTE, compare_trim_saved_values, parse_trim_checkpoint, parse_trim_outputs, parse_trim_profile, parse_trim_summary, saved_trim_mode, saved_trim_mode_name
 from test_trim_inputs import EXPLICIT_REQUEST, TRIM_INSTALLATION_FILES, TRIM_REQUEST, TRIM_SELECTIONS
 from copy import deepcopy
 
@@ -139,8 +139,8 @@ class TestTRIMOutputs(unittest.TestCase):
         self.assertEqual(parsed["layers"][0]["phase"], "solid")
         from _fixtures import make_test_project
         from test_trim_runtime import CACHE
-        from src.srim.trim_defaults import switch_trim_defaults
-        from src.srim.trim_resolution import resolve_trim_inputs
+        from src.srim.trim.defaults import switch_trim_defaults
+        from src.srim.trim.resolution import resolve_trim_inputs
         with TemporaryDirectory(dir=CACHE) as td:
             paths, config, worker = make_test_project(Path(td))
             for name, data in TRIM_INSTALLATION_FILES.items():

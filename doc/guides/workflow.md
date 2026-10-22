@@ -80,7 +80,11 @@ SR batches clean verified working runtimes after the whole batch finishes and re
 ```text
 settings.toml                 Installation, timezone, window preferences
 src/backend/                  Configuration, paths, allocation, resource storage
-src/srim/                     SR/CAB/TRIM inputs, resolution, execution, parsing
+src/srim/common/              Shared types, verified files and simulation records
+src/srim/resources/           Materials, coefficients, defaults and shared resolution
+src/srim/cab/                 Strengths, cache, Bragg dependencies and capture/recovery
+src/srim/sr/                  SR inputs, resolution, execution, parsing and storage
+src/srim/trim/                TRIM inputs, execution, outputs and checkpoint recovery
 src/knowledge/                Native input catalog, filters, verified file access
 doc/                          Guides, API/schema references, recorded investigations
 test/{backend,srim,knowledge,case,analysis,plan,mcp}/ Automated tests

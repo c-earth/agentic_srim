@@ -17,7 +17,7 @@ from tempfile import NamedTemporaryFile, mkdtemp
 import time
 
 from src.mcp.common.contracts import ServerContext, canonical_bytes
-from src.srim.metadata import JSONObject
+from src.srim.common.types import JSONObject
 
 
 _HELD: ContextVar[frozenset[str]] = ContextVar("mcp_held_locks", default=frozenset())

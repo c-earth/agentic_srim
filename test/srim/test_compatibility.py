@@ -9,9 +9,9 @@ import unittest
 
 from _fixtures import make_test_project
 from src.backend.resources import ResourceReference, verify_resource
-from src.srim.compatibility import normalize_atomdata, normalize_compounds, read_module_version
-from src.srim.defaults import switch_sr_defaults, verify_sr_baseline
-from src.srim.material import parse_atomdata, parse_compounds
+from src.srim.resources.compatibility import normalize_atomdata, normalize_compounds, read_module_version
+from src.srim.resources.defaults import switch_sr_defaults, verify_sr_baseline
+from src.srim.resources.materials import parse_atomdata, parse_compounds
 
 
 class TestCompatibility(unittest.TestCase):

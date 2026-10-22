@@ -11,7 +11,7 @@ from src.backend.records import _lock_parent, _validate_paths
 from src.knowledge.index import PROJECTOR_VERSION
 from src.knowledge.schema import matches_filters, validate_search_document
 from src.knowledge.source import read_source_record
-from src.srim.metadata import JSONObject
+from src.srim.common.types import JSONObject
 
 
 def search_inputs(paths: ProjectPaths, filters: JSONObject | None = None, *, offset: int = 0, limit: int = 100, expected_generation: str | None = None) -> JSONObject:

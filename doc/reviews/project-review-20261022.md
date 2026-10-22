@@ -6,13 +6,16 @@ Reviewed base commit `14e3162`, starting from a clean working tree. The review c
 
 Detailed local evidence is under `.cache/project-review-20261022/`. Those files are ignored local artifacts, not a durable backup. Paths below are repository-relative. This report preserves conclusions if the auxiliary evidence is later archived or removed.
 
+Source links follow the current package layout; cited line numbers refer to the
+reviewed base commit above. The package refactor did not fix these findings.
+
 ## Confirmed code findings
 
 Priorities: P2 is an actionable correctness/reliability defect; P3 is a lower-impact reporting defect. The probes demonstrate what the APIs accept, without claiming that an ordinary unmodified native run naturally produces those inputs. Corrections require a separately approved complete implementation proposal under [AGENTS.md](../../AGENTS.md).
 
 ### R1 · P2 · Impossible TRIM summary counts can finalize as succeeded
 
-Source: [trim_outputs.py](../../src/srim/trim_outputs.py), lines 104–108 and 441.
+Source: [trim/outputs.py](../../src/srim/trim/outputs.py), lines 104–108 and 441.
 
 Summary outcome counts are individually parsed but are not bounded by calculated particles or reconciled with checkpoint outcome counts. A frozen five-ion fixture was changed only from transmitted `0` to `999`. The real `run_trim_simulation` path still finalized `succeeded`, with `failure=null`, no parser issues and no saved-value differences; the unchanged checkpoint recorded transmitted `0`.
 
@@ -24,7 +27,7 @@ Evidence: `.cache/project-review-20261022/trim/full-runner-probes.json`.
 
 ### R2 · P2 · Wrong TRIM target chemistry passes consistency checks
 
-Source: [trim_outputs.py](../../src/srim/trim_outputs.py), lines 441, 454–459 and 468–472.
+Source: [trim/outputs.py](../../src/srim/trim/outputs.py), lines 441, 454–459 and 468–472.
 
 For an explicit silicon request with an unchanged silicon checkpoint, changing the summary composition from `Si=100%/100%` to `Au=1%/1%` still finalized `succeeded`. Separately, changing target-energy species or a RANGE target column from Si to Au returned `complete=true`, `issues=[]`. The parser preserves printed identities but does not fully reconcile them with effective inputs and checkpoint identities.
 
@@ -36,7 +39,7 @@ Evidence: `trim/full-runner-probes.json` and `trim/parser-probes.json` under the
 
 ### R3 · P2 · History availability can be reported without numerical history data
 
-Source: [trim_dialogs.py](../../src/srim/trim_dialogs.py), lines 216–220.
+Source: [trim/dialogs.py](../../src/srim/trim/dialogs.py), lines 216–220.
 
 `assess_trim_histories` relies on particle markers and a small set of phrases. A 1,278-byte synthetic file containing `For Ion 1..100` and four marker phrases, without collision/recoil numerical tables, was accepted as detailed history `available`. Removing numerical rows while retaining markers in a committed history fixture gives the same result.
 
@@ -48,7 +51,7 @@ Evidence: `.cache/project-review-20261022/trim/history-probes.json`.
 
 ### R4 · P2 · Checkpoint recovery accepts negative non-energy quantities
 
-Source: [trim_recovery.py](../../src/srim/trim_recovery.py), lines 245–256.
+Source: [trim/recovery.py](../../src/srim/trim/recovery.py), lines 245–256.
 
 A valid-format VACANCY Variant vector containing one `Single(-1)` and 199 Empty records decoded successfully. `parse_trim_checkpoint_results` returned `complete=true`, no issues and `-0.01` vacancies per incident ion. Shape and finiteness checks pass, but profile-domain checks are missing. The native text parser already rejects negative non-energy profiles.
 

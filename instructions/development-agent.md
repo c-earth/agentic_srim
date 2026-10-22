@@ -31,6 +31,37 @@ not create user approval.
 - Do not place comments inside implementation code, including inline comments or standalone comments between statements. Put explanations in the required module, class, and function docstrings instead.
 
 
+## SRIM package placement
+
+Keep `src/srim/` organized by responsibility. Import from the module that owns
+the definition; package `__init__.py` files contain descriptions only.
+
+| Package | Responsibilities |
+| --- | --- |
+| `common/` | Shared JSON and cleanup types, verified file operations, preparation allocation checks, simulation schemas and lifecycle records. |
+| `resources/` | Materials, electronic/nuclear coefficients, installation compatibility, coordinated defaults and shared selection/material-correction resolution. |
+| `cab/` | Core/bond strengths, constants, calculated-entry cache, Bragg dependencies and native capture/recovery. |
+| `sr/` | SR request validation, input models, resolution, preparation, execution, queues, output parsing and storage. |
+| `trim/` | TRIM equivalents, native controls/dialogs, checkpoint recovery/results and packaged TRIM data. |
+
+Put engine-specific input dataclasses in that engine's `models.py`. Keep JSON
+aliases and shared cleanup reports in `common/types.py`; low-level file helpers
+belong in `common/files.py`. These two common modules must not import engine
+execution or resource resolution. Shared simulation schemas and lifecycle
+validation belong in `common/records.py`, not an engine's runtime module.
+SR and TRIM both use `resources/resolution.py` for resource selection and material
+correction; do not make TRIM import the SR resolver for shared behavior.
+CAB recovery can use SR dependency execution while keeping imports explicit and
+preserving existing lease and publication behavior.
+
+Extend the existing module for the responsibility before creating another file.
+Keep `trim/data/trim-damage-defaults.json` next to its module-relative loader.
+When moving definitions, update all callers, test patch targets, module/path
+metadata and linked documentation together. Keep native fixture bytes, stored
+schemas and scientific behavior unchanged unless the approved scope changes them.
+The user-facing package map belongs in [the API reference](../doc/reference/api.md#srim-source-layout),
+not a new subagent definition or a second source README.
+
 ## Verification
 
 Run checks appropriate to the approved change and complete required checks.

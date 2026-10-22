@@ -18,8 +18,8 @@ from pathlib import Path
 from src.backend.config import load_config
 from src.backend.paths import get_project_paths
 from src.backend.records import CreateRequest, create_directories
-from src.srim.trim_runtime import load_trim_input_bundle, prepare_trim_simulation
-from src.srim.trim_execution import run_trim_simulation
+from src.srim.trim.runtime import load_trim_input_bundle, prepare_trim_simulation
+from src.srim.trim.execution import run_trim_simulation
 
 paths = get_project_paths(Path.cwd())
 config = load_config(paths.root / "settings.toml")
@@ -109,7 +109,7 @@ Resume accepts a sealed terminal project record. Successful parents are eligible
 ```python
 """Prepare a new continuation record from an eligible preserved parent."""
 
-from src.srim.trim_runtime import prepare_trim_continuation
+from src.srim.trim.runtime import prepare_trim_continuation
 
 child = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
 resume_worker = create_directories(paths, config, [CreateRequest("worker")]).completed[0]
@@ -137,7 +137,7 @@ Prepare every task before dispatch. Fresh and resumed tasks may be mixed, but a 
 ```python
 """Run two independently allocated tasks using the same pinned input bundle."""
 
-from src.srim.trim_queue import PreparedTRIMTask, run_trim_batch
+from src.srim.trim.queue import PreparedTRIMTask, run_trim_batch
 
 tasks = []
 for index in range(2):
@@ -159,7 +159,7 @@ Working runtimes remain by default. `cleanup=True` explicitly requests deletion 
 ```python
 """Freeze and parse an existing stopped native runtime into a new export."""
 
-from src.srim.trim_storage import parse_trim_directory
+from src.srim.trim.storage import parse_trim_directory
 
 destination = paths.root / ".cache/trim-parsed-export"
 parse_trim_directory(

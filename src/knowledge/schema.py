@@ -9,7 +9,7 @@ import os
 import re
 import uuid
 
-from src.srim.metadata import JSONObject, JSONValue
+from src.srim.common.types import JSONObject, JSONValue
 
 
 UNITS = {

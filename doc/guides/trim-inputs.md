@@ -13,10 +13,10 @@ from pathlib import Path
 from src.backend.config import load_config
 from src.backend.paths import create_base_directories, get_project_paths
 from src.backend.records import CreateRequest, create_directories
-from src.srim.defaults import switch_sr_defaults
-from src.srim.trim_defaults import switch_trim_defaults
-from src.srim.trim_resolution import resolve_trim_inputs, verify_trim_resolution
-from src.srim.trim_storage import write_trim_input_bundle
+from src.srim.resources.defaults import switch_sr_defaults
+from src.srim.trim.defaults import switch_trim_defaults
+from src.srim.trim.resolution import resolve_trim_inputs, verify_trim_resolution
+from src.srim.trim.storage import write_trim_input_bundle
 
 paths = get_project_paths(Path.cwd())
 create_base_directories(paths)
@@ -78,7 +78,7 @@ Disp/Latt use material/trim-damage/vN. Its optional Surf field overrides the alg
 ```python
 """Publish/select a damage variant without changing default pointers."""
 
-from src.srim.trim_defaults import create_trim_damage_variant
+from src.srim.trim.defaults import create_trim_damage_variant
 
 variant = create_trim_damage_variant(
     paths, config, base_version="default",

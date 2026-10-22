@@ -19,8 +19,9 @@ from src.backend.config import Config
 from src.backend.paths import ProjectPaths
 from src.backend.project_records import write_record_json
 from src.backend.records import _lock_parent, _record_time
-from src.srim.metadata import JSONObject, _read_json
-from src.srim.runtime import _read_regular_bytes
+from src.srim.common.types import JSONObject
+from src.srim.common.files import _read_json
+from src.srim.common.files import _read_regular_bytes
 
 
 def list_collections(paths: ProjectPaths) -> JSONObject:

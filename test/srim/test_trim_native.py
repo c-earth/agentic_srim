@@ -11,8 +11,8 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from test_trim_runtime import CACHE
-from src.srim.trim_native import _filter_trim_startup_windows, _observe_trim_dialogs, _post_trim_command, _probe_trim_saved_checkpoint, _read_trim_checkpoint_snapshot, _read_trim_window_text, _read_trim_windows, execute_trim_process
-from src.srim.trim_dialogs import ENGINES, initial_trim_dialog_state
+from src.srim.trim.native import _filter_trim_startup_windows, _observe_trim_dialogs, _post_trim_command, _probe_trim_saved_checkpoint, _read_trim_checkpoint_snapshot, _read_trim_window_text, _read_trim_windows, execute_trim_process
+from src.srim.trim.dialogs import ENGINES, initial_trim_dialog_state
 from test_trim_dialogs import POLICY, WINDOW
 from copy import deepcopy
 
@@ -26,7 +26,7 @@ class TestTRIMNative(unittest.TestCase):
         complete = {**deepcopy(WINDOW), "title": "End of calculation", "detection_reason": "dialog"}
         complete["controls"][0]["text"] = "Calculation Complete (100 Ions)\r\n\r\nYes = Save data\r\n\r\nNo  = Increase number of ions"
         state = {**initial_trim_dialog_state(policy), "events": []}
-        with patch("src.srim.trim_native._read_trim_windows", return_value=[complete]) as read, patch("src.srim.trim_native._post_trim_command") as post:
+        with patch("src.srim.trim.native._read_trim_windows", return_value=[complete]) as read, patch("src.srim.trim.native._post_trim_command") as post:
             first = _observe_trim_dialogs(42, CACHE, policy, state, 1.0)
             repeated = _observe_trim_dialogs(42, CACHE, policy, first["state"], 2.0)
             self.assertEqual(repeated["checkpoint_prompt"], complete)
@@ -58,7 +58,7 @@ class TestTRIMNative(unittest.TestCase):
                 process_list = ctypes.create_string_buffer(1024)
                 struct.pack_into("IIQ", process_list, 0, 1, 1, 43)
                 elapsed = 2.0 if case in ("ready", "cancel-after", "timeout-after") else 10.0
-                with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.subprocess.Popen", return_value=process), patch("src.srim.trim_native._observe_trim_dialogs", side_effect=[observation, second]), patch("src.srim.trim_native._probe_trim_saved_checkpoint", return_value=probe), patch("src.srim.trim_native.monotonic", side_effect=[0.0, elapsed, 11.0 if case == "timeout-after" else elapsed, elapsed, elapsed, elapsed, elapsed]), patch("src.srim.trim_native.sleep"), patch("src.srim.trim_native.ctypes.create_string_buffer", side_effect=[ctypes.create_string_buffer(144), process_list, process_list]), patch("src.srim.trim_native.wintypes.BOOL", return_value=ctypes.c_long(1)), patch("src.srim.trim_native.ctypes.POINTER", return_value=ctypes.c_void_p):
+                with patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.subprocess.Popen", return_value=process), patch("src.srim.trim.native._observe_trim_dialogs", side_effect=[observation, second]), patch("src.srim.trim.native._probe_trim_saved_checkpoint", return_value=probe), patch("src.srim.trim.native.monotonic", side_effect=[0.0, elapsed, 11.0 if case == "timeout-after" else elapsed, elapsed, elapsed, elapsed, elapsed]), patch("src.srim.trim.native.sleep"), patch("src.srim.trim.native.ctypes.create_string_buffer", side_effect=[ctypes.create_string_buffer(144), process_list, process_list]), patch("src.srim.trim.native.wintypes.BOOL", return_value=ctypes.c_long(1)), patch("src.srim.trim.native.ctypes.POINTER", return_value=ctypes.c_void_p):
                     report = execute_trim_process(root / "TRIM.exe", root, hide_window=True, timeout_seconds=10.0 if case == "timeout-after" else None, stdout_path=root / "stdout", stderr_path=root / "stderr", dialog_policy=policy, cancel=MagicMock(side_effect=[False, True]) if case == "cancel-after" else None)
                 expected = {"ready": "checkpoint-stop", "invalid": "monitor-error", "ordinary-missing": "monitor-error", "cancel-after": "cancelled", "timeout-after": "timeout"}.get(case, "checkpoint-unavailable")
                 self.assertEqual(report["termination"], expected, report)
@@ -76,18 +76,18 @@ class TestTRIMNative(unittest.TestCase):
         """Distinguish transient snapshots, unsafe I/O, missing arrays and metadata; return None."""
         policy = {**POLICY, "kind": "resume", "input_mode": 2}
         for error, status in ((FileNotFoundError("missing"), "unavailable"), (ValueError("Checkpoint changed during snapshot"), "waiting"), (ValueError("Unsafe"), "invalid"), (OSError("read failed"), "invalid")):
-            with patch("src.srim.trim_native._read_trim_checkpoint_snapshot", side_effect=error):
+            with patch("src.srim.trim.native._read_trim_checkpoint_snapshot", side_effect=error):
                 result = _probe_trim_saved_checkpoint(CACHE, policy, None, 1.0)
                 self.assertEqual(set(result), {"ready", "status", "candidate", "sources", "last_error"})
                 self.assertEqual(result["status"], status)
         fixture = Path(__file__).parent / "fixtures/trim/recovery/srim_2013_std/mode-02"
         files = {item.name: item.read_bytes() for item in fixture.glob("*.sav")}
         metadata = {name: data for name, data in files.items() if name.casefold() in ("tdata.sav", "trimin.sav")}
-        from src.srim.trim_outputs import parse_trim_checkpoint
+        from src.srim.trim.outputs import parse_trim_checkpoint
         mapping = {name.casefold(): data for name, data in metadata.items()}
         checkpoint = parse_trim_checkpoint(mapping["tdata.sav"], mapping["trimin.sav"])
         policy["autosave_ions"] = checkpoint["counts"]["autosave"]
-        with patch("src.srim.trim_native._read_trim_checkpoint_snapshot", return_value=metadata):
+        with patch("src.srim.trim.native._read_trim_checkpoint_snapshot", return_value=metadata):
             self.assertEqual(_probe_trim_saved_checkpoint(CACHE, policy, None, 1.0)["status"], "unavailable")
             self.assertEqual(_probe_trim_saved_checkpoint(CACHE, {**policy, "autosave_ions": 987}, None, 1.0)["status"], "invalid")
         lines = mapping["tdata.sav"].splitlines(keepends=True)
@@ -96,7 +96,7 @@ class TestTRIMNative(unittest.TestCase):
         values[0] = b"50"
         lines[index] = b" ".join(values) + b"\r\n"
         partial = {**files, next(name for name in files if name.casefold() == "tdata.sav"): b"".join(lines)}
-        with patch("src.srim.trim_native._read_trim_checkpoint_snapshot", return_value=partial):
+        with patch("src.srim.trim.native._read_trim_checkpoint_snapshot", return_value=partial):
             self.assertEqual(_probe_trim_saved_checkpoint(CACHE, policy, None, 1.0)["status"], "unavailable")
 
     def test_ordinary_fallback_reobserves_completion(self: TestTRIMNative) -> None:
@@ -105,7 +105,7 @@ class TestTRIMNative(unittest.TestCase):
         complete = {**deepcopy(WINDOW), "title": "End of calculation", "detection_reason": "dialog"}
         complete["controls"][0]["text"] = "Calculation Complete (100 Ions) Yes = Save data No = Increase number of ions"
         state = {**initial_trim_dialog_state(policy), "events": []}
-        with patch("src.srim.trim_native._read_trim_windows", return_value=[complete]), patch("src.srim.trim_native._post_trim_command", return_value={"queued": True, "error": None}) as post:
+        with patch("src.srim.trim.native._read_trim_windows", return_value=[complete]), patch("src.srim.trim.native._post_trim_command", return_value={"queued": True, "error": None}) as post:
             inspected = _observe_trim_dialogs(42, CACHE, policy, state, 1.0)
             post.assert_not_called()
             authorized = {**inspected["state"], "stage": "checkpoint-save-required", "checkpoint_fallback_attempted": True, "checkpoint_started": 11.0}
@@ -116,7 +116,7 @@ class TestTRIMNative(unittest.TestCase):
             late = _observe_trim_dialogs(42, CACHE, policy, authorized, 21.0)
             self.assertEqual(late["events"], [])
             changed = {**complete, "handle": 999}
-            with patch("src.srim.trim_native._read_trim_windows", return_value=[changed]):
+            with patch("src.srim.trim.native._read_trim_windows", return_value=[changed]):
                 rejected = _observe_trim_dialogs(42, CACHE, policy, authorized, 11.2)
             self.assertEqual(rejected["unhandled"], [changed])
             self.assertEqual(post.call_count, 1)
@@ -130,7 +130,7 @@ class TestTRIMNative(unittest.TestCase):
             fixture = Path(__file__).parent / "fixtures/trim/recovery/srim_2013_std/mode-02"
             for item in fixture.glob("*.sav"):
                 shutil.copyfile(item, source / item.name)
-            from src.srim.trim_recovery import recover_trim_checkpoint
+            from src.srim.trim.recovery import recover_trim_checkpoint
             checkpoint = recover_trim_checkpoint(_read_trim_checkpoint_snapshot(root))["checkpoint"]
             policy = {**POLICY, "kind": "resume", "input_mode": 2, "autosave_ions": checkpoint["counts"]["autosave"]}
             first = _probe_trim_saved_checkpoint(root, policy, None, 1.0)
@@ -156,7 +156,7 @@ class TestTRIMNative(unittest.TestCase):
         policy = {**POLICY, "kind": "resume", "input_mode": 2, "cascade_output": "none"}
         form = {**deepcopy(WINDOW), "class": "ThunderRT5Form", "title": "Form1", "detection_reason": "owned-popup", "controls": [{"handle": i + 20, "pid": 42, "class": "ThunderRT5CommandButton", "text": text, "control_id": i, "visible": True, "enabled": True} for i, text in ((1, "Continue without Saving TRIM"), (2, "Store in another Directory / Disk"), (3, "Store in SRIM directory (default)"))]}
         state = {**initial_trim_dialog_state(policy), "stage": "resume-save", "checkpoint_fallback_attempted": True, "events": []}
-        with patch("src.srim.trim_native._read_trim_windows", return_value=[form]) as read, patch("src.srim.trim_native._post_trim_command", return_value={"queued": True, "error": None}):
+        with patch("src.srim.trim.native._read_trim_windows", return_value=[form]) as read, patch("src.srim.trim.native._post_trim_command", return_value={"queued": True, "error": None}):
             posted = _observe_trim_dialogs(42, CACHE, policy, state, 1.0)
             self.assertIsNone(posted["state"]["checkpoint_save_started"])
             self.assertFalse(_observe_trim_dialogs(42, CACHE, policy, posted["state"], 4.0)["errors"])
@@ -180,10 +180,10 @@ class TestTRIMNative(unittest.TestCase):
             state = {**initial_trim_dialog_state(policy), "stage": "checkpoint-saved", "checkpoint_save_started": 0.0, "checkpoint_completion": {"window": WINDOW}, "events": []}
             observation = {"state": state, "unhandled": [], "errors": []}
             probe = {"ready": True, "status": "ready", "candidate": {"elapsed_seconds": 0.0, "sources": []}, "sources": [], "last_error": None}
-            with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.subprocess.Popen", return_value=process), patch("src.srim.trim_native._observe_trim_dialogs", return_value=observation), patch("src.srim.trim_native._probe_trim_saved_checkpoint", return_value=probe), patch("src.srim.trim_native.monotonic", side_effect=[0.0, 2.0, 2.0, 2.0, 2.1]):
+            with patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.subprocess.Popen", return_value=process), patch("src.srim.trim.native._observe_trim_dialogs", return_value=observation), patch("src.srim.trim.native._probe_trim_saved_checkpoint", return_value=probe), patch("src.srim.trim.native.monotonic", side_effect=[0.0, 2.0, 2.0, 2.0, 2.1]):
                 process_list = ctypes.create_string_buffer(1024)
                 struct.pack_into("IIQ", process_list, 0, 1, 1, 43)
-                with patch("src.srim.trim_native.ctypes.create_string_buffer", side_effect=[ctypes.create_string_buffer(144), process_list]), patch("src.srim.trim_native.wintypes.BOOL", return_value=ctypes.c_long(1)), patch("src.srim.trim_native.ctypes.POINTER", return_value=ctypes.c_void_p):
+                with patch("src.srim.trim.native.ctypes.create_string_buffer", side_effect=[ctypes.create_string_buffer(144), process_list]), patch("src.srim.trim.native.wintypes.BOOL", return_value=ctypes.c_long(1)), patch("src.srim.trim.native.ctypes.POINTER", return_value=ctypes.c_void_p):
                     report = execute_trim_process(root / "TRIM.exe", root, hide_window=True, timeout_seconds=None, stdout_path=root / "stdout", stderr_path=root / "stderr", dialog_policy=policy)
             self.assertEqual(report["termination"], "checkpoint-stop")
             self.assertEqual(report["exit_code"], 1)
@@ -196,7 +196,7 @@ class TestTRIMNative(unittest.TestCase):
         state = {**initial_trim_dialog_state(policy), "events": []}
         complete = {**deepcopy(WINDOW), "title": "End of TRIM.DAT calculation", "detection_reason": "dialog", "controls": [{"class": "Static", "text": "Calculation Complete (100 Ions)"}, {"handle": 12, "class": "Button", "text": "OK", "control_id": 2, "enabled": True, "visible": True, "pid": 42}]}
         form = {**deepcopy(WINDOW), "class": "ThunderRT5Form", "title": "Form1", "detection_reason": "owned-popup", "controls": [{"handle": i + 20, "pid": 42, "class": "ThunderRT5CommandButton", "text": text, "control_id": i, "visible": True, "enabled": True} for i, text in ((1, "Continue without Saving TRIM"), (2, "Store in another Directory / Disk"), (3, "Store in SRIM directory (default)"))]}
-        with patch("src.srim.trim_native._read_trim_windows", side_effect=[[complete], [complete], [form], []]), patch("src.srim.trim_native._post_trim_command", return_value={"queued": True, "error": None}) as post:
+        with patch("src.srim.trim.native._read_trim_windows", side_effect=[[complete], [complete], [form], []]), patch("src.srim.trim.native._post_trim_command", return_value={"queued": True, "error": None}) as post:
             first = _observe_trim_dialogs(42, CACHE, policy, state, 1.0)
             self.assertEqual(first["state"]["stage"], "checkpoint-check")
             saved = _observe_trim_dialogs(42, CACHE, policy, first["state"], 1.1)
@@ -229,9 +229,9 @@ class TestTRIMNative(unittest.TestCase):
                 process_list = ctypes.create_string_buffer(1024)
                 struct.pack_into("IIQ", process_list, 0, 1, 1, 43)
                 probe = {"ready": case == "late-ready", "status": "ready" if case == "late-ready" else "unavailable", "candidate": {"elapsed_seconds": 0.0, "sources": []} if case == "late-ready" else None, "sources": [], "last_error": "incomplete"}
-                with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.subprocess.Popen", return_value=process), patch("src.srim.trim_native._observe_trim_dialogs", return_value=observation), patch("src.srim.trim_native._probe_trim_saved_checkpoint", return_value=probe) as probing, patch("src.srim.trim_native.monotonic", return_value=20.0) as timing, patch("src.srim.trim_native.sleep"):
+                with patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.subprocess.Popen", return_value=process), patch("src.srim.trim.native._observe_trim_dialogs", return_value=observation), patch("src.srim.trim.native._probe_trim_saved_checkpoint", return_value=probe) as probing, patch("src.srim.trim.native.monotonic", return_value=20.0) as timing, patch("src.srim.trim.native.sleep"):
                     timing.side_effect = [0.0, 20.0, 20.0, 20.0, 20.1, 20.2]
-                    with patch("src.srim.trim_native.ctypes.create_string_buffer", side_effect=[ctypes.create_string_buffer(144), process_list]), patch("src.srim.trim_native.wintypes.BOOL", return_value=ctypes.c_long(1)), patch("src.srim.trim_native.ctypes.POINTER", return_value=ctypes.c_void_p):
+                    with patch("src.srim.trim.native.ctypes.create_string_buffer", side_effect=[ctypes.create_string_buffer(144), process_list]), patch("src.srim.trim.native.wintypes.BOOL", return_value=ctypes.c_long(1)), patch("src.srim.trim.native.ctypes.POINTER", return_value=ctypes.c_void_p):
                         report = execute_trim_process(root / "TRIM.exe", root, hide_window=True, timeout_seconds=1.0 if case == "timeout" else None, stdout_path=root / "stdout", stderr_path=root / "stderr", dialog_policy=policy, cancel=MagicMock(side_effect=[True] if case == "cancel" else [False, True]) if case in ("cancel", "done") else None)
                 self.assertEqual(report["termination"], {"popup": "popup", "cancel": "cancelled", "timeout": "timeout", "deadline": "checkpoint-unavailable", "late-ready": "checkpoint-unavailable", "done": "cancelled", "descendant": "checkpoint-unavailable"}[case])
                 self.assertIsNone(report["checkpoint_stop"])
@@ -258,7 +258,7 @@ class TestTRIMNative(unittest.TestCase):
                 process.poll.return_value = None
                 process_list = ctypes.create_string_buffer(1024)
                 struct.pack_into("IIQ", process_list, 0, 1, 1, 43)
-                with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.subprocess.Popen", return_value=process), patch("src.srim.trim_native.monotonic", side_effect=[0.0, 0.0, 11.0]), patch("src.srim.trim_native.ctypes.memset"), patch("src.srim.trim_native.ctypes.create_string_buffer", side_effect=[ctypes.create_string_buffer(144), process_list]):
+                with patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.subprocess.Popen", return_value=process), patch("src.srim.trim.native.monotonic", side_effect=[0.0, 0.0, 11.0]), patch("src.srim.trim.native.ctypes.memset"), patch("src.srim.trim.native.ctypes.create_string_buffer", side_effect=[ctypes.create_string_buffer(144), process_list]):
                     with self.assertRaises(OSError) as caught:
                         execute_trim_process(root / "TRIM.exe", root, hide_window=True, timeout_seconds=None, stdout_path=root / "stdout", stderr_path=root / "stderr", cancel=MagicMock(return_value=True))
                 self.assertIs(caught.exception.trim_job_stopped, False)
@@ -308,7 +308,7 @@ class TestTRIMNative(unittest.TestCase):
         candidate = {"pid": 42, "handle": 12, "owner_handle": 11, "class": "ThunderRT5Form", "title": "", "visible": True, "enabled": True, "rectangle": [645, 406, 891, 457], "controls": [], "capture_errors": ["unavailable"], "detection_reason": "owned-popup"}
         timing: dict[tuple[int, int], float] = {}
         state = {**initial_trim_dialog_state(POLICY), "events": []}
-        with patch("src.srim.trim_native._read_trim_windows", return_value=[candidate]), patch("src.srim.trim_native._post_trim_command") as post:
+        with patch("src.srim.trim.native._read_trim_windows", return_value=[candidate]), patch("src.srim.trim.native._post_trim_command") as post:
             first = _observe_trim_dialogs(42, CACHE, POLICY, state, 1.0, startup_state=timing)
             self.assertEqual(first["unhandled"], [])
             expired = _observe_trim_dialogs(42, CACHE, POLICY, first["state"], 1.5, startup_state=timing)
@@ -330,7 +330,7 @@ class TestTRIMNative(unittest.TestCase):
                 buffers = [ctypes.create_string_buffer(144), process_list]
                 process = MagicMock(pid=43, returncode=1, _handle=44)
                 process.poll.side_effect = [None, None, 1]
-                with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.subprocess.Popen", return_value=process), patch("src.srim.trim_native._read_trim_windows", return_value=[candidate]), patch("src.srim.trim_native.ctypes.create_string_buffer", side_effect=buffers), patch("src.srim.trim_native.wintypes.BOOL", return_value=ctypes.c_long(1)), patch("src.srim.trim_native.ctypes.POINTER", return_value=ctypes.c_void_p), patch("src.srim.trim_native.monotonic", side_effect=[0, 0.1, 0.3, 0.3, 0.3]), patch("src.srim.trim_native.sleep"):
+                with patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.subprocess.Popen", return_value=process), patch("src.srim.trim.native._read_trim_windows", return_value=[candidate]), patch("src.srim.trim.native.ctypes.create_string_buffer", side_effect=buffers), patch("src.srim.trim.native.wintypes.BOOL", return_value=ctypes.c_long(1)), patch("src.srim.trim.native.ctypes.POINTER", return_value=ctypes.c_void_p), patch("src.srim.trim.native.monotonic", side_effect=[0, 0.1, 0.3, 0.3, 0.3]), patch("src.srim.trim.native.sleep"):
                     report = execute_trim_process(root / "TRIM.exe", root, hide_window=True, timeout_seconds=0.2, stdout_path=root / "stdout", stderr_path=root / "stderr", cancel=MagicMock(side_effect=[False, True]) if cancelled else None)
                 self.assertEqual(report["termination"], "cancelled" if cancelled else "timeout")
                 self.assertEqual(report["popups"], [])
@@ -341,7 +341,7 @@ class TestTRIMNative(unittest.TestCase):
         """Queue one recognized owned response and retain evidence; return None."""
         window = {**deepcopy(WINDOW), "detection_reason": "dialog"}
         state = {**initial_trim_dialog_state(POLICY), "events": []}
-        with patch("src.srim.trim_native._read_trim_windows", return_value=[window]), patch("src.srim.trim_native._post_trim_command", return_value={"queued": True, "error": None}) as post:
+        with patch("src.srim.trim.native._read_trim_windows", return_value=[window]), patch("src.srim.trim.native._post_trim_command", return_value={"queued": True, "error": None}) as post:
             report = _observe_trim_dialogs(42, CACHE, POLICY, state, 0.1)
         self.assertEqual(post.call_count, 1)
         self.assertEqual(post.call_args.args[0], 42)
@@ -350,7 +350,7 @@ class TestTRIMNative(unittest.TestCase):
 
     def test_response_revalidation(self: TestTRIMNative) -> None:
         """Reject changed native text before posting any command; return None."""
-        with patch("src.srim.trim_native._read_trim_window_text", return_value={"title": "changed", "controls": [], "capture_errors": []}), patch("src.srim.trim_native.ctypes.WinDLL") as api:
+        with patch("src.srim.trim.native._read_trim_window_text", return_value={"title": "changed", "controls": [], "capture_errors": []}), patch("src.srim.trim.native.ctypes.WinDLL") as api:
             with self.assertRaises(ValueError):
                 _post_trim_command(42, WINDOW, {"action": "button", "target_handle": 12, "control_id": 6, "response": "Yes"})
             api.assert_not_called()
@@ -358,7 +358,7 @@ class TestTRIMNative(unittest.TestCase):
     def test_post_failure_no_retry(self: TestTRIMNative) -> None:
         """Record a queue failure once without retrying; return None."""
         state = {**initial_trim_dialog_state(POLICY), "events": []}
-        with patch("src.srim.trim_native._read_trim_windows", return_value=[{**WINDOW, "detection_reason": "dialog"}]), patch("src.srim.trim_native._post_trim_command", side_effect=OSError("queue failed")) as post:
+        with patch("src.srim.trim.native._read_trim_windows", return_value=[{**WINDOW, "detection_reason": "dialog"}]), patch("src.srim.trim.native._post_trim_command", side_effect=OSError("queue failed")) as post:
             report = _observe_trim_dialogs(42, CACHE, POLICY, state, 0.1)
         self.assertEqual(post.call_count, 1)
         self.assertEqual(report["errors"], ["queue failed"])
@@ -368,7 +368,7 @@ class TestTRIMNative(unittest.TestCase):
         """Reject an unchanged pending dialog after two seconds; return None."""
         window = {**deepcopy(WINDOW), "detection_reason": "dialog"}
         state = {**initial_trim_dialog_state(POLICY), "events": []}
-        with patch("src.srim.trim_native._read_trim_windows", return_value=[window]), patch("src.srim.trim_native._post_trim_command", return_value={"queued": True, "error": None}) as post:
+        with patch("src.srim.trim.native._read_trim_windows", return_value=[window]), patch("src.srim.trim.native._post_trim_command", return_value={"queued": True, "error": None}) as post:
             first = _observe_trim_dialogs(42, CACHE, POLICY, state, 0.1)
             second = _observe_trim_dialogs(42, CACHE, POLICY, first["state"], 1)
             final = _observe_trim_dialogs(42, CACHE, POLICY, second["state"], 2.2)
@@ -381,7 +381,7 @@ class TestTRIMNative(unittest.TestCase):
         for title in ("TRIM", "Plots"):
             state = {**initial_trim_dialog_state(POLICY), "events": []}
             form = {**deepcopy(WINDOW), "class": "ThunderRT5Form", "title": title, "detection_reason": "owned-popup"}
-            with patch("src.srim.trim_native._read_trim_windows", return_value=[form]), patch("src.srim.trim_native._post_trim_command") as post:
+            with patch("src.srim.trim.native._read_trim_windows", return_value=[form]), patch("src.srim.trim.native._post_trim_command") as post:
                 report = _observe_trim_dialogs(42, CACHE, POLICY, state, 0.1)
             post.assert_not_called()
             self.assertEqual(report["unhandled"], [form])
@@ -392,7 +392,7 @@ class TestTRIMNative(unittest.TestCase):
             root = Path(directory)
             (root / "TRIM.exe").write_bytes(b"fixture")
             api = MagicMock()
-            with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.subprocess.Popen") as launch:
+            with patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.subprocess.Popen") as launch:
                 with self.assertRaisesRegex(ValueError, "Legacy"):
                     execute_trim_process(root / "TRIM.exe", root, hide_window=True, timeout_seconds=None, stdout_path=root / "stdout", stderr_path=root / "stderr", dialog_policy={**POLICY, "kind": "resume", "schema_version": 2})
             launch.assert_not_called()
@@ -401,7 +401,7 @@ class TestTRIMNative(unittest.TestCase):
 
     def test_menu_exit_rejected(self: TestTRIMNative) -> None:
         """Reject the removed menu command before inspection or native messaging; return None."""
-        with patch("src.srim.trim_native._read_trim_window_text") as read, patch("src.srim.trim_native.ctypes.WinDLL") as api:
+        with patch("src.srim.trim.native._read_trim_window_text") as read, patch("src.srim.trim.native.ctypes.WinDLL") as api:
             with self.assertRaises(ValueError):
                 _post_trim_command(42, WINDOW, {"action": "menu-exit", "target_handle": 10, "control_id": 7})
             read.assert_not_called()
@@ -417,7 +417,7 @@ class TestTRIMNative(unittest.TestCase):
             api.CreateJobObjectW.return_value = 12
             process = MagicMock(pid=43, returncode=1, _handle=44)
             process.poll.side_effect = [None, 1]
-            with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.subprocess.Popen", return_value=process), patch("src.srim.trim_native._observe_trim_dialogs") as observer:
+            with patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.subprocess.Popen", return_value=process), patch("src.srim.trim.native._observe_trim_dialogs") as observer:
                 result = execute_trim_process(root / "TRIM.exe", root, hide_window=True, timeout_seconds=5, stdout_path=root / "stdout", stderr_path=root / "stderr", cancel=MagicMock(return_value=True), dialog_policy=POLICY)
             observer.assert_not_called()
             self.assertEqual(result["termination"], "cancelled")
@@ -437,7 +437,7 @@ class TestTRIMNative(unittest.TestCase):
             calls = MagicMock()
             calls.attach_mock(api.AssignProcessToJobObject, "assign")
             calls.attach_mock(api.NtResumeProcess, "resume")
-            with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.subprocess.Popen", return_value=process):
+            with patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.subprocess.Popen", return_value=process):
                 report = execute_trim_process(root / "TRIM.exe", root, hide_window=True, timeout_seconds=5, stdout_path=root / "stdout", stderr_path=root / "stderr")
             self.assertEqual(report["termination"], "exit")
             self.assertEqual([call[0] for call in calls.mock_calls], ["assign", "resume"])
@@ -457,7 +457,7 @@ class TestTRIMNative(unittest.TestCase):
             process = MagicMock(pid=43, returncode=1, _handle=44)
             process.poll.side_effect = [None, 1]
             popup = {"detection_reason": "dialog", "title": "Native error", "controls": []}
-            with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.subprocess.Popen", return_value=process), patch("src.srim.trim_native._read_trim_windows", return_value=[popup]), patch("src.srim.trim_native.ctypes.create_string_buffer", side_effect=buffers), patch("src.srim.trim_native.wintypes.BOOL", return_value=ctypes.c_long(1)), patch("src.srim.trim_native.ctypes.POINTER", return_value=ctypes.c_void_p):
+            with patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.subprocess.Popen", return_value=process), patch("src.srim.trim.native._read_trim_windows", return_value=[popup]), patch("src.srim.trim.native.ctypes.create_string_buffer", side_effect=buffers), patch("src.srim.trim.native.wintypes.BOOL", return_value=ctypes.c_long(1)), patch("src.srim.trim.native.ctypes.POINTER", return_value=ctypes.c_void_p):
                 report = execute_trim_process(root / "TRIM.exe", root, hide_window=True, timeout_seconds=5, stdout_path=root / "stdout", stderr_path=root / "stderr")
             self.assertEqual(report["termination"], "popup")
             self.assertEqual(report["popups"], [popup])
@@ -474,7 +474,7 @@ class TestTRIMNative(unittest.TestCase):
             api.CreateJobObjectW.return_value = 12
             process = MagicMock(pid=43, returncode=1, _handle=44)
             process.poll.side_effect = [None, 1]
-            with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.subprocess.Popen", return_value=process), patch("src.srim.trim_native.monotonic", side_effect=[0, 10, 10, 10]):
+            with patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.subprocess.Popen", return_value=process), patch("src.srim.trim.native.monotonic", side_effect=[0, 10, 10, 10]):
                 report = execute_trim_process(root / "TRIM.exe", root, hide_window=True, timeout_seconds=1, stdout_path=root / "stdout", stderr_path=root / "stderr")
             self.assertEqual(report["termination"], "timeout")
             api.TerminateJobObject.assert_called_once_with(12, 1)
@@ -493,7 +493,7 @@ class TestTRIMNative(unittest.TestCase):
                 process.poll.return_value = 0 if not cancelled else None
                 if cancelled:
                     process.poll.side_effect = [None, None, 0]
-                with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.subprocess.Popen", return_value=process), patch("src.srim.trim_native.monotonic", side_effect=[0, 120, 121, 121]), patch("src.srim.trim_native._read_trim_windows", return_value=[]):
+                with patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.subprocess.Popen", return_value=process), patch("src.srim.trim.native.monotonic", side_effect=[0, 120, 121, 121]), patch("src.srim.trim.native._read_trim_windows", return_value=[]):
                     report = execute_trim_process(root / "TRIM.exe", root, hide_window=True, timeout_seconds=None, stdout_path=root / "stdout", stderr_path=root / "stderr", cancel=MagicMock(side_effect=[False, True]) if cancelled else None)
                 self.assertEqual(report["termination"], "cancelled" if cancelled else "exit")
                 self.assertGreater(report["elapsed_seconds"], 60)
@@ -513,7 +513,7 @@ class TestTRIMNative(unittest.TestCase):
             api.CreateJobObjectW.return_value = 12
             process = MagicMock(pid=43, returncode=1, _handle=44)
             process.poll.side_effect = [None, 1]
-            with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.subprocess.Popen", return_value=process):
+            with patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.subprocess.Popen", return_value=process):
                 report = execute_trim_process(root / "TRIM.exe", root, hide_window=False, timeout_seconds=5, stdout_path=root / "stdout", stderr_path=root / "stderr", cancel=MagicMock(return_value=True))
             self.assertEqual(report["termination"], "cancelled")
 
@@ -528,7 +528,7 @@ class TestTRIMNative(unittest.TestCase):
             api.QueryInformationJobObject.side_effect = [OSError("monitor unavailable"), True]
             process = MagicMock(pid=43, returncode=1, _handle=44)
             process.poll.side_effect = [None, 1]
-            with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.subprocess.Popen", return_value=process):
+            with patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.subprocess.Popen", return_value=process):
                 report = execute_trim_process(root / "TRIM.exe", root, hide_window=True, timeout_seconds=5, stdout_path=root / "stdout", stderr_path=root / "stderr")
             self.assertEqual(report["termination"], "monitor-error")
             self.assertIn("monitor unavailable", report["monitor_errors"][0])
@@ -536,7 +536,7 @@ class TestTRIMNative(unittest.TestCase):
         text_api.IsWindow.return_value = 1
         text_api.GetWindow.return_value = 0
         text_api.SendMessageTimeoutW.return_value = 0
-        with patch("src.srim.trim_native.ctypes.WinDLL", return_value=text_api):
+        with patch("src.srim.trim.native.ctypes.WinDLL", return_value=text_api):
             text_report = _read_trim_window_text(100)
         self.assertEqual(text_report["title"], "")
         self.assertTrue(text_report["capture_errors"])
@@ -550,7 +550,7 @@ class TestTRIMNative(unittest.TestCase):
         api.IsWindowEnabled.return_value = 1
         api.IsWindowVisible.return_value = 1
         class_buffer = ctypes.create_unicode_buffer("ThunderRT5MDIForm", 256)
-        with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.wintypes.DWORD", return_value=ctypes.c_ulong(43)), patch("src.srim.trim_native.ctypes.POINTER", return_value=ctypes.c_void_p), patch("src.srim.trim_native.ctypes.create_unicode_buffer", return_value=class_buffer), patch("src.srim.trim_native._read_trim_window_text") as text:
+        with patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.wintypes.DWORD", return_value=ctypes.c_ulong(43)), patch("src.srim.trim.native.ctypes.POINTER", return_value=ctypes.c_void_p), patch("src.srim.trim.native.ctypes.create_unicode_buffer", return_value=class_buffer), patch("src.srim.trim.native._read_trim_window_text") as text:
             windows = _read_trim_windows(43)
         self.assertEqual(len(windows), 1)
         self.assertIsNone(windows[0]["detection_reason"])
@@ -561,7 +561,7 @@ class TestTRIMNative(unittest.TestCase):
         api = MagicMock()
         api.GetTopWindow.return_value = 100
         api.GetWindow.return_value = 0
-        with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.wintypes.DWORD", return_value=ctypes.c_ulong(44)), patch("src.srim.trim_native.ctypes.POINTER", return_value=ctypes.c_void_p), patch("src.srim.trim_native._read_trim_window_text") as text:
+        with patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.wintypes.DWORD", return_value=ctypes.c_ulong(44)), patch("src.srim.trim.native.ctypes.POINTER", return_value=ctypes.c_void_p), patch("src.srim.trim.native._read_trim_window_text") as text:
             windows = _read_trim_windows(43)
         self.assertEqual(windows, [])
         text.assert_not_called()

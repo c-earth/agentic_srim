@@ -14,10 +14,10 @@ from unittest.mock import patch
 from _fixtures import fake_bragg_run, make_test_project
 from test_trim_inputs import TRIM_INSTALLATION_FILES, TRIM_REQUEST, TRIM_SELECTIONS
 from test_trim_defaults import CACHE
-from src.srim.cab import _encode_payload
-from src.srim.defaults import switch_sr_defaults
-from src.srim.trim_defaults import switch_trim_defaults
-from src.srim.trim_resolution import resolve_trim_inputs, verify_trim_resolution
+from src.srim.cab.strengths import _encode_payload
+from src.srim.resources.defaults import switch_sr_defaults
+from src.srim.trim.defaults import switch_trim_defaults
+from src.srim.trim.resolution import resolve_trim_inputs, verify_trim_resolution
 
 
 class TestTRIMResolution(unittest.TestCase):
@@ -140,7 +140,7 @@ class TestTRIMResolution(unittest.TestCase):
             request["parameters"]["layers"].append(deepcopy(layer))
             selections["bond"] = {"source": {"kind": "inline", "data": json.loads(_encode_payload("bond", {"H-H": "10"}))}, "overrides": [], "create_version": False}
             events: list[dict] = []
-            with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run):
+            with patch("src.srim.sr.execution.subprocess.run", side_effect=fake_bragg_run):
                 bundle = resolve_trim_inputs(paths, config, worker, request, selections, progress=events.append)
             self.assertEqual([Decimal(row["correction_factor"]) for row in bundle.effective_request["parameters"]["layers"]], [Decimal("0.4"), Decimal("0.4")])
             self.assertTrue(all("layer_index" in event for event in events))
@@ -166,7 +166,7 @@ class TestTRIMResolution(unittest.TestCase):
             layer["overrides"]["components"] = [{"component_index": 1, "mass_amu": "300", "displacement_eV": "1", "lattice_binding_eV": "0", "surface_binding_eV": "2"}]
             bundle = resolve_trim_inputs(paths, config, worker, request, TRIM_SELECTIONS)
             (config.srim_root / "TRIM.IN").write_bytes(b"changed")
-            with patch("src.srim.trim_resolution.read_sr_defaults", side_effect=AssertionError("no aliases")), patch("src.srim.trim_resolution._read_regular_bytes", side_effect=AssertionError("no filesystem")), patch("src.srim.trim_resolution.read_trim_installation", side_effect=AssertionError("no installation")):
+            with patch("src.srim.trim.resolution.read_sr_defaults", side_effect=AssertionError("no aliases")), patch("src.srim.trim.resolution._read_regular_bytes", side_effect=AssertionError("no filesystem")), patch("src.srim.trim.resolution.read_trim_installation", side_effect=AssertionError("no installation")):
                 self.assertEqual(verify_trim_resolution(bundle), bundle.effective_request)
             self.assertEqual(bundle.effective_request["parameters"]["atoms"][0]["atomic_number"], 119)
             self.assertTrue({"event-identifier", "event-energy-coverage", "event-consumption", "autosave-saved-value"} <= {item["code"] for item in bundle.resolved["native_checks"]})
@@ -204,7 +204,7 @@ class TestTRIMResolution(unittest.TestCase):
             switch_trim_defaults(paths, config)
             selections = deepcopy(TRIM_SELECTIONS)
             selections["damage"]["create_version"] = True
-            with patch("src.srim.trim_resolution.resolve_material_correction", side_effect=RuntimeError("dependency failed")):
+            with patch("src.srim.trim.resolution.resolve_material_correction", side_effect=RuntimeError("dependency failed")):
                 with self.assertRaisesRegex(RuntimeError, "dependency failed") as caught:
                     resolve_trim_inputs(paths, config, worker, TRIM_REQUEST, selections)
             self.assertEqual(len(list((paths.resources / "material/trim-damage").glob("v*"))), 2)

@@ -12,7 +12,7 @@ from src.backend.config import Config
 from src.backend.paths import create_base_directories, get_project_paths
 from src.backend.records import _lock_parent
 from src.backend.resources import register_resource, resolve_resource, verify_resource
-from src.srim.cab import _decode_payload, _normalize_entries, create_cab_variant, load_cab
+from src.srim.cab.strengths import _decode_payload, _normalize_entries, create_cab_variant, load_cab
 
 
 class TestCAB(unittest.TestCase):
@@ -21,7 +21,7 @@ class TestCAB(unittest.TestCase):
     def test_default_registration(self: TestCAB) -> None:
         """Verify self's coordinated default references and convention without supplied-default APIs; return None."""
         from _fixtures import make_test_project
-        from src.srim.defaults import read_sr_defaults
+        from src.srim.resources.defaults import read_sr_defaults
         with TemporaryDirectory(dir=Path(__file__).parent) as directory:
             paths, config, worker = make_test_project(Path(directory).absolute())
             defaults = read_sr_defaults(paths)
@@ -126,7 +126,7 @@ class TestCAB(unittest.TestCase):
             with self.assertRaises(ValueError):
                 load_cab(paths, "bond", "v1")
             payload.write_bytes(original)
-            with patch("src.srim.cab.verify_resource", return_value=payload), patch.object(Path, "read_bytes", return_value=b"changed"):
+            with patch("src.srim.cab.strengths.verify_resource", return_value=payload), patch.object(Path, "read_bytes", return_value=b"changed"):
                 with self.assertRaises(ValueError):
                     load_cab(paths, "bond", "v1")
             register_resource(paths, config, "cab", "core", "v2", b"invalid JSON")

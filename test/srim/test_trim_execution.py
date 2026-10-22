@@ -16,13 +16,14 @@ from _fixtures import make_test_project
 from test_trim_inputs import TRIM_INSTALLATION_FILES, TRIM_REQUEST, TRIM_SELECTIONS
 from test_trim_runtime import CACHE
 from src.backend.records import CreateRequest, create_directories
-from src.srim.trim_defaults import switch_trim_defaults
-from src.srim.trim_execution import _trim_completion, run_trim_simulation
-from src.srim.trim_resolution import ResolvedTRIMInputs, resolve_trim_inputs
-from src.srim.trim_runtime import prepare_trim_continuation, prepare_trim_simulation, verify_trim_runtime
-from src.srim.trim_storage import verify_preserved_trim_runtime
-from src.srim.trim_dialogs import ENGINES
-from src.srim.trim_outputs import parse_trim_checkpoint
+from src.srim.trim.defaults import switch_trim_defaults
+from src.srim.trim.execution import _trim_completion, run_trim_simulation
+from src.srim.trim.models import ResolvedTRIMInputs
+from src.srim.trim.resolution import resolve_trim_inputs
+from src.srim.trim.runtime import prepare_trim_continuation, prepare_trim_simulation, verify_trim_runtime
+from src.srim.trim.storage import verify_preserved_trim_runtime
+from src.srim.trim.dialogs import ENGINES
+from src.srim.trim.outputs import parse_trim_checkpoint
 from test_trim_config import CONFIG
 from test_trim_dialogs import POLICY, WINDOW
 
@@ -77,7 +78,7 @@ class TestTRIMExecution(unittest.TestCase):
             runtime = prepare_trim_simulation(paths, config, created, worker, inputs)
             (runtime / "Data/TRIM.cfg").write_bytes(CONFIG.replace(b" 255 0 ", b" 255 255 "))
             process = {"pid": 42, "exit_code": 0, "elapsed_seconds": 0.1, "termination": "exit", "popups": [], "monitor_errors": []}
-            with patch("src.srim.trim_execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim_execution.execute_trim_process", return_value=process):
+            with patch("src.srim.trim.execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim.execution.execute_trim_process", return_value=process):
                 result = run_trim_simulation(paths, config, created.path.name, runtime)
             self.assertEqual(result["status"], "failed")
             report = json.loads((created.path / "output/raw/execution.json").read_bytes())
@@ -132,7 +133,7 @@ class TestTRIMExecution(unittest.TestCase):
                 lines[index] = b" ".join(tokens) + b"\r\n"
                 tdata.write_bytes(b"".join(lines))
                 process = {"pid": 42, "exit_code": 1, "elapsed_seconds": 0.1, "termination": "timeout", "popups": [], "monitor_errors": []}
-                with patch("src.srim.trim_execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim_execution.execute_trim_process", return_value=process):
+                with patch("src.srim.trim.execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim.execution.execute_trim_process", return_value=process):
                     self.assertEqual(run_trim_simulation(paths, config, parent.path.name, runtime)["status"], "failed")
                 parent_bytes = (parent.path / "output/raw/runtime/SRIM Restore" / tdata.name).read_bytes()
                 child = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
@@ -176,7 +177,7 @@ class TestTRIMExecution(unittest.TestCase):
                     manifest_document = json.loads((child.path / "input/execution/runtime.json").read_bytes())
                     if damage == "baseline":
                         next(entry for entry in manifest_document["files"] if entry["path"] == "Data/TRIM.cfg")["sha256"] = "0" * 64
-                    with patch("src.srim.trim_execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim_execution.execute_trim_process", return_value=process), patch("src.srim.trim_execution._read_json", side_effect=[control_document, control_document, manifest_document]):
+                    with patch("src.srim.trim.execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim.execution.execute_trim_process", return_value=process), patch("src.srim.trim.execution._read_json", side_effect=[control_document, control_document, manifest_document]):
                         result = run_trim_simulation(paths, config, child.path.name, resumed)
                 expected_success = damage in (None, "cfg") and termination != "timeout"
                 report = json.loads((child.path / "output/raw/execution.json").read_bytes())
@@ -207,7 +208,7 @@ class TestTRIMExecution(unittest.TestCase):
                 created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
                 runtime = prepare_trim_simulation(paths, config, created, worker, inputs)
                 process = {"pid": 42, "exit_code": 0, "elapsed_seconds": 120.0, "termination": "exit", "popups": [], "monitor_errors": []}
-                with patch("src.srim.trim_execution.execute_trim_process", return_value=process) as execute:
+                with patch("src.srim.trim.execution.execute_trim_process", return_value=process) as execute:
                     run_trim_simulation(paths, config, created.path.name, runtime, timeout_seconds=timeout)
                 self.assertEqual(execute.call_args.kwargs["timeout_seconds"], timeout)
                 report = json.loads((created.path / "output/raw/execution.json").read_bytes())
@@ -229,7 +230,7 @@ class TestTRIMExecution(unittest.TestCase):
             verify_trim_runtime(paths, created.path.name, runtime)
             shutil.copytree(Path(__file__).parent / "fixtures/trim/2013", runtime, dirs_exist_ok=True)
             process = {"pid": 42, "exit_code": 0, "elapsed_seconds": 0.1, "termination": "exit", "popups": [], "monitor_errors": []}
-            with patch("src.srim.trim_execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim_execution.execute_trim_process", return_value=process):
+            with patch("src.srim.trim.execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim.execution.execute_trim_process", return_value=process):
                 result = run_trim_simulation(paths, config, created.path.name, runtime)
             comparison = json.loads((created.path / "output/parsed/saved-values.json").read_bytes())
             self.assertEqual(comparison["differences"], [])
@@ -246,7 +247,7 @@ class TestTRIMExecution(unittest.TestCase):
             inputs = resolve_trim_inputs(paths, config, worker, TRIM_REQUEST, TRIM_SELECTIONS)
             created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
             runtime = prepare_trim_simulation(paths, config, created, worker, inputs)
-            with patch("src.srim.trim_execution.execute_trim_process", return_value={"pid": 42, "exit_code": 0, "elapsed_seconds": 0.1, "termination": "exit", "popups": [], "monitor_errors": []}):
+            with patch("src.srim.trim.execution.execute_trim_process", return_value={"pid": 42, "exit_code": 0, "elapsed_seconds": 0.1, "termination": "exit", "popups": [], "monitor_errors": []}):
                 result = run_trim_simulation(paths, config, created.path.name, runtime)
             self.assertEqual(result["status"], "failed")
             self.assertIn("missing", result["failure"]["message"])
@@ -263,7 +264,7 @@ class TestTRIMExecution(unittest.TestCase):
             created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
             runtime = prepare_trim_simulation(paths, config, created, worker, inputs)
             popup = {"title": "Unexpected native dialog", "controls": [{"text": "Native error"}]}
-            with patch("src.srim.trim_execution.execute_trim_process", return_value={"pid": 42, "exit_code": 1, "elapsed_seconds": 0.1, "termination": "popup", "popups": [popup], "monitor_errors": []}):
+            with patch("src.srim.trim.execution.execute_trim_process", return_value={"pid": 42, "exit_code": 1, "elapsed_seconds": 0.1, "termination": "popup", "popups": [popup], "monitor_errors": []}):
                 result = run_trim_simulation(paths, config, created.path.name, runtime)
             report = json.loads((created.path / "output/raw/execution.json").read_bytes())
             self.assertEqual(result["status"], "failed")
@@ -281,7 +282,7 @@ class TestTRIMExecution(unittest.TestCase):
             inputs = resolve_trim_inputs(paths, config, worker, TRIM_REQUEST, TRIM_SELECTIONS)
             created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
             runtime = prepare_trim_simulation(paths, config, created, worker, inputs)
-            with patch("src.srim.trim_execution.execute_trim_process", side_effect=KeyboardInterrupt):
+            with patch("src.srim.trim.execution.execute_trim_process", side_effect=KeyboardInterrupt):
                 with self.assertRaises(KeyboardInterrupt):
                     run_trim_simulation(paths, config, created.path.name, runtime)
             verify_preserved_trim_runtime(paths, created.path.name, runtime)
@@ -302,7 +303,7 @@ class TestTRIMExecution(unittest.TestCase):
             shutil.copytree(Path(__file__).parent / "fixtures/trim/2013", runtime, dirs_exist_ok=True)
             for name in ("E2RECOIL", "IONIZ", "NOVAC", "PHONON", "SPUTTER", "STOPPING", "VACANCY", "XRANGE", "YZRADIAL#", "YZRANGE#", "Ioniz3D", "NoVac3D", "Phonon3D", "Range3D", "Recoil3D", "Vac3D"):
                 (runtime / "SRIM Restore" / (name + ".sav")).write_bytes(b"opaque native array fixture")
-            with patch("src.srim.trim_execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim_execution.execute_trim_process", return_value={"pid": 42, "exit_code": 0, "elapsed_seconds": 0.1, "termination": "exit", "popups": [], "monitor_errors": []}):
+            with patch("src.srim.trim.execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim.execution.execute_trim_process", return_value={"pid": 42, "exit_code": 0, "elapsed_seconds": 0.1, "termination": "exit", "popups": [], "monitor_errors": []}):
                 self.assertEqual(run_trim_simulation(paths, config, created.path.name, runtime)["status"], "succeeded")
             parent_bytes = (created.path / "output/raw/runtime/SRIM Restore/TDATA.sav").read_bytes()
             child = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
@@ -328,7 +329,7 @@ class TestTRIMExecution(unittest.TestCase):
             shutil.copytree(Path(__file__).parent / "fixtures/trim/2013", runtime, dirs_exist_ok=True)
             saved = runtime / "SRIM Restore/TDATA.sav"
             saved.write_bytes(saved.read_bytes().replace(b"28.0860", b"29.0860"))
-            with patch("src.srim.trim_execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim_execution.execute_trim_process", return_value={"pid": 42, "exit_code": 0, "elapsed_seconds": 0.1, "termination": "exit", "popups": [], "monitor_errors": []}):
+            with patch("src.srim.trim.execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim.execution.execute_trim_process", return_value={"pid": 42, "exit_code": 0, "elapsed_seconds": 0.1, "termination": "exit", "popups": [], "monitor_errors": []}):
                 result = run_trim_simulation(paths, config, created.path.name, runtime)
             report = json.loads((created.path / "output/raw/execution.json").read_bytes())
             self.assertEqual(result["status"], "failed")
@@ -346,7 +347,7 @@ class TestTRIMExecution(unittest.TestCase):
             inputs = resolve_trim_inputs(paths, config, worker, TRIM_REQUEST, TRIM_SELECTIONS)
             created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
             runtime = prepare_trim_simulation(paths, config, created, worker, inputs)
-            with patch("src.srim.trim_execution.execute_trim_process", return_value={"pid": None, "exit_code": None, "elapsed_seconds": 0.1, "termination": "launch-error", "popups": [], "monitor_errors": ["Cannot assign owned job"]}):
+            with patch("src.srim.trim.execution.execute_trim_process", return_value={"pid": None, "exit_code": None, "elapsed_seconds": 0.1, "termination": "launch-error", "popups": [], "monitor_errors": ["Cannot assign owned job"]}):
                 result = run_trim_simulation(paths, config, created.path.name, runtime)
             self.assertEqual(result["status"], "failed")
             self.assertEqual(json.loads((created.path / "output/raw/execution.json").read_bytes())["failure"]["code"], "launch")
@@ -363,7 +364,7 @@ class TestTRIMExecution(unittest.TestCase):
             created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
             runtime = prepare_trim_simulation(paths, config, created, worker, inputs)
             original = (runtime / "TRIM.IN").read_bytes()
-            with patch("src.srim.trim_execution.execute_trim_process", return_value={"pid": 42, "exit_code": 0, "elapsed_seconds": 0.1, "termination": "exit", "popups": [], "monitor_errors": []}), patch("src.srim.trim_execution.preserve_trim_runtime", side_effect=PermissionError("copy blocked")):
+            with patch("src.srim.trim.execution.execute_trim_process", return_value={"pid": 42, "exit_code": 0, "elapsed_seconds": 0.1, "termination": "exit", "popups": [], "monitor_errors": []}), patch("src.srim.trim.execution.preserve_trim_runtime", side_effect=PermissionError("copy blocked")):
                 with self.assertRaises(PermissionError) as caught:
                     run_trim_simulation(paths, config, created.path.name, runtime)
             self.assertEqual((runtime / "TRIM.IN").read_bytes(), original)
@@ -380,9 +381,9 @@ class TestTRIMExecution(unittest.TestCase):
             inputs = resolve_trim_inputs(paths, config, worker, TRIM_REQUEST, TRIM_SELECTIONS)
             created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
             runtime = prepare_trim_simulation(paths, config, created, worker, inputs)
-            with patch("src.srim.trim_execution.verify_trim_runtime", return_value=inputs):
+            with patch("src.srim.trim.execution.verify_trim_runtime", return_value=inputs):
                 (runtime / "RANGE.txt").write_bytes(b"broken native profile")
-                with patch("src.srim.trim_execution.execute_trim_process", return_value={"pid": 42, "exit_code": 0, "elapsed_seconds": 0.1, "termination": "exit", "popups": [], "monitor_errors": []}):
+                with patch("src.srim.trim.execution.execute_trim_process", return_value={"pid": 42, "exit_code": 0, "elapsed_seconds": 0.1, "termination": "exit", "popups": [], "monitor_errors": []}):
                     result = run_trim_simulation(paths, config, created.path.name, runtime)
             self.assertEqual(result["status"], "failed")
             self.assertEqual((created.path / "output/raw/runtime/RANGE.txt").read_bytes(), b"broken native profile")

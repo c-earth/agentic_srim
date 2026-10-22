@@ -2,7 +2,32 @@
 
 [Documentation index](../README.md) · [First calculation](../guides/getting-started.md) · [Data formats](data-formats.md) · [Current findings](../reviews/project-review-20261022.md)
 
-This reference describes the shared backend and SR APIs, with links to TRIM's input and execution references. Import from `src.backend.<module>` or `src.srim.<module>` while running from the repository root. The historical CAB proposal/catalog record design decisions; they are not the current user entry point.
+This reference describes the shared backend and SR APIs, with links to TRIM's input and execution references. Import from `src.backend.<module>` or `src.srim.<package>.<module>` while running from the repository root.
+
+## SRIM source layout
+
+| Package | Contents and starting points |
+| --- | --- |
+| `src/srim/common/` | Shared [JSON and cleanup types](../../src/srim/common/types.py), [verified file helpers](../../src/srim/common/files.py), [allocation checks](../../src/srim/common/allocations.py) and [simulation records/lifecycle](../../src/srim/common/records.py). |
+| `src/srim/resources/` | Materials, coefficient tables, compatibility, coordinated defaults and [shared selection/material correction](../../src/srim/resources/resolution.py). |
+| `src/srim/cab/` | Core/bond strengths, cache, constants, Bragg dependencies and capture/recovery. |
+| `src/srim/sr/` | SR inputs, [input models](../../src/srim/sr/models.py), resolution, runtime preparation, execution, queues, outputs and storage. |
+| `src/srim/trim/` | TRIM inputs, [input models](../../src/srim/trim/models.py), resolution, native execution, queues, outputs, checkpoint recovery and storage. The packaged damage seed is in `trim/data/`. |
+
+Import definitions directly from their owning modules; package initializers do
+not re-export them. For example:
+
+```python
+from src.srim.common.types import JSONObject
+from src.srim.resources.defaults import switch_sr_defaults
+from src.srim.sr.runtime import prepare_sr_simulation
+from src.srim.trim.execution import run_trim_simulation
+```
+
+The former flat paths such as `src.srim.runtime` and `src.srim.trim_execution`
+have been replaced by `src.srim.sr.runtime` and `src.srim.trim.execution`.
+Update external scripts and test patch targets accordingly. Callable signatures,
+stored formats and calculation behavior are unchanged by this package move.
 
 ## Shared types and behavior
 
@@ -80,7 +105,7 @@ verify_resource(paths: ProjectPaths, reference: ResourceReference) -> Path
 
 ## Coordinated defaults and compatibility
 
-Sources: [defaults.py](../../src/srim/defaults.py), [compatibility.py](../../src/srim/compatibility.py).
+Sources: [resources/defaults.py](../../src/srim/resources/defaults.py), [resources/compatibility.py](../../src/srim/resources/compatibility.py).
 
 ```python
 switch_sr_defaults(paths: ProjectPaths, config: Config) -> JSONObject
@@ -99,7 +124,7 @@ normalize_compounds(contents: bytes) -> tuple[bytes, list[dict[str, object]]]
 
 ## Materials and search
 
-Source: [material.py](../../src/srim/material.py).
+Source: [resources/materials.py](../../src/srim/resources/materials.py).
 
 ```python
 parse_atomdata(contents: bytes) -> JSONObject
@@ -130,7 +155,7 @@ The parsers are pure and return new ordered structures with lexical/source prove
 
 ## User CAB and coefficient variants
 
-Sources: [cab.py](../../src/srim/cab.py), [electronic.py](../../src/srim/electronic.py), [nuclear.py](../../src/srim/nuclear.py).
+Sources: [cab/strengths.py](../../src/srim/cab/strengths.py), [resources/electronic.py](../../src/srim/resources/electronic.py), [resources/nuclear.py](../../src/srim/resources/nuclear.py).
 
 ```python
 create_cab_variant(paths: ProjectPaths, config: Config, kind: CABKind, *,
@@ -157,7 +182,7 @@ Coefficient creation accepts either raw source or base version with a nonempty r
 
 ## Request validation and pure serialization/parsing
 
-Sources: [inputs.py](../../src/srim/inputs.py), [outputs.py](../../src/srim/outputs.py).
+Sources: [sr/inputs.py](../../src/srim/sr/inputs.py), [sr/outputs.py](../../src/srim/sr/outputs.py).
 
 ```python
 validate_sr_request(request: JSONObject) -> None
@@ -174,7 +199,7 @@ parse_sr_output(contents: bytes, request: JSONObject) -> JSONObject
 
 ## Resolution, preparation and execution
 
-Sources: [resolution.py](../../src/srim/resolution.py), [runtime.py](../../src/srim/runtime.py), [execution.py](../../src/srim/execution.py), [metadata.py](../../src/srim/metadata.py).
+Sources: [sr/models.py](../../src/srim/sr/models.py), [sr/resolution.py](../../src/srim/sr/resolution.py), [sr/runtime.py](../../src/srim/sr/runtime.py), [sr/execution.py](../../src/srim/sr/execution.py), [common/records.py](../../src/srim/common/records.py).
 
 ```python
 ResolvedSRInputs(request: JSONObject, selections: JSONObject,
@@ -211,7 +236,7 @@ Derived-correction progress reports each bond, then each composition entry's Bra
 
 ## Prepared batches and permanent runtime storage
 
-Sources: [queue.py](../../src/srim/queue.py), [storage.py](../../src/srim/storage.py), [capture_records.py](../../src/srim/capture_records.py).
+Sources: [sr/queue.py](../../src/srim/sr/queue.py), [sr/storage.py](../../src/srim/sr/storage.py), [common/types.py](../../src/srim/common/types.py), [cab/capture.py](../../src/srim/cab/capture.py).
 
 ```python
 PreparedSRTask(simulation_id: str, runtime: Path)
@@ -242,7 +267,7 @@ Capture initialization validates the eight native files and diagnostic request, 
 
 ## Bragg and default recovery
 
-Sources: [bragg.py](../../src/srim/bragg.py), [cab_recovery.py](../../src/srim/cab_recovery.py).
+Sources: [cab/bragg.py](../../src/srim/cab/bragg.py), [cab/recovery.py](../../src/srim/cab/recovery.py).
 
 ```python
 resolve_bragg(paths: ProjectPaths, config: Config, worker: CreatedDirectory,
@@ -275,7 +300,7 @@ Bulk APIs return references in selected order; `None` selects all 92 elements/co
 
 ## Calculated-entry store
 
-Source: [cab_cache.py](../../src/srim/cab_cache.py).
+Source: [cab/cache.py](../../src/srim/cab/cache.py).
 
 ```python
 CABEntryReference(dataset: ResourceReference, dependency_key: str,
@@ -295,7 +320,7 @@ These are advanced evidence-bearing APIs. Publication validates elemental depend
 
 ## Shared material correction
 
-Source: [resolution.py](../../src/srim/resolution.py).
+Source: [resources/resolution.py](../../src/srim/resources/resolution.py).
 
 `resolve_material_correction` is the common SR/TRIM correction resolver. It
 retains SR's correction formulas, omitted-entry fallback behavior, fixed reference
@@ -309,7 +334,7 @@ see [TRIM API effects](trim-input-format.md#apis-and-effects).
 
 For TRIM's validators, renderers, versioned damage resources, resolver and bundle export, see the [TRIM input API reference](trim-input-format.md#apis-and-effects). Main staging, execution, continuation, prepared batches and summary/profile parsing are documented in the [TRIM execution reference](trim-execution-format.md) and [execution guide](../guides/trim-execution.md). The shared correction API is described in [shared material correction](#shared-material-correction).
 
-Source: [metadata.py](../../src/srim/metadata.py).
+Source: [common/records.py](../../src/srim/common/records.py).
 
 ```python
 initialize_simulation(paths: ProjectPaths, created: CreatedDirectory, engine: JSONObject,

@@ -9,7 +9,7 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from _fixtures import make_test_installation
-from src.srim.material import _encode_atomdata, _encode_compounds, apply_material_overrides, construct_sr_target, parse_atomdata, parse_compounds, search_compounds
+from src.srim.resources.materials import _encode_atomdata, _encode_compounds, apply_material_overrides, construct_sr_target, parse_atomdata, parse_compounds, search_compounds
 
 
 class TestSRMaterial(unittest.TestCase):

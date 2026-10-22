@@ -18,7 +18,7 @@ Stop TRIM and freeze the whole checkpoint before calling recovery. Source-file c
 
 ```python
 from pathlib import Path
-from src.srim.trim_recovery import export_trim_checkpoint_recovery
+from src.srim.trim.recovery import export_trim_checkpoint_recovery
 
 report = export_trim_checkpoint_recovery(
     Path(r"D:\frozen-run\SRIM Restore"),
@@ -70,7 +70,7 @@ Saved numeric Variant records use Empty, Single, Double and Decimal encodings in
 
 ## Precision and validation
 
-**These files are recovered artifacts, not native TRIM exports.** Their headers, layout and summary differ from the native format. Do not feed rendered recovery text to the native-output parser. Resumed execution explicitly selects structured checkpoint results; fresh runs retain native lifecycle output checks. There is no fallback from missing fresh native text. `parse_trim_checkpoint_results(files)` in `src.srim.trim_results` provides the pure adapter, preserving the recovery-v2 object and separate native diagnostics without certifying execution success.
+**These files are recovered artifacts, not native TRIM exports.** Their headers, layout and summary differ from the native format. Do not feed rendered recovery text to the native-output parser. Resumed execution explicitly selects structured checkpoint results; fresh runs retain native lifecycle output checks. There is no fallback from missing fresh native text. `parse_trim_checkpoint_results(files)` in `src.srim.trim.results` provides the pure adapter, preserving the recovery-v2 object and separate native diagnostics without certifying execution success.
 
 The 23 native fixture cases compare **48,800 table cells**. Of these, **48,181** are within half a native final printed digit and **619** are outside that strict threshold. Regression tests measure and retain those discrepancies; they do not loosen tolerance to claim native equality. Saved summary moments are rounded, so some native statistics cannot be reconstructed at their original printed precision. Exact native-only statistics are explicitly unavailable rather than fabricated.
 

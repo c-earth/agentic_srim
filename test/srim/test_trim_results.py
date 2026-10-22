@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 import unittest
 
-from src.srim.trim_results import parse_trim_checkpoint_results
-from src.srim.trim_recovery import recover_trim_checkpoint
+from src.srim.trim.results import parse_trim_checkpoint_results
+from src.srim.trim.recovery import recover_trim_checkpoint
 
 
 FIXTURES = Path(__file__).parent / "fixtures/trim/recovery"

@@ -52,7 +52,18 @@ cleanup_trim_batch(paths: ProjectPaths,
     worker_paths: Sequence[Path]) -> BatchCleanupReport
 ```
 
-Preparation/loading/verification are in `trim_runtime`; execution in `trim_execution`; task classes and scheduling in `trim_queue`; native parsers/comparison in `trim_outputs`; checkpoint result adaptation in `trim_results` using `trim_recovery`; filesystem preservation/export/cleanup in `trim_storage`. The native implementation boundary is `trim_native.execute_trim_process`; ordinary callers should use the lifecycle runner.
+| Source | Interfaces |
+| --- | --- |
+| [trim/runtime.py](../../src/srim/trim/runtime.py) | Preparation, bundle loading and runtime verification. |
+| [trim/execution.py](../../src/srim/trim/execution.py) | Lifecycle execution. |
+| [trim/queue.py](../../src/srim/trim/queue.py) | Task classes and batch scheduling. |
+| [trim/outputs.py](../../src/srim/trim/outputs.py) | Native parsers and saved-value comparison. |
+| [trim/results.py](../../src/srim/trim/results.py), [trim/recovery.py](../../src/srim/trim/recovery.py) | Checkpoint decoding and result adaptation. |
+| [trim/storage.py](../../src/srim/trim/storage.py) | Filesystem preservation, standalone parsing and cleanup. |
+
+The native implementation boundary is `src.srim.trim.native.execute_trim_process`
+in [trim/native.py](../../src/srim/trim/native.py); ordinary callers should use the
+lifecycle runner.
 
 Paths supplied for bundles, runtimes and standalone imports are absolute and link-free. Preparation requires an empty simulation allocation and a valid worker allocation. Bundle loading validates the exact export manifest and independently replays pinned evidence. It does not read installations or current aliases. Metadata initialization/start also verify referenced immutable project resources. Preparation neither reruns material resolution nor launches TRIM.
 
@@ -83,7 +94,7 @@ JSON uses UTF-8, sorted keys, two-space indentation, finite JSON values and term
 
 ## Report schemas
 
-The principal report objects are listed below. Nested native-parser fields are defined in [trim_outputs.py](../../src/srim/trim_outputs.py), runtime controls in [trim_runtime.py](../../src/srim/trim_runtime.py), and resumed result adaptation in [trim_results.py](../../src/srim/trim_results.py).
+The principal report objects are listed below. Nested native-parser fields are defined in [trim/outputs.py](../../src/srim/trim/outputs.py), runtime controls in [trim/runtime.py](../../src/srim/trim/runtime.py), and resumed result adaptation in [trim/results.py](../../src/srim/trim/results.py).
 
 | Object | Exact top-level keys |
 | --- | --- |
@@ -103,7 +114,7 @@ Fresh and resumed runs may explicitly opt into reviewed responses through `casca
 
 Resumed execution selects checkpoint recovery explicitly for report-only and automatic runs. Default `None` keeps report-only popup handling. Automatic ordinary and event completion enters `checkpoint-check` without a command. Two valid full snapshots at least one second apart, while the current exact completion prompt remains verified, permit owned-job stopping. Initial readiness expires after ten seconds. Only unavailable ordinary state authorizes one `checkpoint-save-required` Yes response into `resume-save`, followed by the verified default-save command into `checkpoint-saved`. Its form wait, default-save transition and distinct post-save readiness each have ten-second bounds; the Yes transition has two seconds. Event policies never acknowledge completion or accept a save form. Missing final event checkpoints require an explicit final-covering autosave schedule. Invalid state fails monitoring; unstable state and vanished prompts fail readiness without fallback. Unknown popups, cancellation and timeout take priority, including after a probe. Natural clean empty-job exit remains valid with complete frozen results and no pending/error evidence. Generic `done` never authorizes forced stopping.
 
-For resumed attempts reaching integrity verification, `output/parsed/config-integrity.json` records the assessment of sealed `input/installation/Data/TRIM.cfg` against preserved `output/raw/runtime/Data/TRIM.cfg`. It has exactly `{schema_version, engine, path, engine_sha256, status, before, after, protected_values, changes, reason}`. Version is 1, engine trim, path `Data/TRIM.cfg`, and status equal/qualified/different. Before/after are `{sha256, size_bytes}`; protected_values is null or `{label_size: {before, after}, maximum_secondary_recoils: {before, after}}`. Changes are `{field, before, after, classification}` with presentation/protected/formatting classifications, sorted semantic field names, and a serialization/hash entry for formatting-only changes. Reason is null for equal/qualified and nonempty for different. The pure `trim_config.assess_trim_config_change(before: bytes, after: bytes, *, engine_sha256: str) -> JSONObject` performs this assessment without I/O.
+For resumed attempts reaching integrity verification, `output/parsed/config-integrity.json` records the assessment of sealed `input/installation/Data/TRIM.cfg` against preserved `output/raw/runtime/Data/TRIM.cfg`. It has exactly `{schema_version, engine, path, engine_sha256, status, before, after, protected_values, changes, reason}`. Version is 1, engine trim, path `Data/TRIM.cfg`, and status equal/qualified/different. Before/after are `{sha256, size_bytes}`; protected_values is null or `{label_size: {before, after}, maximum_secondary_recoils: {before, after}}`. Changes are `{field, before, after, classification}` with presentation/protected/formatting classifications, sorted semantic field names, and a serialization/hash entry for formatting-only changes. Reason is null for equal/qualified and nonempty for different. The pure `assess_trim_config_change(before: bytes, after: bytes, *, engine_sha256: str) -> JSONObject` in [trim/config.py](../../src/srim/trim/config.py) performs this assessment without I/O.
 
 The resumed engine-family 2008/input-mode 5 selector specifically expects `End of calculation`, exact expected-count Yes=Save/No=Increase text and Yes/No button IDs 6/7. It returns inspect-checkpoint with command null at running, resume-complete or checkpoint-check, and rejects checkpoint-save-required even with the fallback flag set. It does not accept the event-specific title for this combination. Standard/Pro event selectors and all fresh behavior remain unchanged. This observed prompt difference grants no event save action and changes no version-4 schema or timing.
 

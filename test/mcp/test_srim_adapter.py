@@ -14,8 +14,8 @@ from uuid import uuid4
 from src.mcp.srim_mcp.catalog import build_catalog
 from src.mcp.srim_mcp.operations import read_operation, write_operation
 from src.mcp.common.contracts import canonical_bytes
-from src.srim.inputs import render_sr_input
-from src.srim.metadata import JSONObject
+from src.srim.sr.inputs import render_sr_input
+from src.srim.common.types import JSONObject
 from test_contracts import Fixture
 
 
@@ -88,8 +88,8 @@ class TestScientificAdapter(Fixture):
         from _fixtures import make_test_project
         from test_trim_inputs import EXPLICIT_REQUEST, TRIM_INSTALLATION_FILES, TRIM_REQUEST, TRIM_SELECTIONS
         from jsonschema import Draft202012Validator
-        from src.srim.defaults import switch_sr_defaults
-        from src.srim.trim_defaults import switch_trim_defaults
+        from src.srim.resources.defaults import switch_sr_defaults
+        from src.srim.trim.defaults import switch_trim_defaults
 
         self.events = []
         with patch("subprocess.Popen", side_effect=AssertionError("No native launch during synthetic preparation")):

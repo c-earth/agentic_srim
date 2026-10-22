@@ -10,7 +10,8 @@ from uuid import uuid4
 from src.mcp.common.contracts import ServerContext
 from src.mcp.common.files import publish_json
 from src.mcp.common.jobs import JobManager
-from src.srim.metadata import JSONObject, _read_json
+from src.srim.common.types import JSONObject
+from src.srim.common.files import _read_json
 from test_contracts import Fixture
 
 

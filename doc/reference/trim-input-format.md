@@ -45,17 +45,18 @@ history availability. See [native coverage](validation.md#trim-native-checks).
 
 | Source | Public API | Effects |
 | --- | --- | --- |
-| [trim_inputs.py](../../src/srim/trim_inputs.py) | validate_trim_request, validate_trim_engine_request, flatten_trim_target, render_trim_input, render_trim_events | Pure validation/construction; bytes or None for absent events; ValueError on malformed input. |
-| [trim_defaults.py](../../src/srim/trim_defaults.py) | parse_trim_damage, apply_trim_damage_overrides | Pure; fresh JSON; ValueError on bad tables/operations. |
-| [trim_defaults.py](../../src/srim/trim_defaults.py) | create_trim_damage_variant | Exactly one source/base_version; immutable ResourceReference; never changes defaults. |
-| [trim_defaults.py](../../src/srim/trim_defaults.py) | read_trim_defaults, switch_trim_defaults, read_trim_installation | Verified file reads; explicit pointer switch only in switch_trim_defaults. Partial publications are retained and identified. |
-| [trim_resolution.py](../../src/srim/trim_resolution.py) | ResolvedTRIMInputs, resolve_trim_inputs | Copied intent and pinned byte tuple inventories; requested publications and optional SR/CAB dependency runs; no main TRIM run. |
-| [trim_resolution.py](../../src/srim/trim_resolution.py) | verify_trim_resolution | Offline reconstruction from bundle only; no file/alias/process access. |
-| [trim_storage.py](../../src/srim/trim_storage.py) | write_trim_input_bundle | New absolute destination with safe existing parent; verified staging and rename; no overwrite or cleanup. |
+| [trim/inputs.py](../../src/srim/trim/inputs.py) | validate_trim_request, validate_trim_engine_request, flatten_trim_target, render_trim_input, render_trim_events | Pure validation/construction; bytes or None for absent events; ValueError on malformed input. |
+| [trim/defaults.py](../../src/srim/trim/defaults.py) | parse_trim_damage, apply_trim_damage_overrides | Pure; fresh JSON; ValueError on bad tables/operations. |
+| [trim/defaults.py](../../src/srim/trim/defaults.py) | create_trim_damage_variant | Exactly one source/base_version; immutable ResourceReference; never changes defaults. |
+| [trim/defaults.py](../../src/srim/trim/defaults.py) | read_trim_defaults, switch_trim_defaults, read_trim_installation | Verified file reads; explicit pointer switch only in switch_trim_defaults. Partial publications are retained and identified. |
+| [trim/models.py](../../src/srim/trim/models.py) | ResolvedTRIMInputs | Stores intent, resolved evidence and pinned byte tuple inventories without validation or I/O. |
+| [trim/resolution.py](../../src/srim/trim/resolution.py) | resolve_trim_inputs | Copied intent and pinned byte tuple inventories; requested publications and optional SR/CAB dependency runs; no main TRIM run. |
+| [trim/resolution.py](../../src/srim/trim/resolution.py) | verify_trim_resolution | Offline reconstruction from bundle only; no file/alias/process access. |
+| [trim/storage.py](../../src/srim/trim/storage.py) | write_trim_input_bundle | New absolute destination with safe existing parent; verified staging and rename; no overwrite or cleanup. |
 
 The source modules linked above define the full typed signatures, inputs, outputs, side effects and error contracts. Invalid data/integrity raises ValueError; filesystem/lock errors propagate OSError; collision raises FileExistsError. Dependency/callback/interruption errors propagate with evidence notes. Worker/CAB dependency leases and finite positive operation timeouts follow existing SR machinery. Layers resolve sequentially; progress events receive layer_index after each layer completes. Shared derived-correction events use `calculated`, `cached`, `resolved`, `fallback` and `skipped` states; counters reset per layer and include each bond plus a Bragg/core pair per composition entry. A successful nonempty layer contribution plan reaches its fixed total, including unused skipped work; this is not whole-runtime completion. Explicit correction modes emit no dependency events.
 
-The shared resolve_material_correction in [resolution.py](../../src/srim/resolution.py) extracts SR's original correction block without changing its formulas, omissions/fallbacks, fixed reference conditions or SR API. A derived correction may recover missing entries; none/supplied does not execute dependencies. The ResolvedTRIMInputs dataclass stores values only and does not deeply freeze nested maps; consumers copy and independently verify them.
+The shared resolve_material_correction in [resources/resolution.py](../../src/srim/resources/resolution.py) retains SR's original correction formulas, omissions/fallbacks and fixed reference conditions. A derived correction may recover missing entries; none/supplied does not execute dependencies. The ResolvedTRIMInputs dataclass stores values only and does not deeply freeze nested maps; consumers copy and independently verify them.
 
 ## Bundle layout
 

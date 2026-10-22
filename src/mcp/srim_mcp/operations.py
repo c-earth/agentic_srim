@@ -22,30 +22,34 @@ from src.knowledge.search import search_inputs
 from src.knowledge.source import project_simulation_inputs, read_source_record
 from src.mcp.common.contracts import ServerContext, canonical_bytes, load_json
 from src.mcp.common.files import allowed_source, publish_files, read_verified_chunk, safe_path
-from src.srim.cab import create_cab_variant
-from src.srim.cab_cache import CABEntryReference, load_cab_entry
-from src.srim.cab_recovery import populate_default_cab
-from src.srim.compatibility import read_module_version
-from src.srim.defaults import read_sr_defaults, switch_sr_defaults
-from src.srim.electronic import create_electronic_variant
-from src.srim.execution import run_sr_simulation, verify_sr_runtime
-from src.srim.inputs import render_sr_input, validate_sr_engine_request, validate_sr_request
-from src.srim.material import create_material_variant, parse_atomdata, parse_compounds, search_compounds
-from src.srim.metadata import JSONObject, _inventory, _read_json, read_simulation
-from src.srim.nuclear import create_nuclear_variant
-from src.srim.queue import PreparedSRTask, run_sr_batch
-from src.srim.resolution import _resolve_selection, resolve_sr_inputs
-from src.srim.runtime import _read_regular_bytes, prepare_sr_simulation
-from src.srim.storage import cleanup_sr_batch
-from src.srim.trim_defaults import create_trim_damage_variant, parse_trim_damage, read_trim_defaults, read_trim_installation, switch_trim_defaults
-from src.srim.trim_dialogs import ENGINES
-from src.srim.trim_execution import read_trim_output_availability, run_trim_simulation
-from src.srim.trim_inputs import render_trim_events, render_trim_input, validate_trim_engine_request, validate_trim_request
-from src.srim.trim_queue import PreparedTRIMTask, run_trim_batch
-from src.srim.trim_recovery import export_trim_checkpoint_recovery
-from src.srim.trim_resolution import resolve_trim_inputs
-from src.srim.trim_runtime import load_trim_input_bundle, prepare_trim_continuation, prepare_trim_simulation, verify_trim_runtime
-from src.srim.trim_storage import cleanup_trim_batch, parse_trim_directory, write_trim_input_bundle
+from src.srim.cab.strengths import create_cab_variant
+from src.srim.cab.cache import CABEntryReference, load_cab_entry
+from src.srim.cab.recovery import populate_default_cab
+from src.srim.resources.compatibility import read_module_version
+from src.srim.resources.defaults import read_sr_defaults, switch_sr_defaults
+from src.srim.resources.electronic import create_electronic_variant
+from src.srim.sr.execution import run_sr_simulation, verify_sr_runtime
+from src.srim.sr.inputs import render_sr_input, validate_sr_engine_request, validate_sr_request
+from src.srim.resources.materials import create_material_variant, parse_atomdata, parse_compounds, search_compounds
+from src.srim.common.types import JSONObject
+from src.srim.common.files import _inventory, _read_json
+from src.srim.common.records import read_simulation
+from src.srim.resources.nuclear import create_nuclear_variant
+from src.srim.sr.queue import PreparedSRTask, run_sr_batch
+from src.srim.resources.resolution import _resolve_selection
+from src.srim.sr.resolution import resolve_sr_inputs
+from src.srim.common.files import _read_regular_bytes
+from src.srim.sr.runtime import prepare_sr_simulation
+from src.srim.sr.storage import cleanup_sr_batch
+from src.srim.trim.defaults import create_trim_damage_variant, parse_trim_damage, read_trim_defaults, read_trim_installation, switch_trim_defaults
+from src.srim.trim.dialogs import ENGINES
+from src.srim.trim.execution import read_trim_output_availability, run_trim_simulation
+from src.srim.trim.inputs import render_trim_events, render_trim_input, validate_trim_engine_request, validate_trim_request
+from src.srim.trim.queue import PreparedTRIMTask, run_trim_batch
+from src.srim.trim.recovery import export_trim_checkpoint_recovery
+from src.srim.trim.resolution import resolve_trim_inputs
+from src.srim.trim.runtime import load_trim_input_bundle, prepare_trim_continuation, prepare_trim_simulation, verify_trim_runtime
+from src.srim.trim.storage import cleanup_trim_batch, parse_trim_directory, write_trim_input_bundle
 
 
 def read_operation(name: str, arguments: JSONObject, context: ServerContext) -> JSONObject:

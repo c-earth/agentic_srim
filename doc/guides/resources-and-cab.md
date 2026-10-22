@@ -20,8 +20,8 @@ Compatibility normalization during installation import prefers `VERSION`, otherw
 """Search the current compound defaults without changing resources or running engines."""
 
 from src.backend.resources import ResourceReference, verify_resource
-from src.srim.defaults import read_sr_defaults
-from src.srim.material import parse_atomdata, parse_compounds, search_compounds
+from src.srim.resources.defaults import read_sr_defaults
+from src.srim.resources.materials import parse_atomdata, parse_compounds, search_compounds
 
 generation = read_sr_defaults(paths)
 compound_ref = ResourceReference(**generation["resources"]["compound"])
@@ -68,7 +68,7 @@ To create reusable sparse CAB strengths independently of a simulation:
 ```python
 """Publish user strengths without changing defaults or recovering missing entries."""
 
-from src.srim.cab import create_cab_variant, load_cab
+from src.srim.cab.strengths import create_cab_variant, load_cab
 
 core_ref = create_cab_variant(paths, config, "core", source={"C": "6.2"})
 bond_ref = create_cab_variant(paths, config, "bond", source={"H-C": "1.5"})
@@ -106,7 +106,7 @@ Missing active default bonds use the original all-default baseline, fix the H co
 ```python
 """Recover selected default entries, preserving successful work for later reuse."""
 
-from src.srim.cab_recovery import populate_default_cab
+from src.srim.cab.recovery import populate_default_cab
 
 references = populate_default_cab(
     paths, config, worker, "bond", entries=["H-C"], progress=print

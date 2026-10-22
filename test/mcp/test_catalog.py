@@ -8,8 +8,8 @@ from jsonschema import Draft202012Validator
 
 from src.mcp.project_mcp.catalog import build_catalog as project_catalog
 from src.mcp.srim_mcp.catalog import build_catalog as scientific_catalog
-from src.srim.inputs import validate_sr_request
-from src.srim.trim_inputs import MODES, validate_trim_request
+from src.srim.sr.inputs import validate_sr_request
+from src.srim.trim.inputs import MODES, validate_trim_request
 from test_contracts import Fixture
 
 

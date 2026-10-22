@@ -10,8 +10,8 @@ from unittest.mock import patch
 
 from _fixtures import make_test_project
 from test_trim_runtime import CACHE
-from src.srim.storage import BatchCleanupReport
-from src.srim.trim_queue import PreparedTRIMTask, TRIMTaskResult, run_trim_batch
+from src.srim.common.types import BatchCleanupReport
+from src.srim.trim.queue import PreparedTRIMTask, TRIMTaskResult, run_trim_batch
 
 
 class TestTRIMQueue(unittest.TestCase):
@@ -23,12 +23,12 @@ class TestTRIMQueue(unittest.TestCase):
             paths, config, worker = make_test_project(Path(directory))
             tasks = [PreparedTRIMTask("first", worker.path / "trim/first"), PreparedTRIMTask("second", worker.path / "trim/second"), PreparedTRIMTask("third", paths.workers / "worker_2/trim/third"), PreparedTRIMTask("fourth", paths.workers / "worker_3/trim/fourth")]
             overrides = {worker.path.name: 300.0, "worker_2": None}
-            with patch("src.srim.trim_queue.verify_trim_runtime"), patch("src.srim.trim_queue._execute_trim_task", return_value=TRIMTaskResult(tasks[0], {"status": "failed"}, None, 0.0)) as execute:
+            with patch("src.srim.trim.queue.verify_trim_runtime"), patch("src.srim.trim.queue._execute_trim_task", return_value=TRIMTaskResult(tasks[0], {"status": "failed"}, None, 0.0)) as execute:
                 run_trim_batch(paths, config, tasks, max_workers=3, timeout_seconds=900.0, worker_timeouts=overrides)
             observed = {call.args[2].simulation_id: call.args[3] for call in execute.call_args_list}
             self.assertEqual(observed, {"first": 300.0, "second": 300.0, "third": None, "fourth": 900.0})
             self.assertEqual(overrides, {worker.path.name: 300.0, "worker_2": None})
-            with patch("src.srim.trim_queue.verify_trim_runtime"), patch("src.srim.trim_queue._execute_trim_task", return_value=TRIMTaskResult(tasks[0], {"status": "succeeded"}, None, 0.0)) as execute:
+            with patch("src.srim.trim.queue.verify_trim_runtime"), patch("src.srim.trim.queue._execute_trim_task", return_value=TRIMTaskResult(tasks[0], {"status": "succeeded"}, None, 0.0)) as execute:
                 run_trim_batch(paths, config, tasks, max_workers=3, timeout_seconds=None)
             self.assertTrue(all(call.args[3] is None for call in execute.call_args_list))
 
@@ -39,12 +39,12 @@ class TestTRIMQueue(unittest.TestCase):
             task = PreparedTRIMTask("one", worker.path / "trim/one")
             for value in (True, False, 0, -1, float("inf"), float("nan"), "60"):
                 for overrides in (False, True):
-                    with self.subTest(value=value, overrides=overrides), patch("src.srim.trim_queue.verify_trim_runtime"), patch("src.srim.trim_queue._execute_trim_task") as execute:
+                    with self.subTest(value=value, overrides=overrides), patch("src.srim.trim.queue.verify_trim_runtime"), patch("src.srim.trim.queue._execute_trim_task") as execute:
                         with self.assertRaises(ValueError):
                             run_trim_batch(paths, config, [task], max_workers=1, timeout_seconds=60.0 if overrides else value, worker_timeouts={worker.path.name: value} if overrides else None)
                         execute.assert_not_called()
             for overrides in ({"worker_unknown": None}, {1: 60}, []):
-                with self.subTest(overrides=overrides), patch("src.srim.trim_queue.verify_trim_runtime"), patch("src.srim.trim_queue._execute_trim_task") as execute:
+                with self.subTest(overrides=overrides), patch("src.srim.trim.queue.verify_trim_runtime"), patch("src.srim.trim.queue._execute_trim_task") as execute:
                     with self.assertRaises(ValueError):
                         run_trim_batch(paths, config, [task], max_workers=1, worker_timeouts=overrides)
                     execute.assert_not_called()
@@ -64,7 +64,7 @@ class TestTRIMQueue(unittest.TestCase):
                 notify_simulation_finished(paths, metadata)
                 return TRIMTaskResult(task, metadata, None, 0.0)
 
-            with patch("src.srim.trim_queue.verify_trim_runtime"), patch("src.srim.trim_queue._execute_trim_task", side_effect=execute), patch("src.knowledge.index.update_index") as update:
+            with patch("src.srim.trim.queue.verify_trim_runtime"), patch("src.srim.trim.queue._execute_trim_task", side_effect=execute), patch("src.knowledge.index.update_index") as update:
                 result = run_trim_batch(paths, config, tasks, max_workers=2)
             self.assertEqual(len(result.task_results), 2)
             update.assert_called_once_with(paths, sorted(task.simulation_id for task in tasks))
@@ -75,7 +75,7 @@ class TestTRIMQueue(unittest.TestCase):
             paths, config, worker = make_test_project(Path(directory))
             tasks = [PreparedTRIMTask(str(i), worker.path / "trim" / str(i)) for i in range(4)]
             outcomes = [TRIMTaskResult(task, {"status": "succeeded"}, None, 0.0) for task in tasks]
-            with patch("src.srim.trim_queue.verify_trim_runtime"), patch("src.srim.trim_queue._execute_trim_task", side_effect=outcomes) as execute:
+            with patch("src.srim.trim.queue.verify_trim_runtime"), patch("src.srim.trim.queue._execute_trim_task", side_effect=outcomes) as execute:
                 result = run_trim_batch(paths, config, tasks, max_workers=3)
             self.assertEqual([r.task for r in result.task_results], tasks)
             self.assertEqual([call.args[2] for call in execute.call_args_list], tasks)
@@ -86,7 +86,7 @@ class TestTRIMQueue(unittest.TestCase):
         with TemporaryDirectory(dir=CACHE) as directory:
             paths, config, worker = make_test_project(Path(directory))
             task = PreparedTRIMTask("same", worker.path / "trim/same")
-            with patch("src.srim.trim_queue.verify_trim_runtime"), patch("src.srim.trim_queue._execute_trim_task") as execute:
+            with patch("src.srim.trim.queue.verify_trim_runtime"), patch("src.srim.trim.queue._execute_trim_task") as execute:
                 with self.assertRaises(ValueError):
                     run_trim_batch(paths, config, [task, task], max_workers=2)
                 execute.assert_not_called()
@@ -97,7 +97,7 @@ class TestTRIMQueue(unittest.TestCase):
             paths, config, worker = make_test_project(Path(directory))
             tasks = [PreparedTRIMTask(str(i), worker.path / "trim" / str(i)) for i in range(2)]
             outcomes = [TRIMTaskResult(tasks[0], {"status": "failed"}, None, 0.0), TRIMTaskResult(tasks[1], {"status": "succeeded"}, None, 0.0)]
-            with patch("src.srim.trim_queue.verify_trim_runtime"), patch("src.srim.trim_queue._execute_trim_task", side_effect=outcomes):
+            with patch("src.srim.trim.queue.verify_trim_runtime"), patch("src.srim.trim.queue._execute_trim_task", side_effect=outcomes):
                 result = run_trim_batch(paths, config, tasks, max_workers=2)
             self.assertEqual([r.metadata["status"] for r in result.task_results], ["failed", "succeeded"])
 
@@ -106,7 +106,7 @@ class TestTRIMQueue(unittest.TestCase):
         with TemporaryDirectory(dir=CACHE) as directory:
             paths, config, worker = make_test_project(Path(directory))
             task = PreparedTRIMTask("one", worker.path / "trim/one")
-            with patch("src.srim.trim_queue.verify_trim_runtime"), patch("src.srim.trim_queue._execute_trim_task", return_value=TRIMTaskResult(task, {"status": "succeeded"}, None, 0.0)), patch("src.srim.trim_queue.cleanup_trim_batch", return_value=BatchCleanupReport((worker.path,), ())) as cleanup:
+            with patch("src.srim.trim.queue.verify_trim_runtime"), patch("src.srim.trim.queue._execute_trim_task", return_value=TRIMTaskResult(task, {"status": "succeeded"}, None, 0.0)), patch("src.srim.trim.queue.cleanup_trim_batch", return_value=BatchCleanupReport((worker.path,), ())) as cleanup:
                 result = run_trim_batch(paths, config, [task], max_workers=1, cleanup=True)
             cleanup.assert_called_once_with(paths, (worker.path,))
             self.assertEqual(result.cleanup.cleaned_workers, (worker.path,))
@@ -121,7 +121,7 @@ class TestTRIMQueue(unittest.TestCase):
                 future: Future[TRIMTaskResult] = Future()
                 future.set_result(TRIMTaskResult(tasks[index], {"status": "succeeded"}, None, 0.0))
                 futures.append(future)
-            with patch("src.srim.trim_queue.verify_trim_runtime"), patch("src.srim.trim_queue.ThreadPoolExecutor") as factory:
+            with patch("src.srim.trim.queue.verify_trim_runtime"), patch("src.srim.trim.queue.ThreadPoolExecutor") as factory:
                 factory.return_value.submit.side_effect = futures
                 result = run_trim_batch(paths, config, tasks, max_workers=2)
             self.assertEqual([call.args[4] for call in factory.return_value.submit.call_args_list], [tasks[0], tasks[2], tasks[1]])
@@ -134,7 +134,7 @@ class TestTRIMQueue(unittest.TestCase):
             task = PreparedTRIMTask("first", worker.path / "trim/first")
             future: Future[TRIMTaskResult] = Future()
             future.set_exception(KeyboardInterrupt())
-            with patch("src.srim.trim_queue.verify_trim_runtime"), patch("src.srim.trim_queue.ThreadPoolExecutor") as factory, patch("src.srim.trim_queue.cleanup_trim_batch") as cleanup:
+            with patch("src.srim.trim.queue.verify_trim_runtime"), patch("src.srim.trim.queue.ThreadPoolExecutor") as factory, patch("src.srim.trim.queue.cleanup_trim_batch") as cleanup:
                 factory.return_value.submit.return_value = future
                 with self.assertRaises(KeyboardInterrupt):
                     run_trim_batch(paths, config, [task], max_workers=1, cleanup=True)

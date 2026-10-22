@@ -14,9 +14,9 @@ from unittest.mock import patch
 from _fixtures import make_test_project
 from test_trim_defaults import CACHE
 from test_trim_inputs import TRIM_INSTALLATION_FILES, TRIM_REQUEST, TRIM_SELECTIONS
-from src.srim.trim_defaults import switch_trim_defaults
-from src.srim.trim_resolution import resolve_trim_inputs
-from src.srim.trim_storage import cleanup_trim_batch, parse_trim_directory, write_trim_input_bundle
+from src.srim.trim.defaults import switch_trim_defaults
+from src.srim.trim.resolution import resolve_trim_inputs
+from src.srim.trim.storage import cleanup_trim_batch, parse_trim_directory, write_trim_input_bundle
 
 
 class TestTRIMStorage(unittest.TestCase):
@@ -103,7 +103,7 @@ class TestTRIMStorage(unittest.TestCase):
                 (config.srim_root / name).write_bytes(payload)
             switch_trim_defaults(paths, config)
             bundle = resolve_trim_inputs(paths, config, worker, TRIM_REQUEST, TRIM_SELECTIONS)
-            with patch("src.srim.trim_storage._read_regular_bytes", side_effect=PermissionError("verification blocked")):
+            with patch("src.srim.trim.storage._read_regular_bytes", side_effect=PermissionError("verification blocked")):
                 with self.assertRaises(PermissionError) as caught:
                     write_trim_input_bundle(Path(td) / "failed", bundle)
             self.assertFalse((Path(td) / "failed").exists())
@@ -149,12 +149,12 @@ class TestTRIMStorage(unittest.TestCase):
 
     def test_live_source_change_rejected(self: TestTRIMStorage) -> None:
         """Reject an import whose source inventory changes during copying; return None."""
-        from src.srim.metadata import _inventory
+        from src.srim.common.files import _inventory
         source = (Path(__file__).parent / "fixtures/trim/2013").resolve()
         original = _inventory(source, source)
         with TemporaryDirectory(dir=CACHE) as td:
             destination = Path(td) / "changed"
-            with patch("src.srim.trim_storage._inventory", side_effect=[original, original, []]):
+            with patch("src.srim.trim.storage._inventory", side_effect=[original, original, []]):
                 with self.assertRaisesRegex(ValueError, "source changed"):
                     parse_trim_directory(source, destination)
             self.assertFalse(destination.exists())

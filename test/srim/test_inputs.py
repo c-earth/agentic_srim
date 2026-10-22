@@ -5,8 +5,8 @@ from __future__ import annotations
 from copy import deepcopy
 import unittest
 
-from src.srim.inputs import render_sr_input, validate_sr_request
-from src.srim.metadata import JSONObject
+from src.srim.sr.inputs import render_sr_input, validate_sr_request
+from src.srim.common.types import JSONObject
 
 
 class TestSRInputs(unittest.TestCase):

@@ -7,9 +7,9 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-from src.srim.trim_dialogs import ACTIVE, CASCADE, DETAIL, DETAIL_ACTIVE, ENGINES, KP, SPECIAL, advance_trim_dialog_state, assess_trim_histories, build_trim_dialog_policy, classify_trim_dialog, count_trim_event_records, initial_trim_dialog_state, validate_trim_native_request
-from src.srim.trim_inputs import render_trim_events
-from src.srim.trim_resolution import ResolvedTRIMInputs
+from src.srim.trim.dialogs import ACTIVE, CASCADE, DETAIL, DETAIL_ACTIVE, ENGINES, KP, SPECIAL, advance_trim_dialog_state, assess_trim_histories, build_trim_dialog_policy, classify_trim_dialog, count_trim_event_records, initial_trim_dialog_state, validate_trim_native_request
+from src.srim.trim.inputs import render_trim_events
+from src.srim.trim.models import ResolvedTRIMInputs
 from test_trim_inputs import EXPLICIT_REQUEST
 
 
@@ -24,7 +24,7 @@ class TestTRIMDialogs(unittest.TestCase):
 
     def test_checkpoint_inspection_across_engine_modes(self: TestTRIMDialogs) -> None:
         """Inspect every supported completion without commands and gate fallback; return None."""
-        from src.srim.trim_inputs import MODES
+        from src.srim.trim.inputs import MODES
         for family, modes in MODES.items():
             for mode in set(modes.values()):
                 policy = {**POLICY, "engine_family": family, "engine_sha256": ENGINES[family], "kind": "resume", "input_mode": mode}
@@ -71,7 +71,7 @@ class TestTRIMDialogs(unittest.TestCase):
         inputs = ResolvedTRIMInputs({}, {}, request, {}, (), (("TRIM.exe", b"fixture"),))
         original = deepcopy(request)
         self.assertIsNone(build_trim_dialog_policy(inputs, CONTROL, None))
-        with patch("src.srim.trim_dialogs.hashlib.sha256") as digest:
+        with patch("src.srim.trim.dialogs.hashlib.sha256") as digest:
             digest.return_value.hexdigest.return_value = ENGINES["2013"]
             for choice in ("none", "statistics", "detailed"):
                 policy = build_trim_dialog_policy(inputs, CONTROL, choice)
@@ -188,7 +188,7 @@ class TestTRIMDialogs(unittest.TestCase):
         inputs.effective_request["parameters"]["mode"] = "recoil-quick"
         control = {**CONTROL, "kind": "resume", "initial_count": 5}
         self.assertIsNone(build_trim_dialog_policy(inputs, control, None))
-        with patch("src.srim.trim_dialogs.hashlib.sha256") as digest:
+        with patch("src.srim.trim.dialogs.hashlib.sha256") as digest:
             digest.return_value.hexdigest.return_value = ENGINES["2013"]
             for choice in ("none", "statistics", "detailed"):
                 policy = build_trim_dialog_policy(inputs, control, choice)
@@ -214,7 +214,7 @@ class TestTRIMDialogs(unittest.TestCase):
         contents = render_trim_events(request)
         self.assertEqual(count_trim_event_records(contents), 1)
         inputs = ResolvedTRIMInputs({}, {}, request, {}, (), (("TRIM.exe", b"fixture"),))
-        with patch("src.srim.trim_dialogs.hashlib.sha256") as digest:
+        with patch("src.srim.trim.dialogs.hashlib.sha256") as digest:
             digest.return_value.hexdigest.return_value = ENGINES["2013"]
             with self.assertRaises(ValueError):
                 validate_trim_native_request(inputs, total_ions=2, event_contents=contents)
@@ -231,7 +231,7 @@ class TestTRIMDialogs(unittest.TestCase):
             else:
                 request["parameters"]["layers"][0]["name"] = 'quoted "layer"'
             inputs = ResolvedTRIMInputs({}, {}, request, {}, (), (("TRIM.exe", b"fixture"),))
-            with patch("src.srim.trim_dialogs.hashlib.sha256") as digest:
+            with patch("src.srim.trim.dialogs.hashlib.sha256") as digest:
                 digest.return_value.hexdigest.return_value = ENGINES["2013"]
                 with self.assertRaisesRegex(ValueError, "doubled-quote"):
                     validate_trim_native_request(inputs, total_ions=1, event_contents=None)

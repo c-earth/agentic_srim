@@ -16,9 +16,9 @@ from src.backend.config import Config
 from src.backend.paths import create_base_directories, get_project_paths
 from src.backend.records import CreateRequest, create_directories
 from src.knowledge.source import project_simulation_inputs, read_source_file, read_source_record
-from src.srim.inputs import render_sr_input
-from src.srim.metadata import finish_simulation, initialize_simulation
-from src.srim.trim_inputs import render_trim_events, render_trim_input
+from src.srim.sr.inputs import render_sr_input
+from src.srim.common.records import finish_simulation, initialize_simulation
+from src.srim.trim.inputs import render_trim_events, render_trim_input
 
 
 CACHE = Path(".cache/input-search/tests").resolve()
@@ -56,10 +56,10 @@ class TestSource(NativeFixture):
         self.addCleanup(sys.path.pop, 0)
         from _fixtures import make_test_project
         from test_trim_inputs import TRIM_INSTALLATION_FILES, TRIM_REQUEST as intent, TRIM_SELECTIONS
-        from src.srim.trim_defaults import switch_trim_defaults
-        from src.srim.trim_execution import run_trim_simulation
-        from src.srim.trim_resolution import resolve_trim_inputs
-        from src.srim.trim_runtime import prepare_trim_continuation, prepare_trim_simulation
+        from src.srim.trim.defaults import switch_trim_defaults
+        from src.srim.trim.execution import run_trim_simulation
+        from src.srim.trim.resolution import resolve_trim_inputs
+        from src.srim.trim.runtime import prepare_trim_continuation, prepare_trim_simulation
         for event_mode in (False, True):
             paths, config, worker = make_test_project(self.paths.root / ("event" if event_mode else "ordinary"))
             for name, data in TRIM_INSTALLATION_FILES.items():
@@ -83,7 +83,7 @@ class TestSource(NativeFixture):
                 path = runtime / "SRIM Restore/TRIMIN.sav"
                 path.write_bytes(path.read_bytes().replace(b"2 12345 0", b"4 12345 0"))
             process = {"pid": 42, "exit_code": 1, "elapsed_seconds": 0.1, "termination": "timeout", "popups": [], "monitor_errors": []}
-            with patch("src.srim.trim_execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim_execution.execute_trim_process", return_value=process):
+            with patch("src.srim.trim.execution.verify_trim_runtime", return_value=inputs), patch("src.srim.trim.execution.execute_trim_process", return_value=process):
                 run_trim_simulation(paths, config, parent.path.name, runtime)
             child = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
             appended = [{**event, "id": "T0002", "energy_eV": "60000"}]
@@ -148,7 +148,7 @@ class TestSource(NativeFixture):
             (created.path / "input/engine/TRIM.IN").write_bytes(render_trim_input(request))
             if event_mode:
                 (created.path / "input/engine/TRIM.DAT").write_bytes(render_trim_events(request))
-            from src.srim.metadata import _inventory
+            from src.srim.common.files import _inventory
             metadata = json.loads((self.created.path / "metadata.json").read_bytes())
             metadata.update(id=created.path.name, engine={"name": "trim", "version": "2013", "executable": {"name": "TRIM.exe", "sha256": "b" * 64}}, inputs=_inventory(created.path / "input", created.path), outputs=[])
             (created.path / "metadata.json").write_text(json.dumps(metadata), encoding="utf-8")

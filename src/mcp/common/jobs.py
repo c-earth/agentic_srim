@@ -17,8 +17,8 @@ from uuid import UUID, uuid4
 from src.backend.records import _record_time
 from src.mcp.common.contracts import ServerContext, canonical_bytes, error_response, load_json
 from src.mcp.common.files import acquire_lock, publish_json, read_verified_chunk, safe_path
-from src.srim.metadata import JSONObject
-from src.srim.runtime import _read_regular_bytes
+from src.srim.common.types import JSONObject
+from src.srim.common.files import _read_regular_bytes
 
 
 Progress = Callable[[JSONObject], None]

@@ -12,9 +12,9 @@ from unittest.mock import patch
 
 from _fixtures import fake_bragg_run, make_test_project, make_test_request, make_test_selections
 from src.backend.records import CreateRequest, CreatedDirectory, create_directories
-from src.srim.metadata import read_simulation
-from src.srim.queue import PreparedSRTask, run_sr_batch
-from src.srim.runtime import prepare_sr_simulation
+from src.srim.common.records import read_simulation
+from src.srim.sr.queue import PreparedSRTask, run_sr_batch
+from src.srim.sr.runtime import prepare_sr_simulation
 
 
 class TestPreparedQueue(unittest.TestCase):
@@ -85,7 +85,7 @@ class TestPreparedQueue(unittest.TestCase):
     def test_validation(self: TestPreparedQueue) -> None:
         """Reject self's invalid batches before native launch and accept an empty batch; return None."""
         task = self._make_task(self.worker)
-        with patch("src.srim.execution.subprocess.run") as launch:
+        with patch("src.srim.sr.execution.subprocess.run") as launch:
             for count in (0, -1, True, 1.5):
                 with self.subTest(count=count), self.assertRaises(ValueError):
                     run_sr_batch(self.paths, self.config, [task], max_workers=count)
@@ -105,7 +105,7 @@ class TestPreparedQueue(unittest.TestCase):
         other = create_directories(self.paths, self.config, [CreateRequest("worker")]).completed[0]
         tasks = [self._make_task(worker) for worker in (self.worker, other)]
         self.barrier = Barrier(2)
-        with patch("src.srim.execution.subprocess.run", side_effect=self._fake_run):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=self._fake_run):
             result = run_sr_batch(self.paths, self.config, tasks, max_workers=2)
         self.assertEqual(self.peak, 2)
         self.assertTrue(all(item.metadata["status"] == "succeeded" for item in result.task_results))
@@ -119,7 +119,7 @@ class TestPreparedQueue(unittest.TestCase):
         """Bound self's six tasks across three workers to two active calls; return None."""
         workers = [self.worker, *create_directories(self.paths, self.config, [CreateRequest("worker"), CreateRequest("worker")]).completed]
         tasks = [self._make_task(workers[index % 3]) for index in range(6)]
-        with patch("src.srim.execution.subprocess.run", side_effect=self._fake_run):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=self._fake_run):
             result = run_sr_batch(self.paths, self.config, tasks, max_workers=2)
         self.assertLessEqual(self.peak, 2)
         self.assertTrue(all(item.error is None and item.metadata["status"] == "succeeded" for item in result.task_results))
@@ -127,7 +127,7 @@ class TestPreparedQueue(unittest.TestCase):
     def test_same_worker_order(self: TestPreparedQueue) -> None:
         """Keep self's single-worker submission order despite a larger concurrency limit; return None."""
         tasks = [self._make_task(self.worker) for _ in range(3)]
-        with patch("src.srim.execution.subprocess.run", side_effect=self._fake_run):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=self._fake_run):
             result = run_sr_batch(self.paths, self.config, tasks, max_workers=3)
         self.assertEqual(self.peak, 1)
         self.assertEqual(self.starts, [task.simulation_id for task in tasks])
@@ -137,7 +137,7 @@ class TestPreparedQueue(unittest.TestCase):
         """Preserve self's input order while skipping tasks whose worker remains busy; return None."""
         other = create_directories(self.paths, self.config, [CreateRequest("worker")]).completed[0]
         tasks = [self._make_task(worker) for worker in (self.worker, self.worker, other)]
-        with patch("src.srim.execution.subprocess.run", side_effect=self._fake_run):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=self._fake_run):
             result = run_sr_batch(self.paths, self.config, tasks, max_workers=2)
         self.assertEqual(tuple(item.task for item in result.task_results), tuple(tasks))
         self.assertLess(self.starts.index(tasks[2].simulation_id), self.starts.index(tasks[1].simulation_id))
@@ -146,7 +146,7 @@ class TestPreparedQueue(unittest.TestCase):
         """Keep self's failed metadata, unexpected error and later success independent; return None."""
         tasks = [self._make_task(self.worker) for _ in range(3)]
         self.failure, self.exception = tasks[0].runtime, tasks[1].runtime
-        with patch("src.srim.execution.subprocess.run", side_effect=self._fake_run):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=self._fake_run):
             result = run_sr_batch(self.paths, self.config, tasks, max_workers=2)
         self.assertEqual(result.task_results[0].metadata["status"], "failed")
         self.assertIsInstance(result.task_results[1].error, LookupError)
@@ -157,7 +157,7 @@ class TestPreparedQueue(unittest.TestCase):
         """Stop self's dispatch on interruption, retain workers and leave pending records created; return None."""
         tasks = [self._make_task(self.worker) for _ in range(2)]
         self.interrupt = tasks[0].runtime
-        with patch("src.srim.execution.subprocess.run", side_effect=self._fake_run), self.assertRaises(KeyboardInterrupt):
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=self._fake_run), self.assertRaises(KeyboardInterrupt):
             run_sr_batch(self.paths, self.config, tasks, max_workers=1)
         self.assertTrue(self.worker.path.is_dir())
         self.assertEqual(read_simulation(self.paths, tasks[1].simulation_id)["status"], "created")
@@ -165,7 +165,7 @@ class TestPreparedQueue(unittest.TestCase):
     def test_indexing_once_after_native_batch(self: TestPreparedQueue) -> None:
         """Collect finalized self tasks across copied contexts and flush once; return None."""
         tasks = [self._make_task(self.worker) for _ in range(2)]
-        with patch("src.srim.execution.subprocess.run", side_effect=self._fake_run), patch("src.knowledge.index.update_index") as update:
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=self._fake_run), patch("src.knowledge.index.update_index") as update:
             result = run_sr_batch(self.paths, self.config, tasks, max_workers=2)
         self.assertEqual([item.metadata["status"] for item in result.task_results], ["succeeded", "succeeded"])
         update.assert_called_once_with(self.paths, sorted(task.simulation_id for task in tasks))

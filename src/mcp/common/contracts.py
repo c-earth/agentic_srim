@@ -17,7 +17,7 @@ from jsonschema.exceptions import SchemaError
 
 from src.backend.config import Config, load_config
 from src.backend.paths import ProjectPaths, get_project_paths
-from src.srim.metadata import JSONObject, JSONValue
+from src.srim.common.types import JSONObject, JSONValue
 
 
 ServerName = Literal["srim_mcp", "project_mcp"]

@@ -21,8 +21,9 @@ from src.backend.config import Config
 from src.backend.paths import ProjectPaths
 from src.backend.records import CreateRequest, _HELD_LOCKS, _record_time, create_directories
 from src.knowledge.schema import validate_search_document
-from src.srim.metadata import JSONObject, _read_json
-from src.srim.runtime import _read_regular_bytes
+from src.srim.common.types import JSONObject
+from src.srim.common.files import _read_json
+from src.srim.common.files import _read_regular_bytes
 
 
 def initialize_record(paths: ProjectPaths, config: Config, kind: Literal["case", "analysis"], document: JSONObject, request_id: str, *, allocated_id: str | None = None) -> JSONObject:

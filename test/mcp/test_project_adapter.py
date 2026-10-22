@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from src.mcp.project_mcp.catalog import build_catalog
 from src.mcp.project_mcp.operations import read_operation, write_operation
-from src.srim.metadata import JSONObject
+from src.srim.common.types import JSONObject
 from test_contracts import Fixture
 
 
@@ -26,7 +26,7 @@ class TestProjectAdapter(Fixture):
         """Create multiple independent cases and prove project tools never launch physics."""
         self.events = []
         spec = {"title": "A", "question": "Question?", "status": "open", "tags": [], "notes": "", "members": []}
-        with patch("src.srim.execution.run_sr_simulation", side_effect=AssertionError("No native execution")):
+        with patch("src.srim.sr.execution.run_sr_simulation", side_effect=AssertionError("No native execution")):
             first = write_operation("case_create", {"request_id": str(uuid4()), "spec": spec, "allocated_id": None}, self.project, self.cancel, self.progress)
             second = write_operation("case_create", {"request_id": str(uuid4()), "spec": {**spec, "title": "B"}, "allocated_id": None}, self.project, self.cancel, self.progress)
             self.assertNotEqual(first["data"]["record"]["id"], second["data"]["record"]["id"])

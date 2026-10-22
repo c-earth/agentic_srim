@@ -16,7 +16,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from src.srim.trim_recovery import _decode_double_pairs, _decode_numeric_variants, _render_recovered_files, export_trim_checkpoint_recovery, recover_trim_checkpoint
+from src.srim.trim.recovery import _decode_double_pairs, _decode_numeric_variants, _render_recovered_files, export_trim_checkpoint_recovery, recover_trim_checkpoint
 
 
 FIXTURES = Path(__file__).parent / "fixtures/trim/recovery"
@@ -294,7 +294,7 @@ class TestTRIMRecovery(unittest.TestCase):
                     shutil.copyfile(entry, source / entry.name)
             original = _render_recovered_files
             destination = root / "changed"
-            with patch("src.srim.trim_recovery._render_recovered_files", side_effect=lambda result: ((source / "extra").write_bytes(b"new"), original(result))[1]):
+            with patch("src.srim.trim.recovery._render_recovered_files", side_effect=lambda result: ((source / "extra").write_bytes(b"new"), original(result))[1]):
                 with self.assertRaisesRegex(ValueError, "Source inventory changed"):
                     export_trim_checkpoint_recovery(source, destination)
             self.assertFalse(destination.exists())
@@ -303,14 +303,14 @@ class TestTRIMRecovery(unittest.TestCase):
             with patch.object(Path, "open", autospec=True, side_effect=OSError("injected failure")):
                 with self.assertRaises(OSError):
                     export_trim_checkpoint_recovery(source, root / "read-failure")
-            with patch("src.srim.trim_recovery._render_recovered_files", return_value={"bad/subfile.txt": b"failure"}):
+            with patch("src.srim.trim.recovery._render_recovered_files", return_value={"bad/subfile.txt": b"failure"}):
                 with self.assertRaises(OSError) as caught:
                     export_trim_checkpoint_recovery(source, root / "partial")
             self.assertTrue((root / "partial").is_dir())
             self.assertTrue(any("partial output retained" in note for note in caught.exception.__notes__))
             self.assertEqual({p.name: p.read_bytes() for p in source.iterdir()}, before)
             destination = root / "changed-after-write"
-            with patch("src.srim.trim_recovery._render_recovered_files", return_value={"one.txt": b"one"}), patch.object(Path, "read_bytes", autospec=True, side_effect=lambda path: ((source / "added-after-write").write_bytes(b"changed"), b"one")[1] if path == destination / "one.txt" else before[path.name]):
+            with patch("src.srim.trim.recovery._render_recovered_files", return_value={"one.txt": b"one"}), patch.object(Path, "read_bytes", autospec=True, side_effect=lambda path: ((source / "added-after-write").write_bytes(b"changed"), b"one")[1] if path == destination / "one.txt" else before[path.name]):
                 with self.assertRaisesRegex(ValueError, "after publication"):
                     export_trim_checkpoint_recovery(source, destination)
             self.assertTrue((destination / "one.txt").exists())

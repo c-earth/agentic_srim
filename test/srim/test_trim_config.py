@@ -5,8 +5,8 @@ from __future__ import annotations
 import hashlib
 import unittest
 
-from src.srim.trim_config import _parse_trim_config, assess_trim_config_change
-from src.srim.trim_dialogs import ENGINES
+from src.srim.trim.config import _parse_trim_config, assess_trim_config_change
+from src.srim.trim.dialogs import ENGINES
 
 
 CONFIG = ("\r\n".join(["----TRIM.cfg : TRIM Color Configuration----", "", "[Ion Colors - MOVE, STOP]", " 255 0 ", "", "[12 Recoil Colors - MOVE, STOP]", *[f" {i} 33023 5614335 " for i in range(1, 13)], "", "[Distribution Plot Labels - SIZE, COLOR]", " 6 8388608 ", "", "[4 Distribution Plot Colors]", " 255 8388608 65280 16776960 ", "", "[Plot Background, Outer Box, Axes, Layer Lines, Layer Names]", "16777215 255 0 0 0", "", "Maximum number of secondary recoils (default=20000)", " 20000 ", "Note: 100k recoils requires extra 2MB of memory, 1M recoils requires 35MB."]) + "\r\n").encode("ascii")
