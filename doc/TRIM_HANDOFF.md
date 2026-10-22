@@ -6,13 +6,15 @@ Verification: 151 TRIM tests passed with warnings as errors in the mixed working
 
 Commit boundary: checkpoint-first control, resumed result adapter, config qualification, preparation contracts, their tests and documentation. Separate native-parser mode/signed-energy changes in `trim_outputs.py`, `test_trim_outputs.py`, their two fixture directories and the signed-energy availability addition in `trim_dialogs.py` remain outside this commit. Unrelated NERSC data, Python caches and interrupted-test residue remain untouched. Cache evidence is local and Git-ignored; durable conclusions are in the direction document. The isolated staged snapshot passed all 146 TRIM tests with warnings as errors (147.138 seconds), without the five pending parser tests or their fixtures. Staged checks passed for 12 Python files and 11 Markdown files, including annotations, docstrings, no implementation comments, relative links, code fences and diff whitespace.
 
+Follow-up: the previously excluded parser work is now committed separately as `1592408`: saved-mode comparison, exact signed-energy token preservation, availability qualification, five regression cases and thirteen hash-preserved native fixture files. The focused parser and dialog suites each passed 14 tests with warnings as errors; the earlier full 151-test run already covered the unchanged combined implementation. Python caches and the entire local NERSC folder are now ignored, with the dataset retained for its planned move. The user authorized removal of `test/srim/tmp2uuond23/` after inspection confirmed synthetic test-project residue with no source references; actual test modules and fixtures remain intact. The historical popup-review additions below are retained. No implementation or cleanup task remains outstanding.
+
 Current continuation direction is [checkpoint `.sav` recovery](TRIM_DIRECTION.md), confirmed 2026-10-22. Historical F-export/chooser plans below are superseded and must not be resumed. Export-only code has been removed under the approved cleanup; `.sav` result/lifecycle integration remains the next design task.
 
 ## Execution implementation and verification
 
 The user approved [TRIM_EXECUTION_PROPOSAL.md](TRIM_EXECUTION_PROPOSAL.md), including its later event-list annotation, not-calculated NOVAC, normalized-composition and quick-mode aggregate-table amendments. Implementation resumed after the requested pause and is complete for fresh execution, continuation, prepared batches, whole-runtime preservation and summary/profile parsing. Usage and exact contracts are in the [execution guide](guides/trim-execution.md) and [reference](reference/trim-execution-format.md). Implementation was committed as `7d4c780` — `Implement TRIM execution, continuation, batches and profile parsing`.
 
-The user also approved `.gitattributes` rules disabling text conversion for native `.txt`/`.sav` fixtures. All 20 staged fixture hashes/sizes matched the recorded originals before the commit. Native trailing spaces and CRLF bytes are intentional. The next review is the recoil cascade-file popup and resume save/increase-count popup, individually; no response handlers have been approved or implemented.
+The user also approved `.gitattributes` rules disabling text conversion for native `.txt`/`.sav` fixtures. All 20 staged fixture hashes/sizes matched the recorded originals before the commit. Native trailing spaces and CRLF bytes are intentional. The cascade-file and event-completion popup paths have since been reviewed in an authorized UI-assisted matrix; see the update below. The next original review item is the resume save/increase-count popup. No production response handlers have been approved or implemented.
 
 The full SRIM regression passed 175 tests, and the backend suite passed 41 tests, with warnings as errors. After the final TRIM format/verification amendments, all 68 TRIM tests passed again. Syntax, required docstrings, complete argument/return annotations and absence of implementation comments passed across the 21 checked Python files. Documentation links and code fences were checked.
 
@@ -21,6 +23,12 @@ Latest native acceptance established clean Standard quick, full-cascade and mono
 Every detected interactive popup remains report-only: no response is sent. A recoil probe captured the cascade-file question. A continuation advanced a five-ion parent to six ions and captured the native save/increase-count question, then stopped its owned job and finalized failed/popup. The parent inventory stayed unchanged. This confirms preserved continuation progress and reporting, not clean unattended resume completion. Complete checkpoint copying does not prove atomic native binary-array publication or equivalence with uninterrupted calculations. Optional histories and binary arrays are preserved but not scientifically parsed. Unknown limits remain executable-evaluated; no request is silently modified or retried.
 
 Evidence is local under `.cache/trim-execution/`: `final-srim-tests.log`, `backend-tests.log`, `final-trim-tests.log`, `audited-native-checks.json`, `final-native-checks.json`, `multicomponent-native-checks.json`, and permanent native records beneath `native-acceptance/`. Latest case identities are Standard quick `srim_20261021_161405_1`, Standard full/monolayer `srim_20261021_160552_1` / `srim_20261021_160553_1`, 2008/Pro full `srim_20261021_161409_1` / `srim_20261021_161412_1`, continuation `srim_20261021_160603_1`, quick silica `srim_20261021_162545_1`, and layered full `srim_20261021_162550_1`. Earlier development false positives and pre-amendment parser/comparison failures are superseded by these checks. Cache evidence may be removed by cleanup; this section preserves durable conclusions. No intentionally live native probe remains.
+
+## Subsequent popup review: core outputs and optional histories
+
+The user approved a UI-assisted mode/version matrix and acknowledgment of the newly observed "No cascade details available with KP Damage" message. All 35 isolated runs across 23 supported version/mode combinations exited 0 and saved 100/100. Core summary/profile output was produced for each tested mode; this does not promise every optional history or scientific validation. Detailed results and qualifications are now in the [execution guide](guides/trim-execution.md#core-results-versus-optional-collision-histories), with local environments and hashes under `.cache/popup-review/mode-version-matrix/`.
+
+Additional unresolved state: 2013 Standard/Pro full recoil (input mode 6, saved runtime mode 7) produced core results and cascade statistics but did not offer detailed recoil histories through the reviewed popup path; the KP message is inconsistent with that mode. Renumbering is a plausible unconfirmed explanation. Alternative collision-output controls remain untested. Quick-recoil Yes/No detail choices produced identical files in 2013; 2008 full recoil did produce additional detail tables. The investigation did not change production report-only popup behavior. Original popup review progress: five of nine items reviewed, with resume save/increase-count next; the other remaining items are exhausted-event runtime errors, quoted-name runtime errors and density warnings.
 
 ## Input implementation handoff (historical)
 
@@ -41,8 +49,11 @@ All queues are stopped, owned executables closed and copied dictionaries restore
 ## Pending work
 
 - Complete unfinished mode, random-mixture, incident-ion, compound and compound-phase matrices if requested. Preserve Standard-only scope unless changed by the user. Do not restart completed elemental baselines.
+
 - Resolve incomplete UI captures and confirmation/identity failures before interpreting them as scientific differences. Manual-order blank-row diagnostics did not establish exported-input or transport behavior.
+
 - A controlled ATOMDATA change could distinguish dynamic lookup from an embedded or cached equivalent. This has not been performed. The zero-to-2 eV surface rule matches all installed data, but native causality and a published general statement remain unverified.
+
 - Production integration is separate work. Preserve per-entry overrides and different-layer entries; displayed defaults are not universal physical parameters.
 
 ## Local evidence inventory
@@ -67,13 +78,8 @@ The committed table, reference and figure preserve the final findings without th
 
 ## Optional execution deadlines - 2026-10-22
 
-
-
 The separately approved timeout change is implemented in the working tree. Direct TRIM execution accepts timeout_seconds=None for unlimited execution. Batches accept the same default plus worker_timeouts overrides keyed by participating worker directory name. Every task receives a fresh execution clock; unknown override names and invalid values are rejected before dispatch. The default remains 60 seconds. Execution evidence records the effective timeout as a number or null; existing report versions are retained.
 
-
-
 Verification passed 227 SRIM, 41 backend and 19 knowledge tests with warnings as errors. Targeted tests cover mixed worker budgets, same-worker budget reuse, unlimited fallback, invalid controls before dispatch, finite owned cleanup, unlimited exit/cancellation beyond sixty simulated seconds, and numeric/null evidence forwarding. Six touched Python files passed syntax/docstring/annotation/comment checks; changed guide/reference link targets and fences and Git whitespace checks passed. Process/clock behavior was mocked; no long native calculation was launched. Existing unfinished popup changes remain separate and preserved. No automatic retry, continuation or control interface was added. The user requested a handoff and local commit; only timeout changes are included. Unfinished popup code/docs/fixtures, NERSC archives and existing test/cache residue remain outside this commit.
-
 
 The 287-test result above covers the mixed working tree. The isolated staged snapshot passed all 27 relevant tests (8 native ownership/timeout, 9 queue and 10 execution) with warnings as errors, without the unstaged popup modules or fixtures. Staged syntax/docstring/annotation/comment and Markdown-fence checks passed. Remaining optional verification: a long native TRIM execution with finite/unlimited settings. No such run is claimed.
