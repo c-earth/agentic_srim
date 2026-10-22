@@ -56,3 +56,16 @@ These paths are under ignored `.cache/trim-default-checks/`; they are not commit
 Runners support explicit single-preset isolation and exact-success resume with source-hash validation. Inspect the current CLI and manifests before continuing; interrupted results are not successful resume candidates. `runs/phase-retry-20261021T103103` is the separately retained titanium retry and lacks the standard source-hash manifest schema.
 
 The committed table, reference and figure preserve the final findings without the cache. No production implementation code changed in this documentation task.
+
+## Optional execution deadlines - 2026-10-22
+
+
+
+The separately approved timeout change is implemented in the working tree. Direct TRIM execution accepts timeout_seconds=None for unlimited execution. Batches accept the same default plus worker_timeouts overrides keyed by participating worker directory name. Every task receives a fresh execution clock; unknown override names and invalid values are rejected before dispatch. The default remains 60 seconds. Execution evidence records the effective timeout as a number or null; existing report versions are retained.
+
+
+
+Verification passed 227 SRIM, 41 backend and 19 knowledge tests with warnings as errors. Targeted tests cover mixed worker budgets, same-worker budget reuse, unlimited fallback, invalid controls before dispatch, finite owned cleanup, unlimited exit/cancellation beyond sixty simulated seconds, and numeric/null evidence forwarding. Six touched Python files passed syntax/docstring/annotation/comment checks; changed guide/reference link targets and fences and Git whitespace checks passed. Process/clock behavior was mocked; no long native calculation was launched. Existing unfinished popup changes remain separate and preserved. No automatic retry, continuation or control interface was added. The user requested a handoff and local commit; only timeout changes are included. Unfinished popup code/docs/fixtures, NERSC archives and existing test/cache residue remain outside this commit.
+
+
+The 287-test result above covers the mixed working tree. The isolated staged snapshot passed all 27 relevant tests (8 native ownership/timeout, 9 queue and 10 execution) with warnings as errors, without the unstaged popup modules or fixtures. Staged syntax/docstring/annotation/comment and Markdown-fence checks passed. Remaining optional verification: a long native TRIM execution with finite/unlimited settings. No such run is claimed.

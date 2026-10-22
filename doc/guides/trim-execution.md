@@ -133,3 +133,26 @@ print(imported["complete"], imported["issues"])
 The source must be stopped/quiescent; before/after hash verification is not an atomic snapshot of a live external process. Destination must be new, with an existing safe parent, and must not overlap the source. Every source file is copied, while only summary/profile/textual checkpoint files are parsed. Native parse errors are stored in the report; I/O, unsafe paths, collisions and a changing source raise while retaining staging evidence.
 
 Omit `request` when provenance is unknown. The report then states that no request was checked and does not invent a simulation identity or execution success. `complete` describes parsing consistency, not the historical success of an imported run. Use a persistent export destination when evidence must survive cache cleanup.
+
+## Optional execution deadlines
+
+Single runs accept `timeout_seconds=None` to disable the overall execution deadline. The default remains 60 seconds; positive finite seconds set a deadline. Cancellation and monitoring remain active with unlimited execution.
+
+Batches support separate settings for each participating worker:
+
+```python
+batch = run_trim_batch(
+    paths, config, tasks,
+    max_workers=3,
+    timeout_seconds=60.0,
+    worker_timeouts={
+        "worker_1": 300.0,
+        "worker_2": None,
+        "worker_3": 900.0,
+    },
+)
+```
+
+Use the actual worker directory names associated with the prepared tasks. Unknown names and invalid timeout values are rejected before launch. Unlisted workers use the batch default; `timeout_seconds=None` makes that default unlimited. Each task starts a fresh clock when its native attempt starts, including successive tasks on the same worker. Queue waiting, preservation and parsing do not consume that budget.
+
+A timed-out task is stopped and its runtime preserved. Other workers and subsequent queued tasks continue; retry or checkpoint continuation requires a separate request. Unlimited runs remain blocking until they finish or are stopped. Execution evidence records unlimited as JSON `null`. Existing cleanup and owned-process safety rules still apply.

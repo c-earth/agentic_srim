@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from contextvars import copy_context
 from dataclasses import dataclass
@@ -60,19 +60,27 @@ class TRIMBatchResult:
     elapsed_seconds: float
 
 
-def _validate_trim_batch(paths: ProjectPaths, config: Config, tasks: Sequence[PreparedTRIMTask], max_workers: int, timeout_seconds: float, cleanup: bool) -> tuple[PreparedTRIMTask, ...]:
+def _validate_trim_batch(paths: ProjectPaths, config: Config, tasks: Sequence[PreparedTRIMTask], max_workers: int, timeout_seconds: float | None, worker_timeouts: Mapping[str, float | None] | None, cleanup: bool) -> tuple[tuple[PreparedTRIMTask, ...], dict[str, float | None]]:
     """Snapshot/validate tasks, paths, config and concurrency/timeout/cleanup controls.
 
-    Return input-ordered tuple before native launch. Reject duplicate identities,
-    invalid finite-positive controls or unprepared runtimes with ValueError/OSError.
+    Return ordered tasks and resolved worker timeouts before native launch.
+    worker_timeouts overrides timeout_seconds by participating worker name.
+    None disables a deadline. Reject invalid controls, unknown workers and
+    duplicate identities with ValueError; runtime verification may raise OSError.
     Perform reads and persistent coordination only; no lifecycle writes.
     """
-    if type(max_workers) is not int or max_workers < 1 or type(timeout_seconds) not in (int, float) or timeout_seconds <= 0 or not math.isfinite(timeout_seconds) or type(cleanup) is not bool:
+    if type(max_workers) is not int or max_workers < 1 or (timeout_seconds is not None and (type(timeout_seconds) not in (int, float) or timeout_seconds <= 0 or not math.isfinite(timeout_seconds))) or type(cleanup) is not bool:
         raise ValueError("Invalid TRIM batch controls")
     if not isinstance(config, Config) or type(config.hide_trim_window) is not bool or not isinstance(tasks, Sequence):
         raise ValueError("Invalid TRIM batch configuration/tasks")
     _record_time(config, None)
     _validate_paths(paths)
+    if worker_timeouts is not None and not isinstance(worker_timeouts, Mapping):
+        raise ValueError("Invalid TRIM worker timeouts")
+    overrides = {} if worker_timeouts is None else dict(worker_timeouts)
+    for name, value in overrides.items():
+        if type(name) is not str or (value is not None and (type(value) not in (int, float) or value <= 0 or not math.isfinite(value))):
+            raise ValueError("Invalid TRIM worker timeout")
     prepared = tuple(tasks)
     ids: set[str] = set()
     runtimes: set[Path] = set()
@@ -82,10 +90,13 @@ def _validate_trim_batch(paths: ProjectPaths, config: Config, tasks: Sequence[Pr
         ids.add(task.simulation_id)
         runtimes.add(task.runtime)
         verify_trim_runtime(paths, task.simulation_id, task.runtime)
-    return prepared
+    workers = {task.runtime.parent.parent.name for task in prepared}
+    if overrides.keys() - workers:
+        raise ValueError("Unknown TRIM timeout worker")
+    return prepared, {name: overrides.get(name, timeout_seconds) for name in workers}
 
 
-def _execute_trim_task(paths: ProjectPaths, config: Config, task: PreparedTRIMTask, timeout_seconds: float, cancel: Callable[[], bool]) -> TRIMTaskResult:
+def _execute_trim_task(paths: ProjectPaths, config: Config, task: PreparedTRIMTask, timeout_seconds: float | None, cancel: Callable[[], bool]) -> TRIMTaskResult:
     """Run task under paths/config using timeout_seconds and cancellation callback.
 
     Return measured metadata or captured Exception independently. Never retry or
@@ -99,11 +110,14 @@ def _execute_trim_task(paths: ProjectPaths, config: Config, task: PreparedTRIMTa
         return TRIMTaskResult(task, None, error, perf_counter() - started)
 
 
-def run_trim_batch(paths: ProjectPaths, config: Config, tasks: Sequence[PreparedTRIMTask], *, max_workers: int, timeout_seconds: float = 60.0, cleanup: bool = False) -> TRIMBatchResult:
+def run_trim_batch(paths: ProjectPaths, config: Config, tasks: Sequence[PreparedTRIMTask], *, max_workers: int, timeout_seconds: float | None = 60.0, worker_timeouts: Mapping[str, float | None] | None = None, cleanup: bool = False) -> TRIMBatchResult:
     """Run prepared tasks with bounded concurrency and same-worker ordering.
 
     Validate paths/config/tasks and max_workers/timeout_seconds/cleanup before
-    dispatch. Return input-ordered outcomes, continuing independent failures.
+    dispatch, including worker_timeouts overrides keyed by worker directory name.
+    None means unlimited; otherwise each native attempt gets a fresh positive
+    finite deadline. Queue waiting is excluded. Snapshot overrides without
+    modifying the caller mapping. Return ordered independent outcomes.
     Keep working copies unless cleanup=True. On BaseException stop dispatch,
     cancel active owned native jobs, wait/preserve, retain workers and re-raise.
     Finalized inputs are indexed once after active calls finish.
@@ -111,7 +125,7 @@ def run_trim_batch(paths: ProjectPaths, config: Config, tasks: Sequence[Prepared
     """
     with collect_index_updates(paths):
         started = perf_counter()
-        prepared = _validate_trim_batch(paths, config, tasks, max_workers, timeout_seconds, cleanup)
+        prepared, timeouts = _validate_trim_batch(paths, config, tasks, max_workers, timeout_seconds, worker_timeouts, cleanup)
         pending = list(enumerate(prepared))
         active: dict[Future[TRIMTaskResult], tuple[int, Path]] = {}
         busy: set[Path] = set()
@@ -129,7 +143,7 @@ def run_trim_batch(paths: ProjectPaths, config: Config, tasks: Sequence[Prepared
                         continue
                     pending.pop(position)
                     busy.add(worker)
-                    future = executor.submit(copy_context().run, _execute_trim_task, paths, config, task, timeout_seconds, stop.is_set)
+                    future = executor.submit(copy_context().run, _execute_trim_task, paths, config, task, timeouts[worker.name], stop.is_set)
                     active[future] = index, worker
                 completed, _ = wait(active, timeout=0.1, return_when=FIRST_COMPLETED)
                 for future in completed:

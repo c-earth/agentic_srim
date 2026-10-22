@@ -43,17 +43,18 @@ def _trim_completion(inputs: ResolvedTRIMInputs, process_result: JSONObject, par
     return {"complete": not failures, "reason": failures[0]["detail"] if failures else None, "checks": checks}
 
 
-def run_trim_simulation(paths: ProjectPaths, config: Config, simulation_id: str, runtime: Path, *, timeout_seconds: float = 60.0, cancel: Callable[[], bool] | None = None) -> JSONObject:
+def run_trim_simulation(paths: ProjectPaths, config: Config, simulation_id: str, runtime: Path, *, timeout_seconds: float | None = 60.0, cancel: Callable[[], bool] | None = None) -> JSONObject:
     """Execute matching prepared simulation_id/runtime under paths/config ownership.
 
-    timeout_seconds bounds native execution; cancel optionally requests stopping.
+    timeout_seconds bounds native execution, or None disables its deadline.
+    cancel optionally requests stopping; monitoring and cleanup remain active.
     Hold worker lease through validation, process ownership, complete stopped
     runtime preservation, parsing and terminal metadata. Return succeeded/failed
     shared metadata for expected native failures. Never retry, click or delete.
     Invalid caller/state/collision raises before launch. I/O and BaseException
     propagate after best-effort preservation/failure publication with notes.
     """
-    if type(timeout_seconds) not in (int, float) or timeout_seconds <= 0 or not math.isfinite(timeout_seconds) or type(config.hide_trim_window) is not bool or (cancel is not None and not callable(cancel)):
+    if (timeout_seconds is not None and (type(timeout_seconds) not in (int, float) or timeout_seconds <= 0 or not math.isfinite(timeout_seconds))) or type(config.hide_trim_window) is not bool or (cancel is not None and not callable(cancel)):
         raise ValueError("Invalid TRIM execution configuration")
     _record_time(config, None)
     record = _simulation_path(paths, simulation_id)
@@ -65,7 +66,7 @@ def run_trim_simulation(paths: ProjectPaths, config: Config, simulation_id: str,
             raise ValueError("Only a created TRIM simulation can execute")
         if _inventory(record / "output", record):
             raise FileExistsError("TRIM output directories must be empty")
-        report: JSONObject = {"schema_version": 1, "engine": "trim", "simulation_id": simulation_id, "runtime_path": runtime.relative_to(paths.root).as_posix(), "timeout_seconds": float(timeout_seconds), "stage": "preflight", "process": None, "completion": None, "failure": None}
+        report: JSONObject = {"schema_version": 1, "engine": "trim", "simulation_id": simulation_id, "runtime_path": runtime.relative_to(paths.root).as_posix(), "timeout_seconds": None if timeout_seconds is None else float(timeout_seconds), "stage": "preflight", "process": None, "completion": None, "failure": None}
         preserved = False
         try:
             try:

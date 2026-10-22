@@ -116,10 +116,11 @@ def _read_trim_windows(process_id: int) -> list[JSONObject]:
     return windows
 
 
-def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, timeout_seconds: float, stdout_path: Path, stderr_path: Path, cancel: Callable[[], bool] | None = None) -> JSONObject:
+def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, timeout_seconds: float | None, stdout_path: Path, stderr_path: Path, cancel: Callable[[], bool] | None = None) -> JSONObject:
     """Run executable in runtime under a Windows kill-on-close job with bounded monitoring.
 
-    hide_window controls initial display; timeout_seconds is positive and finite.
+    hide_window controls initial display; timeout_seconds is positive and finite
+    or None to disable the overall execution deadline.
     Write exact diagnostics exclusively to stdout_path/stderr_path; cancel may
     request termination. Return exit/popup/timeout/cancellation/monitor evidence.
     Never answer popups or kill unrelated processes. Validation/I/O errors raise;
@@ -127,7 +128,7 @@ def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, 
     """
     if os.name != "nt":
         raise OSError("TRIM execution requires Windows")
-    if type(hide_window) is not bool or type(timeout_seconds) not in (int, float) or timeout_seconds <= 0 or not math.isfinite(timeout_seconds) or (cancel is not None and not callable(cancel)):
+    if type(hide_window) is not bool or (timeout_seconds is not None and (type(timeout_seconds) not in (int, float) or timeout_seconds <= 0 or not math.isfinite(timeout_seconds))) or (cancel is not None and not callable(cancel)):
         raise ValueError("Invalid TRIM process controls")
     for path in (executable, runtime, stdout_path, stderr_path):
         if not isinstance(path, Path) or not path.is_absolute() or ".." in path.parts:
@@ -232,7 +233,7 @@ def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, 
                     if cancel is not None and cancel():
                         result["termination"] = "cancelled"
                         break
-                    if monotonic() - started >= timeout_seconds:
+                    if timeout_seconds is not None and monotonic() - started >= timeout_seconds:
                         result["termination"] = "timeout"
                         break
                     if process.poll() is not None and active_count == 0:

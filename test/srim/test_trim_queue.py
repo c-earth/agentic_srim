@@ -17,6 +17,38 @@ from src.srim.trim_queue import PreparedTRIMTask, TRIMTaskResult, run_trim_batch
 class TestTRIMQueue(unittest.TestCase):
     """Exercise scheduling with mocked native task outcomes and no real processes."""
 
+    def test_worker_timeout_overrides_and_fallback(self: TestTRIMQueue) -> None:
+        """Dispatch same/different workers with fresh finite/unlimited budgets; return None."""
+        with TemporaryDirectory(dir=CACHE) as directory:
+            paths, config, worker = make_test_project(Path(directory))
+            tasks = [PreparedTRIMTask("first", worker.path / "trim/first"), PreparedTRIMTask("second", worker.path / "trim/second"), PreparedTRIMTask("third", paths.workers / "worker_2/trim/third"), PreparedTRIMTask("fourth", paths.workers / "worker_3/trim/fourth")]
+            overrides = {worker.path.name: 300.0, "worker_2": None}
+            with patch("src.srim.trim_queue.verify_trim_runtime"), patch("src.srim.trim_queue._execute_trim_task", return_value=TRIMTaskResult(tasks[0], {"status": "failed"}, None, 0.0)) as execute:
+                run_trim_batch(paths, config, tasks, max_workers=3, timeout_seconds=900.0, worker_timeouts=overrides)
+            observed = {call.args[2].simulation_id: call.args[3] for call in execute.call_args_list}
+            self.assertEqual(observed, {"first": 300.0, "second": 300.0, "third": None, "fourth": 900.0})
+            self.assertEqual(overrides, {worker.path.name: 300.0, "worker_2": None})
+            with patch("src.srim.trim_queue.verify_trim_runtime"), patch("src.srim.trim_queue._execute_trim_task", return_value=TRIMTaskResult(tasks[0], {"status": "succeeded"}, None, 0.0)) as execute:
+                run_trim_batch(paths, config, tasks, max_workers=3, timeout_seconds=None)
+            self.assertTrue(all(call.args[3] is None for call in execute.call_args_list))
+
+    def test_invalid_worker_timeouts_before_launch(self: TestTRIMQueue) -> None:
+        """Reject invalid defaults/overrides and unknown workers before dispatch; return None."""
+        with TemporaryDirectory(dir=CACHE) as directory:
+            paths, config, worker = make_test_project(Path(directory))
+            task = PreparedTRIMTask("one", worker.path / "trim/one")
+            for value in (True, False, 0, -1, float("inf"), float("nan"), "60"):
+                for overrides in (False, True):
+                    with self.subTest(value=value, overrides=overrides), patch("src.srim.trim_queue.verify_trim_runtime"), patch("src.srim.trim_queue._execute_trim_task") as execute:
+                        with self.assertRaises(ValueError):
+                            run_trim_batch(paths, config, [task], max_workers=1, timeout_seconds=60.0 if overrides else value, worker_timeouts={worker.path.name: value} if overrides else None)
+                        execute.assert_not_called()
+            for overrides in ({"worker_unknown": None}, {1: 60}, []):
+                with self.subTest(overrides=overrides), patch("src.srim.trim_queue.verify_trim_runtime"), patch("src.srim.trim_queue._execute_trim_task") as execute:
+                    with self.assertRaises(ValueError):
+                        run_trim_batch(paths, config, [task], max_workers=1, worker_timeouts=overrides)
+                    execute.assert_not_called()
+
     def test_index_collection_in_worker_context(self: TestTRIMQueue) -> None:
         """Flush TRIM terminal notifications once after worker contexts finish; return None."""
         from src.knowledge.index import notify_simulation_finished

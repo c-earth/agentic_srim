@@ -73,6 +73,29 @@ class TestTRIMNative(unittest.TestCase):
             api.TerminateJobObject.assert_called_once_with(12, 1)
             process.wait.assert_called_once()
 
+    def test_unlimited_exit_and_cancellation(self: TestTRIMNative) -> None:
+        """Run synthetic jobs beyond sixty seconds with no deadline; verify exit/cancel and return None."""
+        for cancelled in (False, True):
+            with self.subTest(cancelled=cancelled), TemporaryDirectory(dir=CACHE) as directory:
+                root = Path(directory)
+                (root / "TRIM.exe").write_bytes(b"fixture")
+                api = MagicMock()
+                api.NtResumeProcess.return_value = 0
+                api.CreateJobObjectW.return_value = 12
+                process = MagicMock(pid=43, returncode=0, _handle=44)
+                process.poll.return_value = 0 if not cancelled else None
+                if cancelled:
+                    process.poll.side_effect = [None, None, 0]
+                with patch("src.srim.trim_native.ctypes.WinDLL", return_value=api), patch("src.srim.trim_native.subprocess.Popen", return_value=process), patch("src.srim.trim_native.monotonic", side_effect=[0, 120, 121]), patch("src.srim.trim_native._read_trim_windows", return_value=[]):
+                    report = execute_trim_process(root / "TRIM.exe", root, hide_window=True, timeout_seconds=None, stdout_path=root / "stdout", stderr_path=root / "stderr", cancel=MagicMock(side_effect=[False, True]) if cancelled else None)
+                self.assertEqual(report["termination"], "cancelled" if cancelled else "exit")
+                self.assertGreater(report["elapsed_seconds"], 60)
+                if cancelled:
+                    api.TerminateJobObject.assert_called_once_with(12, 1)
+                else:
+                    api.TerminateJobObject.assert_not_called()
+                process.wait.assert_called_once()
+
     def test_cancel_owned_cleanup(self: TestTRIMNative) -> None:
         """A requested cancellation terminates the owned job and returns its reason; return None."""
         with TemporaryDirectory(dir=CACHE) as directory:

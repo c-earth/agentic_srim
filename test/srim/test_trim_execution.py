@@ -24,6 +24,24 @@ from src.srim.trim_storage import verify_preserved_trim_runtime
 class TestTRIMExecution(unittest.TestCase):
     """Use owned synthetic allocations and committed native results without GUI launches."""
 
+    def test_timeout_forwarding_and_evidence(self: TestTRIMExecution) -> None:
+        """Execute isolated synthetic runs with finite/unlimited deadlines; verify evidence and return None."""
+        for timeout in (None, 120):
+            with self.subTest(timeout=timeout), TemporaryDirectory(dir=CACHE) as directory:
+                paths, config, worker = make_test_project(Path(directory))
+                for name, data in TRIM_INSTALLATION_FILES.items():
+                    (config.srim_root / name).write_bytes(data)
+                switch_trim_defaults(paths, config)
+                inputs = resolve_trim_inputs(paths, config, worker, TRIM_REQUEST, TRIM_SELECTIONS)
+                created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
+                runtime = prepare_trim_simulation(paths, config, created, worker, inputs)
+                process = {"pid": 42, "exit_code": 0, "elapsed_seconds": 120.0, "termination": "exit", "popups": [], "monitor_errors": []}
+                with patch("src.srim.trim_execution.execute_trim_process", return_value=process) as execute:
+                    run_trim_simulation(paths, config, created.path.name, runtime, timeout_seconds=timeout)
+                self.assertEqual(execute.call_args.kwargs["timeout_seconds"], timeout)
+                report = json.loads((created.path / "output/raw/execution.json").read_bytes())
+                self.assertEqual(report["timeout_seconds"], timeout)
+
     def test_success_requires_saved_counts(self: TestTRIMExecution) -> None:
         """Require real saved counts, parsed profiles and preserved settings for success; return None."""
         with TemporaryDirectory(dir=CACHE) as directory:

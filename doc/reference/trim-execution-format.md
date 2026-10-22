@@ -19,7 +19,7 @@ verify_trim_runtime(paths: ProjectPaths, simulation_id: str,
     runtime: Path) -> ResolvedTRIMInputs
 
 run_trim_simulation(paths: ProjectPaths, config: Config,
-    simulation_id: str, runtime: Path, *, timeout_seconds: float = 60.0,
+    simulation_id: str, runtime: Path, *, timeout_seconds: float | None = 60.0,
     cancel: Callable[[], bool] | None = None) -> JSONObject
 
 PreparedTRIMTask(simulation_id: str, runtime: Path)
@@ -29,7 +29,9 @@ TRIMBatchResult(task_results: tuple[TRIMTaskResult, ...],
     cleanup: BatchCleanupReport, elapsed_seconds: float)
 run_trim_batch(paths: ProjectPaths, config: Config,
     tasks: Sequence[PreparedTRIMTask], *, max_workers: int,
-    timeout_seconds: float = 60.0, cleanup: bool = False) -> TRIMBatchResult
+    timeout_seconds: float | None = 60.0,
+    worker_timeouts: Mapping[str, float | None] | None = None,
+    cleanup: bool = False) -> TRIMBatchResult
 
 parse_trim_summary(contents: bytes) -> JSONObject
 parse_trim_profile(filename: str, contents: bytes) -> JSONObject
@@ -52,7 +54,7 @@ Preparation/loading/verification are in `trim_runtime`; execution in `trim_execu
 
 Paths supplied for bundles, runtimes and standalone imports are absolute and link-free. Preparation requires an empty simulation allocation and a valid worker allocation. Bundle loading validates the exact export manifest and independently replays pinned evidence. It does not read installations or current aliases. Metadata initialization/start also verify referenced immutable project resources. Preparation neither reruns material resolution nor launches TRIM.
 
-Invalid caller types/layouts/state, collisions and worker contention can raise before execution. Expected native/preflight/timeout/popup/parse/substitution failures return terminal failed metadata. Filesystem/publication errors propagate with retained artifact notes after best-effort finalization. Interruption terminates owned native processes, attempts preservation and failure publication, then re-raises. Timeouts are positive finite int/float values excluding bool and apply per native attempt; queue waiting, preservation and parsing are separate. Initial window visibility follows `config.hide_trim_window`.
+Invalid caller types/layouts/state, collisions and worker contention can raise before execution. Expected native/preflight/timeout/popup/parse/substitution failures return terminal failed metadata. Filesystem/publication errors propagate with retained artifact notes after best-effort finalization. Interruption terminates owned native processes, attempts preservation and failure publication, then re-raises. Timeouts are None (unlimited) or positive finite int/float values excluding bool and apply per native attempt; queue waiting, preservation and parsing are separate. The default remains 60 seconds. Batch worker_timeouts maps exact participating worker directory names to timeout overrides; absent names use the batch timeout_seconds. Unknown keys, invalid mappings and invalid values raise ValueError before dispatch. Overrides are copied before dispatch without modifying the caller mapping. Each task starts a fresh clock, including successive tasks on one worker. Timeout affects only the owned task; other workers and subsequent queued tasks continue. Unlimited disables only the overall execution deadline; cancellation and monitoring remain active. Batches still wait for all active tasks. Initial window visibility follows `config.hide_trim_window`.
 
 ## Runtime and provenance
 
@@ -116,3 +118,5 @@ Batch results are input-ordered; each task has exactly one of metadata/error. Th
 Cleanup is explicit, verifies terminal permanent inventories and working/preserved file and directory equality, and keeps worker allocation directories. Unknown or unsafe files, SR contents, unfinished records and changed evidence retain the worker with an explanation. Permanent simulation/resource data is not deleted.
 
 Standalone import requires a quiescent runtime directory and a new disjoint destination. It stream-copies every file into `raw/runtime`, writes `parsed/results.json`, optionally preserves an explicit request and publishes a hash manifest with `kind="trim-output-import"`. No request, engine executable identity or simulation success is inferred when absent. Native parser issues return a report; unsafe I/O, source mutation and publication failures raise with retained staging paths.
+
+The execution.json timeout_seconds field records the effective per-attempt timeout as a positive number, or null for unlimited. Report schema versions and other fields are unchanged; existing records are not rewritten. No automatic retry or continuation is performed.
