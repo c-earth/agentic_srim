@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from src.srim.trim_outputs import PROFILES, compare_trim_saved_values, parse_trim_checkpoint, parse_trim_outputs, parse_trim_profile, parse_trim_summary
+from src.srim.trim_outputs import PROFILES, SIGNED_ENERGY_NOTE, compare_trim_saved_values, parse_trim_checkpoint, parse_trim_outputs, parse_trim_profile, parse_trim_summary, saved_trim_mode, saved_trim_mode_name
 from test_trim_inputs import EXPLICIT_REQUEST, TRIM_INSTALLATION_FILES, TRIM_REQUEST, TRIM_SELECTIONS
 from copy import deepcopy
 
@@ -16,6 +16,58 @@ FIXTURES = Path(__file__).parent / "fixtures/trim"
 
 class TestTRIMOutputs(unittest.TestCase):
     """Read committed 2008/2013 native evidence using inherited unittest construction."""
+
+    def test_saved_mode_numbering(self: TestTRIMOutputs) -> None:
+        """Check saved numbering independently of input codes; return None."""
+        for input_mode, saved_mode, name in ((8, 6, "recoil-quick"), (6, 7, "recoil-full"), (7, 8, "recoil-monolayer")):
+            self.assertEqual(saved_trim_mode("SRIM-2013.00", input_mode), saved_mode)
+            self.assertEqual(saved_trim_mode_name("SRIM-2013.00", saved_mode), name)
+        for number in range(1, 8):
+            self.assertEqual(saved_trim_mode("SRIM-2008.04", number), number)
+        with self.assertRaises(ValueError):
+            saved_trim_mode_name("SRIM-2013.00", 99)
+
+    def test_recoil_quick_novac_compatibility(self: TestTRIMOutputs) -> None:
+        """Parse complete saved quick-mode evidence without invented replacements; return None."""
+        root = FIXTURES / "recoil-quick-2013"
+        report = parse_trim_outputs({p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file() and p.name != "manifest.json"})
+        self.assertEqual(report["issues"], [])
+        self.assertTrue(report["complete"])
+        self.assertIsNone(report["profiles"]["NOVAC.txt"]["calculated_ions"])
+        self.assertEqual(report["checkpoint"]["mode"], 6)
+        self.assertEqual(report["checkpoint"]["native_input"]["mode"], 8)
+
+    def test_signed_kp_recoil_energy_preserved(self: TestTRIMOutputs) -> None:
+        """Preserve signed native tokens in all approved exact layouts; return None."""
+        sources = [FIXTURES / "recoil-quick-2013/E2RECOIL.txt", *(FIXTURES / "signed-recoil").glob("*/E2RECOIL.txt")]
+        self.assertEqual(len(sources), 4)
+        for source in sources:
+            profile = parse_trim_profile("E2RECOIL.txt", source.read_bytes())
+            self.assertEqual(profile["rows"][10][1], "-2000.00E-04")
+            self.assertIn(SIGNED_ENERGY_NOTE, profile["notes"])
+            with self.assertRaises(ValueError):
+                parse_trim_profile("E2RECOIL.txt", source.read_bytes().replace(b"-2000.00E-04", b"-NaN"))
+
+    def test_other_negative_profiles_rejected(self: TestTRIMOutputs) -> None:
+        """Reject signed values outside the approved energy column/layout; return None."""
+        original = (FIXTURES / "recoil-quick-2013/E2RECOIL.txt").read_bytes()
+        for payload in (original.replace(b"SRIM-2013.00", b"SRIM-2013.01"), original.replace(b"-2000.00E-04", b"2000.00E-04").replace(b"0000.00E+00", b"-0001.00E+00")):
+            with self.assertRaises(ValueError):
+                parse_trim_profile("E2RECOIL.txt", payload)
+        range_data = (FIXTURES / "2013/RANGE.txt").read_bytes()
+        with self.assertRaises(ValueError):
+            parse_trim_profile("RANGE.txt", range_data.replace(b"100100.E-04", b"-100100.E-04", 1))
+
+    def test_wrong_mode_still_inconsistent(self: TestTRIMOutputs) -> None:
+        """Reject a full-mode request against quick saved semantics; return None."""
+        root = FIXTURES / "recoil-quick-2013"
+        files = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file() and p.name != "manifest.json"}
+        request = deepcopy(EXPLICIT_REQUEST)
+        request["parameters"]["mode"] = "recoil-full"
+        request["parameters"]["events"] = [{"id": "T0001", "atomic_number": 14, "energy_eV": "1000", "position_angstrom": ["100", "0", "0"], "direction_cosines": ["1", "0", "0"]}]
+        report = parse_trim_outputs(files, request)
+        self.assertFalse(report["complete"])
+        self.assertTrue(any(issue["path"] == "NOVAC.txt" for issue in report["issues"]))
 
     def test_native_family_fixtures(self: TestTRIMOutputs) -> None:
         """Parse both complete native families and require five-ion summary/checkpoints; return None."""

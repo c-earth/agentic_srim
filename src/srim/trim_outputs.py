@@ -20,6 +20,7 @@ from src.srim.trim_resolution import ResolvedTRIMInputs, verify_trim_resolution
 PROFILES = ("RANGE.txt", "VACANCY.txt", "IONIZ.txt", "PHONON.txt", "E2RECOIL.txt", "NOVAC.txt", "LATERAL.txt")
 NUMBER = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][+-]?\d+)?"
 AGGREGATE_NOTE = "Native Kinchin-Pease tables contain aggregate recoil quantities, not per-atom columns."
+SIGNED_ENERGY_NOTE = "Native SRIM-2008.04/SRIM-2013.00 energy transfer contains signed values; printed tokens are preserved without physical correction."
 
 
 def saved_trim_mode(version: str, input_mode: int) -> int:
@@ -182,7 +183,8 @@ def parse_trim_profile(filename: str, contents: bytes) -> JSONObject:
         tokens = line.split()
         if len(tokens) != width:
             raise ValueError(f"{filename}: malformed row at line {line_number}")
-        row = [_trim_number(t, f"{filename}:{line_number}") for t in tokens]
+        signed_energy = filename == "E2RECOIL.txt" and versions[0] in ("SRIM-2008.04", "SRIM-2013.00") and width == 3 and "from" in " ".join(header) and "IONS" in " ".join(header) and "Absorbed" in " ".join(header)
+        row = [_trim_number(t, f"{filename}:{line_number}", signed=signed_energy and i == 1) for i, t in enumerate(tokens)]
         depth = Decimal(row[0])
         if previous is not None and depth <= previous:
             raise ValueError(f"{filename}: nonincreasing depth")
@@ -212,6 +214,8 @@ def parse_trim_profile(filename: str, contents: bytes) -> JSONObject:
         notes.append("Native E2RECOIL heading omits printed data columns; their labels remain unavailable.")
     if aggregate:
         notes.append(AGGREGATE_NOTE)
+    if filename == "E2RECOIL.txt" and any(Decimal(row[1]) < 0 for row in rows):
+        notes.append(SIGNED_ENERGY_NOTE)
     return {"source": _trim_source(filename, contents), "version": versions[0], "calculated_ions": _trim_number(count[0], "ions"), "title": required, "columns": columns, "rows": rows, "statistics": statistics, "notes": notes}
 
 
@@ -293,7 +297,7 @@ def compare_trim_saved_values(checkpoint: JSONObject, inputs: ResolvedTRIMInputs
     No mutation, file access or native operation occurs.
     """
     p = verify_trim_resolution(inputs)["parameters"]
-    observed: list[tuple[str, object, object, bool]] = [("name", p["name"], checkpoint["name"], False), ("version", inputs.resolved["installation"]["version_text"].strip(), checkpoint["version"], False), ("mode", MODES[p["engine_family"]][p["mode"]], checkpoint["mode"], False)]
+    observed: list[tuple[str, object, object, bool]] = [("name", p["name"], checkpoint["name"], False), ("version", inputs.resolved["installation"]["version_text"].strip(), checkpoint["version"], False), ("mode", saved_trim_mode(inputs.resolved["installation"]["version_text"], MODES[p["engine_family"]][p["mode"]]), checkpoint["mode"], False)]
     for key, value in p["projectile"].items():
         observed.append(("projectile." + key, value, checkpoint["projectile"].get(key), isinstance(value, str)))
     for key in ("atoms", "layers"):
@@ -418,7 +422,7 @@ def parse_trim_outputs(files: Mapping[str, bytes], request: JSONObject | None = 
                 quick_mode: bool | None = request["parameters"]["mode"].endswith("-quick") if request is not None else None
                 if result["checkpoint"] is not None:
                     family = "2008" if result["checkpoint"]["version"].startswith("SRIM-2008.") else "2013"
-                    saved_quick = result["checkpoint"]["mode"] in {code for name, code in MODES[family].items() if name.endswith("-quick")}
+                    saved_quick = saved_trim_mode_name(result["checkpoint"]["version"], result["checkpoint"]["mode"]).endswith("-quick")
                     quick_mode = saved_quick if quick_mode is None else quick_mode and saved_quick
                 if quick_mode is False:
                     result["issues"].append({"path": filename, "code": "inconsistent", "line": None, "message": "Full-cascade mode requires its replacement-collision table"})

@@ -199,7 +199,7 @@ def assess_trim_histories(files: Mapping[str, bytes], policy: JSONObject, events
     """Return output availability from stopped files, policy and response events.
 
     Validate policy, inspect exact native structure and count coverage, and
-    retain native history qualifications. No I/O or mutation; malformed caller
+    preserve signed-value qualifications. No I/O or mutation; malformed caller
     arguments raise ValueError, missing native data returns an evidenced status.
     """
     initial_trim_dialog_state(policy)
@@ -224,4 +224,14 @@ def assess_trim_histories(files: Mapping[str, bytes], policy: JSONObject, events
                 code = "native-kp-no-trajectories" if quick else "native-2013-full-detail-unavailable"
                 status = "native-unavailable"
                 limitations.append({"code": code, "message": "Verified native engine supplied cascade statistics without detailed recoil trajectories.", "requested": requested, "observed": "statistics", "evidence": deepcopy(evidence)})
+    for name, data in files.items():
+        if name.casefold().split("/")[-1] == "e2recoil.txt":
+            from src.srim.trim_outputs import SIGNED_ENERGY_NOTE, parse_trim_profile
+            try:
+                profile = parse_trim_profile("E2RECOIL.txt", data)
+            except ValueError:
+                continue
+            if SIGNED_ENERGY_NOTE in profile["notes"]:
+                rows = [i for i, row in enumerate(profile["rows"]) if Decimal(row[1]) < 0]
+                limitations.append({"code": "native-signed-energy-transfer", "message": SIGNED_ENERGY_NOTE, "requested": "native energy-transfer profile", "observed": "signed printed tokens preserved", "evidence": [{"path": name, "rows": rows, "column": 1}]})
     return {"schema_version": 1, "engine": "trim", "cascade_output": requested, "core_verified": False, "histories": {"path": path, "requested": requested, "status": status, "evidence": evidence}, "limitations": limitations}

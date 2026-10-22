@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "source": ".cache/popup-review/mode-version-matrix",
+  "files": [
+    {
+      "path": "2008-full/E2RECOIL.txt",
+      "sha256": "c798b385cad69755c6d0da4f67f25cf06c28f693779c6f72a15129f69a3b41c0",
+      "size_bytes": 5198
+    },
+    {
+      "path": "2008-quick/E2RECOIL.txt",
+      "sha256": "7398fb0d3d69fddf9ff8f0bd02e5a330b3b4ce925f1f97803bd4fedce0a4dc07",
+      "size_bytes": 5200
+    },
+    {
+      "path": "2013-full/E2RECOIL.txt",
+      "sha256": "206557955c745482b75196f7037a7ed5df2a27640ff2579ba1d9ce8f7b035e65",
+      "size_bytes": 5198
+    }
+  ]
+}
