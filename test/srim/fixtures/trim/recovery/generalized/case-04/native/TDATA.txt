@@ -1,0 +1,42 @@
+====== Ar into silica =======
+        SRIM-2013.00
+=======================================
+      Data  of  TRIM  Calculation      
+=======================================
+--------------------------------------------------------------------
+    Recoil/Damage Calculations made with Kinchin-Pease Estimates    
+--------------------------------------------------------------------
+Ion = Ar (18)   Ion Mass= 039.9620
+Energy  = 5000000.E-05 keV
+Ion Angle to Surface = 0 degrees
+============= TARGET MATERIAL ======================================
+  Layer # 1 - Silica
+  Layer # 1 - Bottom Depth=     1.E+03 A
+  Layer # 1- Density = 6.614E22 atoms/cm3 = 2.2 g/cm3
+  Layer # 1- Si = 33.3 Atomic Percent = 46.7 Mass Percent
+  Layer # 1-  O = 66.6 Atomic Percent = 53.2 Mass Percent
+====================================================================
+Target energies for target atom = Si
+    Displacement = 15 eV, Binding = 2 eV, Surface = 4.7 eV
+Target energies for target atom =  O
+    Displacement = 28 eV, Binding = 3 eV, Surface = 2 eV
+====================================================================
+Depth Range of Tabulated Data=  000000.E+00  -  100000.E-02  Angstroms
+====================================================================
+Total Ions calculated =  000005
+Average Range         =   57954.E-02 Angstroms
+Average Straggling    =   22541.E-02 Angstroms
+Average Vacancy/Ion   =   55871.E-02
+====================================================================
+Total Backscattered Ions=  0 
+Total Transmitted Ions  =  0 
+====================================================================
+See files SRIM Outputs\*.txt for tables :
+   TDATA.txt    -- Details of the calculation.
+   RANGE.txt    -- Final distribution of Ions/Recoils
+   VACANCY.txt  -- Distribution of Vacancies
+   IONIZ.txt    -- Distribution of Ionization
+   PHONON.txt   -- Distribution of Phonons
+   E2RECOIL.txt -- Energy transferred to recoils
+   NOVAC.txt    -- Replacement collisions
+   LATERAL.txt  -- Lateral Spread of Ions

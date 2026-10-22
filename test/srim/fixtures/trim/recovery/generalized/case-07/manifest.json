@@ -1,0 +1,213 @@
+{
+  "comparison": {
+    "E2RECOIL.txt": {
+      "cells": 300,
+      "checkpoint_count": "1",
+      "max_printed_quanta": "2.54674058055112542065134",
+      "native_count": "1.00",
+      "numeric_comparison_eligible": true,
+      "outside_half_printed_digit": 8,
+      "reason": "count_matches"
+    },
+    "IONIZ.txt": {
+      "cells": 300,
+      "checkpoint_count": "1",
+      "max_printed_quanta": "13.1840506041843309456008",
+      "native_count": "000001.00",
+      "numeric_comparison_eligible": true,
+      "outside_half_printed_digit": 8,
+      "reason": "count_matches"
+    },
+    "LATERAL.txt": {
+      "cells": 500,
+      "checkpoint_count": "1",
+      "max_printed_quanta": "0.3103363536865799687802791595458984375",
+      "native_count": "1.00",
+      "numeric_comparison_eligible": true,
+      "outside_half_printed_digit": 0,
+      "reason": "count_matches"
+    },
+    "NOVAC.txt": {
+      "checkpoint_count": "1",
+      "native_count": null,
+      "numeric_comparison_eligible": false,
+      "reason": "not_calculated"
+    },
+    "PHONON.txt": {
+      "cells": 300,
+      "checkpoint_count": "1",
+      "max_printed_quanta": "11.5390663395915125360182",
+      "native_count": "1.00",
+      "numeric_comparison_eligible": true,
+      "outside_half_printed_digit": 8,
+      "reason": "count_matches"
+    },
+    "RANGE.txt": {
+      "cells": 300,
+      "checkpoint_count": "1",
+      "max_printed_quanta": "1.33171904087066650390625",
+      "native_count": "1.00",
+      "numeric_comparison_eligible": true,
+      "outside_half_printed_digit": 1,
+      "reason": "count_matches"
+    },
+    "TDATA.txt": {
+      "checkpoint_count": "1",
+      "native_count": "000001",
+      "numeric_comparison_eligible": true,
+      "reason": "count_matches"
+    },
+    "VACANCY.txt": {
+      "cells": 300,
+      "checkpoint_count": "1",
+      "max_printed_quanta": "7.938905239105224609375",
+      "native_count": "1.00",
+      "numeric_comparison_eligible": true,
+      "outside_half_printed_digit": 8,
+      "reason": "count_matches"
+    }
+  },
+  "files": [
+    {
+      "path": "E2RECOIL.sav",
+      "sha256": "a9ae0b6563f22d52883c4ebf162efd354e552f7c7b8991e1113377d760473c79",
+      "size_bytes": 528
+    },
+    {
+      "path": "IONIZ.SAV",
+      "sha256": "f10dfee168b01b187f7d3ace20fa40b1de6cf347eaa3e1d9a96165e911a1bfcc",
+      "size_bytes": 528
+    },
+    {
+      "path": "Ioniz3D.sav",
+      "sha256": "65f4dbafd46641506ca66c21a3ef9c12153ebc71e91f5913bb71bbaa0a719b3a",
+      "size_bytes": 20080
+    },
+    {
+      "path": "NOVAC.sav",
+      "sha256": "6d9c54dee5660c46886f32d80e57e9dd0ffa57ee0cd2a762b036d9c8e0c3a33a",
+      "size_bytes": 200
+    },
+    {
+      "path": "NoVac3D.sav",
+      "sha256": "28b4f41a7f3ee6d8cc87272db6e09c6d3566551fd4d18702b041a21658272a85",
+      "size_bytes": 20000
+    },
+    {
+      "path": "PHONON.sav",
+      "sha256": "2d6b4e7f6ccc073b82ced9c7f13cdd0e812d4d2b926d39268a73ea7521b0d903",
+      "size_bytes": 528
+    },
+    {
+      "path": "Phonon3D.sav",
+      "sha256": "2a17f18ad4541bf7f17505e84a08ecad7e79047eaf30388b54f9a222670615d2",
+      "size_bytes": 20080
+    },
+    {
+      "path": "Range3D.sav",
+      "sha256": "b17fbbd311cb0abfa4337d051925ba6aa363121b048a5366d27808d5ddf2f47e",
+      "size_bytes": 20004
+    },
+    {
+      "path": "Recoil3D.sav",
+      "sha256": "28b4f41a7f3ee6d8cc87272db6e09c6d3566551fd4d18702b041a21658272a85",
+      "size_bytes": 20000
+    },
+    {
+      "path": "SPUTTER.sav",
+      "sha256": "67042dfda5683aead81b6055d19c4dba238341f9dd82f49c0e7cc0c19c5f10d1",
+      "size_bytes": 800
+    },
+    {
+      "path": "STOPPING.sav",
+      "sha256": "f45095a80c2d3f935c3e68c32609c8d267d260750391dbdbae4c3a8ea4e3b05f",
+      "size_bytes": 900000
+    },
+    {
+      "path": "TDATA.sav",
+      "sha256": "332ef87049d3ca9f64afae73b7c0d6c98d230ee172da912465d5fe6ed37c6cdb",
+      "size_bytes": 5874
+    },
+    {
+      "path": "TRIMIN.sav",
+      "sha256": "cb10d9812b05a3b90c0e5c6bca4ba6e3c5814ce3ac871e513a917859178aedf2",
+      "size_bytes": 2028
+    },
+    {
+      "path": "VACANCY.sav",
+      "sha256": "9619d1d23637317ba07dc869404df3dbd823e484040dd10d13433d5232869b90",
+      "size_bytes": 480
+    },
+    {
+      "path": "Vac3D.sav",
+      "sha256": "173a3eefec0c24fcf292b30e60e2892fd0a991fbe2fa6c065ddef895b96c9def",
+      "size_bytes": 20020
+    },
+    {
+      "path": "XRANGE.sav",
+      "sha256": "f35a591879f464a2f24327ebdc86cf8d32053c05fcbbd199145b1045f33c585b",
+      "size_bytes": 404
+    },
+    {
+      "path": "YZRADIAL#.sav",
+      "sha256": "d5bba6562a62a12455541cc21b39237abb9395bf67ab9572da98784c1ed5a095",
+      "size_bytes": 1600
+    },
+    {
+      "path": "YZRANGE#.sav",
+      "sha256": "2f30c00ef36392d2ea83da05c545c297a3f367c72d8d01e2525bc474f90327d1",
+      "size_bytes": 1600
+    },
+    {
+      "path": "native/E2RECOIL.txt",
+      "sha256": "e124a9ec4ce2cc474297a6fa57afc2ca29872370bb9e6e5cb6015c31c683079b",
+      "size_bytes": 13426
+    },
+    {
+      "path": "native/IONIZ.txt",
+      "sha256": "0461b987e44e741c7c0bfd4e337e2adb8cab9c2622cde88dd973fe9a3c5f5cef",
+      "size_bytes": 13579
+    },
+    {
+      "path": "native/LATERAL.txt",
+      "sha256": "91f7383de587e21b91dd8ac784a2334e201422c3e6dbff4ee2192a64eb6868c5",
+      "size_bytes": 17673
+    },
+    {
+      "path": "native/NOVAC.txt",
+      "sha256": "5aae9bec0965bc539ffa3bf7e6873dbd1b26464ec03e180073dfbe93d4dfc58c",
+      "size_bytes": 552
+    },
+    {
+      "path": "native/PHONON.txt",
+      "sha256": "7f14dcc27fa3bfd89f3709f0118ee50d7d2b14241856ae258bc55ce29ee8a4cf",
+      "size_bytes": 13363
+    },
+    {
+      "path": "native/RANGE.txt",
+      "sha256": "98c7a0f606c7ce0ebaefe493d9f4399e49636a966539319e3b9dbe1df72a85df",
+      "size_bytes": 13388
+    },
+    {
+      "path": "native/TDATA.txt",
+      "sha256": "b85cec728f556e644155e5ab11f7a0e6ab7a1e8949295242ed71035cb0caa74e",
+      "size_bytes": 14366
+    },
+    {
+      "path": "native/VACANCY.txt",
+      "sha256": "fcff2c9a5574feb08c3848cdef2a4376ef3409b0ab73328a07fadeb1b88e8ada",
+      "size_bytes": 13649
+    }
+  ],
+  "geometry": {
+    "end": "15000",
+    "layers": 50,
+    "row_count": 100,
+    "start": "0",
+    "target_entries": 1,
+    "width": "150"
+  },
+  "mode": "ion-quick",
+  "source": ".cache\\trim-input-limits\\20261021T125019Z\\srim_2013_std\\layers-50",
+  "version": "SRIM-2013.00"
+}

@@ -18,6 +18,8 @@ The current project is a Python library used from the repository root. There is 
 
 ## Setup and first calculation
 
+Offline [TRIM checkpoint recovery](doc/guides/trim-checkpoint-recovery.md) provides explicitly labeled recovered profiles from complete frozen `.sav` sets, covering seven 2008 modes and eight modes in each 2013 edition. Recovery v2 derives dimensions, grids and distinct target-entry columns from saved metadata and array lengths, supporting compounds and multilayers. Nonzero plot starts, fractional widths, gas layers and non-100-row arrays are accepted only as explicitly flagged inferred layouts. Quick-mode unavailable quantities remain unavailable. Recovered files do not reproduce exact native formatting/precision, are not native-parser substitutes, and do not relax lifecycle output requirements. Existing native outputs should be preserved.
+
 You need Windows, Python 3.13+, and an existing working SRIM installation with its numerical data and native runtime dependencies. Executables and installation data are not distributed here. Default CAB recovery additionally requires Windows PowerShell 5.1 and an interactive desktop for the SR GUI.
 
 The current Python code uses only the standard library. There is no `pyproject.toml`, `setup.py`, or pip dependency installation step. Use a Python 3.13+ virtual environment at `.venv`; in this checkout, run all project Python commands through `D:\projects\agentic_srim\.venv\Scripts\python.exe`. Run commands from `D:\projects\agentic_srim` so `src` imports resolve.

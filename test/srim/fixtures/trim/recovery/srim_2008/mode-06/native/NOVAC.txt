@@ -1,0 +1,14 @@
+====== Si 100 nm =======
+        SRIM-2008.04
+=========================================
+        Replacement Collisions       
+ See SRIM Outputs\TDATA.txt for calc. details   
+=========================================
+Si 100 nm
+------------------------------------------------------------------------------
+--------------------------------------------------------------------
+    Recoil/Damage Calculations made with Kinchin-Pease Estimates    
+--------------------------------------------------------------------
+
+ There are NO Replacement Collisions calculated.
+ You must execute a full TRIM cascade calculation for these.

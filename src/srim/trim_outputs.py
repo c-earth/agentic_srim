@@ -22,6 +22,30 @@ NUMBER = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][+-]?\d+)?"
 AGGREGATE_NOTE = "Native Kinchin-Pease tables contain aggregate recoil quantities, not per-atom columns."
 
 
+def saved_trim_mode(version: str, input_mode: int) -> int:
+    """Return the saved cascade number for version and input_mode without effects.
+
+    Raise ValueError for unsupported versions or input mode numbers.
+    """
+    family = "2008" if "2008" in version else "2013" if "2013" in version else None
+    if family is None or type(input_mode) is not int or input_mode not in MODES[family].values():
+        raise ValueError("Unsupported TRIM version/input mode")
+    return {8: 6, 6: 7, 7: 8}.get(input_mode, input_mode) if family == "2013" else input_mode
+
+
+def saved_trim_mode_name(version: str, saved_mode: int) -> str:
+    """Return descriptive saved_mode semantics for version, without effects.
+
+    Raise ValueError for unsupported versions or saved mode numbers.
+    """
+    family = "2008" if "2008" in version else "2013" if "2013" in version else None
+    if family is not None:
+        for name, number in MODES[family].items():
+            if saved_trim_mode(version, number) == saved_mode:
+                return name
+    raise ValueError("Unsupported TRIM version/saved mode")
+
+
 def _trim_text(contents: bytes, source: str) -> list[str]:
     """Decode contents from source as native CP1252 lines without effects.
 

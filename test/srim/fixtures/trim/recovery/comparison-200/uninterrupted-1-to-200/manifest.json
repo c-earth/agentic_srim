@@ -1,0 +1,135 @@
+{
+  "files": [
+    {
+      "path": "E2RECOIL.sav",
+      "sha256": "8979518a2527906ad5ed5a1183aa6bd8672292e80b1bb0cfeb420aa511e9c011",
+      "size_bytes": 3600
+    },
+    {
+      "path": "IONIZ.SAV",
+      "sha256": "551315022385f5798c4804590d02537cc094c7d0b9f686462b895cf261ff0905",
+      "size_bytes": 3600
+    },
+    {
+      "path": "Ioniz3D.sav",
+      "sha256": "071896f2710b03eddb387a3bdd962890a3b2364d52649b60992837ca4e9a8fa9",
+      "size_bytes": 100832
+    },
+    {
+      "path": "NOVAC.sav",
+      "sha256": "04277f18738494356af4f74e23c9f62b0770c74443d1cf49e115e990c3a1896d",
+      "size_bytes": 600
+    },
+    {
+      "path": "NoVac3D.sav",
+      "sha256": "869156857a4a61aa2b27d01506a66da714834e4939625578f5148effbc930e8d",
+      "size_bytes": 32072
+    },
+    {
+      "path": "PHONON.sav",
+      "sha256": "5e33df1828c70a94f90e857936e5bea98c03b7e70699bb2c7f18275ba215aec4",
+      "size_bytes": 3600
+    },
+    {
+      "path": "Phonon3D.sav",
+      "sha256": "8da46f05773efd10780fb95d82c534e844c41b38ad30c6f1ec9be4f7b0d0236a",
+      "size_bytes": 81452
+    },
+    {
+      "path": "Range3D.sav",
+      "sha256": "6fa5e3381dcc4b89997bda7b7794b8c168ae6e883e1bed9dd75c9405b2c9171e",
+      "size_bytes": 20764
+    },
+    {
+      "path": "Recoil3D.sav",
+      "sha256": "31f9a20fdc3decde54ea25203aeec4c6a54b3e4fc13eb3c115906bf022e5ecef",
+      "size_bytes": 38896
+    },
+    {
+      "path": "SPUTTER.sav",
+      "sha256": "d16170e694c8c08635796b5d802eb1d77ba272a62b7b2947af37cf3a0b5d2cec",
+      "size_bytes": 1118
+    },
+    {
+      "path": "STOPPING.sav",
+      "sha256": "c6326362ba595ccc8eea810f2b883accba075ccbde994a456ea8de450a4e2eda",
+      "size_bytes": 36000
+    },
+    {
+      "path": "TDATA.sav",
+      "sha256": "806f883d678c042bab907e411cf0c2ca8558f81f76152c752d3191ee235c073d",
+      "size_bytes": 2637
+    },
+    {
+      "path": "TRIMIN.sav",
+      "sha256": "502dd30e8cfe7b3d2e34fd66cde5213f31c2eee714073b6b550d4b009f451276",
+      "size_bytes": 936
+    },
+    {
+      "path": "VACANCY.sav",
+      "sha256": "2e28ba92e57617f1a380b80216ca387aa2e76ae25e6fd0b2b41aea27c6f758ea",
+      "size_bytes": 1200
+    },
+    {
+      "path": "Vac3D.sav",
+      "sha256": "d21a52bb31132ff76e00006e747d22fd5e52bcfef77df91e9084eef17134760b",
+      "size_bytes": 37704
+    },
+    {
+      "path": "XRANGE.sav",
+      "sha256": "a538be84329c377a23b05f9be27e36f7b958b1e9754adb6b3400288fdffce22b",
+      "size_bytes": 1096
+    },
+    {
+      "path": "YZRADIAL#.sav",
+      "sha256": "5c4424db48b2e465d90a50a85d815620cba002e52a388f8c0f062cf73c5e025d",
+      "size_bytes": 1600
+    },
+    {
+      "path": "YZRANGE#.sav",
+      "sha256": "ac9770befcfef21a6d378c95c2c782ad37ea5eea870eb3feb3e9fda1561228cd",
+      "size_bytes": 1600
+    },
+    {
+      "path": "native/E2RECOIL.txt",
+      "sha256": "fcd81114e057f0d539db6872d3db5c71e531ec6f084b51b82764907f74d9df25",
+      "size_bytes": 5107
+    },
+    {
+      "path": "native/IONIZ.txt",
+      "sha256": "9ae530ad79b8be361ee3995e1e919c60814e79409cccfc6ac59c1a03b15204bc",
+      "size_bytes": 4896
+    },
+    {
+      "path": "native/LATERAL.txt",
+      "sha256": "89d8f493924b66202655f7437502da2b526a2968868f59034af40a564e8199f9",
+      "size_bytes": 9146
+    },
+    {
+      "path": "native/NOVAC.txt",
+      "sha256": "d1512fcc1c79309b3c25bb26d512eb214682a7ea7de778db65a8c66e2a2e8668",
+      "size_bytes": 3841
+    },
+    {
+      "path": "native/PHONON.txt",
+      "sha256": "26d9cd17449b0030f4537366046228cb2985574746961128da6894eb75ca9129",
+      "size_bytes": 4836
+    },
+    {
+      "path": "native/RANGE.txt",
+      "sha256": "2e45cc71fde550188d52b872e7732e6a94b3da58994b009b407815ee03faf759",
+      "size_bytes": 5336
+    },
+    {
+      "path": "native/TDATA.txt",
+      "sha256": "cb2581f7557e76d77aa65dfe50c49cbc206c56f983eb0b2205f6ca9ab4d3fe3a",
+      "size_bytes": 1688
+    },
+    {
+      "path": "native/VACANCY.txt",
+      "sha256": "1c878186bb62dc84f1e4972eea784bc7db498ee3dc04b307004dc74c797ddd4b",
+      "size_bytes": 5424
+    }
+  ],
+  "source": ".cache\\popup-review\\sav-coverage\\comparison-200\\uninterrupted-1-to-200"
+}

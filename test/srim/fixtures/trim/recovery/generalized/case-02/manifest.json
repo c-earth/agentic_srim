@@ -1,0 +1,183 @@
+{
+  "comparison": {
+    "E2RECOIL.txt": {
+      "cells": 300,
+      "checkpoint_count": "1000",
+      "max_printed_quanta": "0.50038593537731330263121",
+      "native_count": "1000.00",
+      "numeric_comparison_eligible": true,
+      "outside_half_printed_digit": 2,
+      "reason": "count_matches"
+    },
+    "IONIZ.txt": {
+      "cells": 300,
+      "checkpoint_count": "1000",
+      "max_printed_quanta": "0.50062320665217715718445",
+      "native_count": "001000.00",
+      "numeric_comparison_eligible": true,
+      "outside_half_printed_digit": 2,
+      "reason": "count_matches"
+    },
+    "LATERAL.txt": {
+      "cells": 500,
+      "checkpoint_count": "1000",
+      "max_printed_quanta": "48.809367178909316204917052486531552097154784786252247660133370864869790018",
+      "native_count": "1000.00",
+      "numeric_comparison_eligible": true,
+      "outside_half_printed_digit": 257,
+      "reason": "count_matches"
+    },
+    "NOVAC.txt": {
+      "checkpoint_count": "1000",
+      "native_count": null,
+      "numeric_comparison_eligible": false,
+      "reason": "not_calculated"
+    },
+    "PHONON.txt": {
+      "cells": 300,
+      "checkpoint_count": "1000",
+      "max_printed_quanta": "0.49943705194967350511237",
+      "native_count": "1000.00",
+      "numeric_comparison_eligible": true,
+      "outside_half_printed_digit": 0,
+      "reason": "count_matches"
+    },
+    "RANGE.txt": {
+      "cells": 300,
+      "checkpoint_count": "1000",
+      "max_printed_quanta": "0.0095367431640625",
+      "native_count": "1000.00",
+      "numeric_comparison_eligible": true,
+      "outside_half_printed_digit": 0,
+      "reason": "count_matches"
+    },
+    "TDATA.txt": {
+      "checkpoint_count": "1000",
+      "native_count": "001000",
+      "numeric_comparison_eligible": true,
+      "reason": "count_matches"
+    },
+    "VACANCY.txt": {
+      "cells": 300,
+      "checkpoint_count": "1000",
+      "max_printed_quanta": "0.5460205078125",
+      "native_count": "1000.00",
+      "numeric_comparison_eligible": true,
+      "outside_half_printed_digit": 4,
+      "reason": "count_matches"
+    }
+  },
+  "files": [
+    {
+      "path": "E2RECOIL.sav",
+      "sha256": "832b5abd857a10cdbb6e22ab44901da194b3301a988a953db766547fd1e91a71",
+      "size_bytes": 5400
+    },
+    {
+      "path": "IONIZ.SAV",
+      "sha256": "34bc400179ce4047ddb3ba999bd4dd1600080f6308b26209925c83e9cff2f964",
+      "size_bytes": 3600
+    },
+    {
+      "path": "NOVAC.sav",
+      "sha256": "6d9c54dee5660c46886f32d80e57e9dd0ffa57ee0cd2a762b036d9c8e0c3a33a",
+      "size_bytes": 200
+    },
+    {
+      "path": "PHONON.sav",
+      "sha256": "72449a4add1b84805108f4e7ecaac84908d09c09ee61ce8abff5b545448ec8b4",
+      "size_bytes": 3600
+    },
+    {
+      "path": "SPUTTER.sav",
+      "sha256": "34fa1826a0a171d2579b65040894c503d1bfc945f90690b95a979dd136dd0dfd",
+      "size_bytes": 4400
+    },
+    {
+      "path": "STOPPING.sav",
+      "sha256": "7d18eeb3a3c9039df68aaf0e3b86bebbf6937553fdd709e110d66cf4554f46ae",
+      "size_bytes": 180000
+    },
+    {
+      "path": "TDATA.sav",
+      "sha256": "69b364d3f000363ae4815785b2c830d123a62327da4353ff2d476cbd3b714be1",
+      "size_bytes": 5151
+    },
+    {
+      "path": "TRIMIN.sav",
+      "sha256": "9cb8e10bf6e40b54f8bc10fbe5b3e9c9cbc14000c2bf82a4df947c8ba2ec9ac5",
+      "size_bytes": 1742
+    },
+    {
+      "path": "VACANCY.sav",
+      "sha256": "c0bfa9bb4f1d3921e8e1fe69d7477dc0186090536c2ce29850c995dae9db4082",
+      "size_bytes": 4200
+    },
+    {
+      "path": "XRANGE.sav",
+      "sha256": "dc1926de47bd2404f778ab68f49e8433781d3f40b2ad4225876506a47600cece",
+      "size_bytes": 2576
+    },
+    {
+      "path": "YZRADIAL#.sav",
+      "sha256": "69764ca04865451e5489020de20062b5858dc9b468af090a191533e405ea3b9d",
+      "size_bytes": 1600
+    },
+    {
+      "path": "YZRANGE#.sav",
+      "sha256": "fc544150782553d596d3bb49184624d6db4c9efd242d6a55036f6d536f028e3c",
+      "size_bytes": 1600
+    },
+    {
+      "path": "native/E2RECOIL.txt",
+      "sha256": "bb0bd6e7050154f7196bdfeb539bb02bd933e3657780b1a3539862feffaf36fd",
+      "size_bytes": 6624
+    },
+    {
+      "path": "native/IONIZ.txt",
+      "sha256": "afc44bcb3bfa3cf7b8609eb8b0bf5233ff6ea11f25593f4a6181cbea50b09f55",
+      "size_bytes": 6594
+    },
+    {
+      "path": "native/LATERAL.txt",
+      "sha256": "08d1775471556273d04d5a265b05009c57921749ce6a668571911e370c15004b",
+      "size_bytes": 10871
+    },
+    {
+      "path": "native/NOVAC.txt",
+      "sha256": "f08bbce0da0ff9a1326eb7a0296350cb5dec0cae295d21812be4c44226f8319d",
+      "size_bytes": 547
+    },
+    {
+      "path": "native/PHONON.txt",
+      "sha256": "2e9acebac29288f040232ebdf36a48585008b719f513df75552c4ac53e87b578",
+      "size_bytes": 6561
+    },
+    {
+      "path": "native/RANGE.txt",
+      "sha256": "3518c0de867ee7f053e9b832cb375248e64c1451a9e5872a3735ab4c37efa6c1",
+      "size_bytes": 7224
+    },
+    {
+      "path": "native/TDATA.txt",
+      "sha256": "421561dafc8176a94c9945b5589753d4ea21e44ad98a06067a84dc47da7a485d",
+      "size_bytes": 5044
+    },
+    {
+      "path": "native/VACANCY.txt",
+      "sha256": "057642bca803ef0815133dda8f177849faedff3d2eebb51a6dcdfcf5e5eaf241",
+      "size_bytes": 6924
+    }
+  ],
+  "geometry": {
+    "end": "1000",
+    "layers": 10,
+    "row_count": 100,
+    "start": "0",
+    "target_entries": 10,
+    "width": "10"
+  },
+  "mode": "ion-quick",
+  "source": ".cache\\trim-implementation\\retry-20261021T141237Z\\srim_2008\\ten-distinct",
+  "version": "SRIM-2008.04"
+}

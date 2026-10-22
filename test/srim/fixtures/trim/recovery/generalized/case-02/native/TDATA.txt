@@ -1,0 +1,102 @@
+====== Si 100 nm =======
+        SRIM-2008.04
+=======================================
+      Data  of  TRIM  Calculation      
+=======================================
+--------------------------------------------------------------------
+    Recoil/Damage Calculations made with Kinchin-Pease Estimates    
+--------------------------------------------------------------------
+Ion = Ar (18)   Ion Mass= 039.9620
+Energy  = 5000000.E-05 keV
+Ion Angle to Surface = 0 degrees
+============= TARGET MATERIAL ======================================
+  Layer # 1 - Silicon
+  Layer # 1 - Bottom Depth=     1.E+02 A
+  Layer # 1- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 1- Si = 100  Atomic Percent = 50   Mass Percent
+====================================================================
+  Layer # 2 - Silicon
+  Layer # 2 - Bottom Depth=     2.E+02 A
+  Layer # 2- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 2- Si = 100  Atomic Percent = 50   Mass Percent
+====================================================================
+  Layer # 3 - Silicon
+  Layer # 3 - Bottom Depth=     3.E+02 A
+  Layer # 3- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 3- Si = 100  Atomic Percent = 50   Mass Percent
+====================================================================
+  Layer # 4 - Silicon
+  Layer # 4 - Bottom Depth=     4.E+02 A
+  Layer # 4- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 4- Si = 100  Atomic Percent = 50   Mass Percent
+====================================================================
+  Layer # 5 - Silicon
+  Layer # 5 - Bottom Depth=     5.E+02 A
+  Layer # 5- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 5- Si = 100  Atomic Percent = 50   Mass Percent
+====================================================================
+  Layer # 6 - Silicon
+  Layer # 6 - Bottom Depth=     6.E+02 A
+  Layer # 6- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 6- Si = 100  Atomic Percent = 50   Mass Percent
+====================================================================
+  Layer # 7 - Silicon
+  Layer # 7 - Bottom Depth=     7.E+02 A
+  Layer # 7- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 7- Si = 100  Atomic Percent = 50   Mass Percent
+====================================================================
+  Layer # 8 - Silicon
+  Layer # 8 - Bottom Depth=     8.E+02 A
+  Layer # 8- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 8- Si = 100  Atomic Percent = 50   Mass Percent
+====================================================================
+  Layer # 9 - Silicon
+  Layer # 9 - Bottom Depth=     9.E+02 A
+  Layer # 9- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 9- Si = 100  Atomic Percent = 50   Mass Percent
+====================================================================
+  Layer # 10 - Silicon
+  Layer # 10 - Bottom Depth=     1.E+03 A
+  Layer # 10- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 10- Si = 100  Atomic Percent = 50   Mass Percent
+====================================================================
+Target energies for target atom = Si
+    Displacement = 15 eV, Binding = 2 eV, Surface = 4.7 eV
+Target energies for target atom = Si
+    Displacement = 15 eV, Binding = 2 eV, Surface = 4.7 eV
+Target energies for target atom = Si
+    Displacement = 15 eV, Binding = 2 eV, Surface = 4.7 eV
+Target energies for target atom = Si
+    Displacement = 15 eV, Binding = 2 eV, Surface = 4.7 eV
+Target energies for target atom = Si
+    Displacement = 15 eV, Binding = 2 eV, Surface = 4.7 eV
+Target energies for target atom = Si
+    Displacement = 15 eV, Binding = 2 eV, Surface = 4.7 eV
+Target energies for target atom = Si
+    Displacement = 15 eV, Binding = 2 eV, Surface = 4.7 eV
+Target energies for target atom = Si
+    Displacement = 15 eV, Binding = 2 eV, Surface = 4.7 eV
+Target energies for target atom = Si
+    Displacement = 15 eV, Binding = 2 eV, Surface = 4.7 eV
+Target energies for target atom = Si
+    Displacement = 15 eV, Binding = 2 eV, Surface = 4.7 eV
+====================================================================
+Depth Range of Tabulated Data=  000000.E+00  -  100000.E-02  Angstroms
+====================================================================
+Total Ions calculated =  001000
+Average Range         =   57542.E-02 Angstroms
+Average Straggling    =   20345.E-02 Angstroms
+Average Vacancy/Ion   =   73933.E-02
+====================================================================
+Total Backscattered Ions=  0 
+Total Transmitted Ions  =  35 
+====================================================================
+See files SRIM Outputs\*.txt for tables :
+   TDATA.txt    -- Details of the calculation.
+   RANGE.txt    -- Final distribution of Ions/Recoils
+   VACANCY.txt  -- Distribution of Vacancies
+   IONIZ.txt    -- Distribution of Ionization
+   PHONON.txt   -- Distribution of Phonons
+   E2RECOIL.txt -- Energy transferred to recoils
+   NOVAC.txt    -- Replacement collisions
+   LATERAL.txt  -- Lateral Spread of Ions

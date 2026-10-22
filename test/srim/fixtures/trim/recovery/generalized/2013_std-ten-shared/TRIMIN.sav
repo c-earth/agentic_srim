@@ -1,0 +1,37 @@
+==> TRIM layer equivalence
+Ion Z Mass Energy Angle Count Bragg Autosave
+18 39.962 50 0 1000 0 10000
+Cascades Seed Reminders
+1 12345 0
+Diskfiles
+0 0 0 0 0 0
+Target material
+"Si 100 nm" 1 10
+PlotType Depths
+5 0 1000
+Target Elements
+Atom 1 = Si =   14 28.086
+Layer Layer Name Width Density Stoichiometry
+Number Description Angstrom g/cm3
+1 "Silicon" 100 2.3212 1
+2 "Silicon" 100 2.3212 1
+3 "Silicon" 100 2.3212 1
+4 "Silicon" 100 2.3212 1
+5 "Silicon" 100 2.3212 1
+6 "Silicon" 100 2.3212 1
+7 "Silicon" 100 2.3212 1
+8 "Silicon" 100 2.3212 1
+9 "Silicon" 100 2.3212 1
+10 "Silicon" 100 2.3212 1
+0 Target layer phases
+0 0 0 0 0 0 0 0 0 0
+Target Compound Corrections
+1 1 1 1 1 1 1 1 1 1
+Displacement
+15
+Lattice
+2
+Surface
+4.7
+Stopping Power Version
+0

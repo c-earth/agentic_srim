@@ -1,0 +1,333 @@
+====== Boundary check =======
+        SRIM-2013.00
+=====================================
+       LATERAL SPREAD OF IONS        
+ See SRIM Outputs\TDATA.txt for calc. details   
+Ì===================================Ê===================================
+  NOTE : The Projected LATERAL Spread is based on a projection on a     
+  plane- just the way the XY or XZ displays look on the screen.  The    
+  Lateral Projected Range is defined as the average of the absolute     
+  values of the projected lateral displacements from the X-axis.        
+  One use of this range: If a mask covers half of a target, the lateral 
+  range is the distance under the mask where the concentration drops to 
+  25% (at the mask edge the concentration= 50% of the uniform value).   
+                                                                        
+  The Radial Range is the mean radial displacement range from the       
+  X-axis a-uming cylindrical symmetry.                                 
+========================================================================
+--------------------------------------------------------------------
+    Recoil/Damage Calculations made with Kinchin-Pease Estimates    
+--------------------------------------------------------------------
+ See file: SRIM Outputs\TDATA.txt for data about the calculation
+ Ion    = Ar   Energy = 50 keV
+ Total Ions calculated =1.00
+============= TARGET MATERIAL ======================================
+Layer  1 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 1- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 1- Si = 100  Atomic Percent = 100  Mass Percent
+Layer  2 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 2- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 2- Si = 100  Atomic Percent = 100  Mass Percent
+Layer  3 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 3- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 3- Si = 100  Atomic Percent = 100  Mass Percent
+Layer  4 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 4- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 4- Si = 100  Atomic Percent = 100  Mass Percent
+Layer  5 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 5- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 5- Si = 100  Atomic Percent = 100  Mass Percent
+Layer  6 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 6- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 6- Si = 100  Atomic Percent = 100  Mass Percent
+Layer  7 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 7- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 7- Si = 100  Atomic Percent = 100  Mass Percent
+Layer  8 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 8- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 8- Si = 100  Atomic Percent = 100  Mass Percent
+Layer  9 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 9- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 9- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 10 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 10- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 10- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 11 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 11- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 11- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 12 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 12- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 12- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 13 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 13- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 13- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 14 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 14- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 14- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 15 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 15- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 15- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 16 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 16- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 16- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 17 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 17- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 17- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 18 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 18- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 18- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 19 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 19- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 19- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 20 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 20- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 20- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 21 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 21- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 21- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 22 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 22- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 22- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 23 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 23- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 23- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 24 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 24- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 24- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 25 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 25- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 25- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 26 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 26- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 26- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 27 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 27- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 27- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 28 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 28- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 28- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 29 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 29- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 29- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 30 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 30- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 30- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 31 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 31- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 31- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 32 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 32- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 32- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 33 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 33- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 33- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 34 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 34- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 34- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 35 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 35- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 35- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 36 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 36- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 36- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 37 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 37- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 37- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 38 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 38- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 38- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 39 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 39- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 39- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 40 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 40- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 40- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 41 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 41- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 41- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 42 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 42- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 42- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 43 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 43- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 43- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 44 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 44- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 44- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 45 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 45- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 45- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 46 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 46- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 46- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 47 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 47- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 47- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 48 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 48- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 48- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 49 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 49- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 49- Si = 100  Atomic Percent = 100  Mass Percent
+Layer 50 : Silicon
+Layer Width = 30000.E-02 AAA ;
+  Layer # 50- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 50- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+ Ion Average Range = 553146.E-03 A   Straggling = 000000.E+00 A
+ Ion Lateral Range = 194578.E-03 A   Straggling = 000000.E+00 A
+ Ion Radial  Range = 195038.E-03 A   Straggling = 000000.E+00 A
+====================================================================
+                LATERAL     Projected      LATERAL        Radial    
+  TARGET       PROJ.RANGE   Straggling      RADIAL      Straggling  
+  DEPTH (A)   (Angstroms)   (Angstroms)   (Angstroms)   (Angstroms) 
+------------ ------------- ------------- ------------- -------------
+1500100.E-04 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+3000100.E-04 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+4500100.E-04 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+6000100.E-04 19457800.E-05 19457800.E-05 19503775.E-05 00000000.E+00 
+7500100.E-04 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+9000100.E-04 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1050010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1200010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1350010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1500010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1650010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1800010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1950010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+2100010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+2250010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+2400010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+2550010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+2700010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+2850010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+3000010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+3150010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+3300010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+3450010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+3600010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+3750010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+3900010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+4050010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+4200010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+4350010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+4500010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+4650010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+4800010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+4950010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+5100010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+5250010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+5400010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+5550010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+5700010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+5850010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+6000010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+6150010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+6300010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+6450010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+6600010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+6750010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+6900010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+7050010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+7200010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+7350010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+7500010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+7650010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+7800010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+7950010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+8100010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+8250010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+8400010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+8550010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+8700010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+8850010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+9000010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+9150010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+9300010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+9450010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+9600010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+9750010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+9900010.E-03 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1005001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1020001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1035001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1050001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1065001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1080001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1095001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1110001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1125001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1140001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1155001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1170001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1185001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1200001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1215001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1230001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1245001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1260001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1275001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1290001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1305001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1320001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1335001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1350001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1365001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1380001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1395001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1410001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1425001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1440001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1455001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1470001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1485001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 
+1500001.E-02 00000000.E+00 00000000.E+00 00000000.E+00 00000000.E+00 

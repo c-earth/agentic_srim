@@ -1,0 +1,284 @@
+====== Boundary check =======
+        SRIM-2013.00
+=======================================
+      Data  of  TRIM  Calculation      
+=======================================
+--------------------------------------------------------------------
+    Recoil/Damage Calculations made with Kinchin-Pease Estimates    
+--------------------------------------------------------------------
+Ion = Ar (18)   Ion Mass= 039.9620
+Energy  = 5000000.E-05 keV
+Ion Angle to Surface = 0 degrees
+============= TARGET MATERIAL ======================================
+  Layer # 1 - Silicon
+  Layer # 1 - Bottom Depth=     3.E+02 A
+  Layer # 1- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 1- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 2 - Silicon
+  Layer # 2 - Bottom Depth=     6.E+02 A
+  Layer # 2- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 2- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 3 - Silicon
+  Layer # 3 - Bottom Depth=     9.E+02 A
+  Layer # 3- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 3- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 4 - Silicon
+  Layer # 4 - Bottom Depth=     1.E+03 A
+  Layer # 4- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 4- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 5 - Silicon
+  Layer # 5 - Bottom Depth=     2.E+03 A
+  Layer # 5- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 5- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 6 - Silicon
+  Layer # 6 - Bottom Depth=     2.E+03 A
+  Layer # 6- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 6- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 7 - Silicon
+  Layer # 7 - Bottom Depth=     2.E+03 A
+  Layer # 7- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 7- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 8 - Silicon
+  Layer # 8 - Bottom Depth=     2.E+03 A
+  Layer # 8- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 8- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 9 - Silicon
+  Layer # 9 - Bottom Depth=     3.E+03 A
+  Layer # 9- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 9- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 10 - Silicon
+  Layer # 10 - Bottom Depth=     3.E+03 A
+  Layer # 10- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 10- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 11 - Silicon
+  Layer # 11 - Bottom Depth=     3.E+03 A
+  Layer # 11- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 11- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 12 - Silicon
+  Layer # 12 - Bottom Depth=     4.E+03 A
+  Layer # 12- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 12- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 13 - Silicon
+  Layer # 13 - Bottom Depth=     4.E+03 A
+  Layer # 13- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 13- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 14 - Silicon
+  Layer # 14 - Bottom Depth=     4.E+03 A
+  Layer # 14- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 14- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 15 - Silicon
+  Layer # 15 - Bottom Depth=     5.E+03 A
+  Layer # 15- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 15- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 16 - Silicon
+  Layer # 16 - Bottom Depth=     5.E+03 A
+  Layer # 16- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 16- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 17 - Silicon
+  Layer # 17 - Bottom Depth=     5.E+03 A
+  Layer # 17- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 17- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 18 - Silicon
+  Layer # 18 - Bottom Depth=     5.E+03 A
+  Layer # 18- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 18- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 19 - Silicon
+  Layer # 19 - Bottom Depth=     6.E+03 A
+  Layer # 19- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 19- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 20 - Silicon
+  Layer # 20 - Bottom Depth=     6.E+03 A
+  Layer # 20- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 20- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 21 - Silicon
+  Layer # 21 - Bottom Depth=     6.E+03 A
+  Layer # 21- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 21- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 22 - Silicon
+  Layer # 22 - Bottom Depth=     7.E+03 A
+  Layer # 22- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 22- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 23 - Silicon
+  Layer # 23 - Bottom Depth=     7.E+03 A
+  Layer # 23- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 23- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 24 - Silicon
+  Layer # 24 - Bottom Depth=     7.E+03 A
+  Layer # 24- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 24- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 25 - Silicon
+  Layer # 25 - Bottom Depth=     8.E+03 A
+  Layer # 25- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 25- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 26 - Silicon
+  Layer # 26 - Bottom Depth=     8.E+03 A
+  Layer # 26- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 26- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 27 - Silicon
+  Layer # 27 - Bottom Depth=     8.E+03 A
+  Layer # 27- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 27- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 28 - Silicon
+  Layer # 28 - Bottom Depth=     8.E+03 A
+  Layer # 28- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 28- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 29 - Silicon
+  Layer # 29 - Bottom Depth=     9.E+03 A
+  Layer # 29- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 29- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 30 - Silicon
+  Layer # 30 - Bottom Depth=     9.E+03 A
+  Layer # 30- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 30- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 31 - Silicon
+  Layer # 31 - Bottom Depth=     9.E+03 A
+  Layer # 31- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 31- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 32 - Silicon
+  Layer # 32 - Bottom Depth=     1.E+04 A
+  Layer # 32- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 32- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 33 - Silicon
+  Layer # 33 - Bottom Depth=     1.E+04 A
+  Layer # 33- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 33- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 34 - Silicon
+  Layer # 34 - Bottom Depth=     1.E+04 A
+  Layer # 34- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 34- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 35 - Silicon
+  Layer # 35 - Bottom Depth=     1.E+04 A
+  Layer # 35- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 35- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 36 - Silicon
+  Layer # 36 - Bottom Depth=     1.E+04 A
+  Layer # 36- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 36- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 37 - Silicon
+  Layer # 37 - Bottom Depth=     1.E+04 A
+  Layer # 37- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 37- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 38 - Silicon
+  Layer # 38 - Bottom Depth=     1.E+04 A
+  Layer # 38- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 38- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 39 - Silicon
+  Layer # 39 - Bottom Depth=     1.E+04 A
+  Layer # 39- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 39- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 40 - Silicon
+  Layer # 40 - Bottom Depth=     1.E+04 A
+  Layer # 40- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 40- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 41 - Silicon
+  Layer # 41 - Bottom Depth=     1.E+04 A
+  Layer # 41- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 41- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 42 - Silicon
+  Layer # 42 - Bottom Depth=     1.E+04 A
+  Layer # 42- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 42- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 43 - Silicon
+  Layer # 43 - Bottom Depth=     1.E+04 A
+  Layer # 43- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 43- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 44 - Silicon
+  Layer # 44 - Bottom Depth=     1.E+04 A
+  Layer # 44- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 44- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 45 - Silicon
+  Layer # 45 - Bottom Depth=     1.E+04 A
+  Layer # 45- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 45- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 46 - Silicon
+  Layer # 46 - Bottom Depth=     1.E+04 A
+  Layer # 46- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 46- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 47 - Silicon
+  Layer # 47 - Bottom Depth=     1.E+04 A
+  Layer # 47- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 47- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 48 - Silicon
+  Layer # 48 - Bottom Depth=     1.E+04 A
+  Layer # 48- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 48- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 49 - Silicon
+  Layer # 49 - Bottom Depth=     1.E+04 A
+  Layer # 49- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 49- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+  Layer # 50 - Silicon
+  Layer # 50 - Bottom Depth=     2.E+04 A
+  Layer # 50- Density = 4.976E22 atoms/cm3 = 2.321 g/cm3
+  Layer # 50- Si = 100  Atomic Percent = 100  Mass Percent
+====================================================================
+Target energies for target atom = Si
+    Displacement = 15 eV, Binding = 2 eV, Surface = 4.7 eV
+====================================================================
+Depth Range of Tabulated Data=  000000.E+00  -  150000.E-01  Angstroms
+====================================================================
+Total Ions calculated =  000001
+Average Range         =   55315.E-02 Angstroms
+Average Straggling    =   00000.E+00 Angstroms
+Average Vacancy/Ion   =   75653.E-02
+====================================================================
+Total Backscattered Ions=  0 
+Total Transmitted Ions  =  0 
+====================================================================
+See files SRIM Outputs\*.txt for tables :
+   TDATA.txt    -- Details of the calculation.
+   RANGE.txt    -- Final distribution of Ions/Recoils
+   VACANCY.txt  -- Distribution of Vacancies
+   IONIZ.txt    -- Distribution of Ionization
+   PHONON.txt   -- Distribution of Phonons
+   E2RECOIL.txt -- Energy transferred to recoils
+   NOVAC.txt    -- Replacement collisions
+   LATERAL.txt  -- Lateral Spread of Ions

@@ -1,0 +1,269 @@
+{
+  "comparison": {
+    "E2RECOIL": {
+      "cells": 300,
+      "examples": [
+        {
+          "column": 2,
+          "decoded": "84.23934248801347862476765154",
+          "difference": "0.00005751198652137523234846",
+          "native": "8423.94E-02",
+          "row": 9
+        },
+        {
+          "column": 2,
+          "decoded": "88.29744451030307523592904812",
+          "difference": "0.00005548969692476407095188",
+          "native": "8829.75E-02",
+          "row": 12
+        },
+        {
+          "column": 2,
+          "decoded": "62.191541969164798373457271647",
+          "difference": "0.000058030835201626542728353",
+          "native": "6219.16E-02",
+          "row": 14
+        }
+      ],
+      "max_absolute_difference": "0.00396386890156497442307222",
+      "outside_half_printed_digit": 15
+    },
+    "IONIZ": {
+      "cells": 300,
+      "examples": [
+        {
+          "column": 3,
+          "decoded": "25.551646930825143362296343755",
+          "difference": "0.000053069174856637703656245",
+          "native": "2555.17E-02",
+          "row": 21
+        },
+        {
+          "column": 2,
+          "decoded": "8.609084637919871773697727684",
+          "difference": "0.000005362080128226302272316",
+          "native": "8609.09E-03",
+          "row": 50
+        },
+        {
+          "column": 2,
+          "decoded": "8.020154028418875632119211545",
+          "difference": "0.000005971581124367880788455",
+          "native": "8020.16E-03",
+          "row": 51
+        }
+      ],
+      "max_absolute_difference": "0.000053069174856637703656245",
+      "outside_half_printed_digit": 8
+    },
+    "LATERAL": {
+      "cells": 500,
+      "examples": [],
+      "max_absolute_difference": "0.00000491413170797143850091894712817993999932182",
+      "outside_half_printed_digit": 0
+    },
+    "NOVAC": {
+      "cells": 200,
+      "examples": [],
+      "max_absolute_difference": "2.93731689453125E-7",
+      "outside_half_printed_digit": 0
+    },
+    "PHONON": {
+      "cells": 300,
+      "examples": [
+        {
+          "column": 2,
+          "decoded": "0.45538844744873479245271801314",
+          "difference": "5.5255126520754728198686E-7",
+          "native": "455389.E-06",
+          "row": 11
+        },
+        {
+          "column": 2,
+          "decoded": "0.46057545442097797943406142810",
+          "difference": "5.4557902202056593857190E-7",
+          "native": "460576.E-06",
+          "row": 21
+        },
+        {
+          "column": 2,
+          "decoded": "0.57203543022823979144729348164",
+          "difference": "5.6977176020855270651836E-7",
+          "native": "572036.E-06",
+          "row": 29
+        }
+      ],
+      "max_absolute_difference": "0.000053908720174310681909680",
+      "outside_half_printed_digit": 12
+    },
+    "RANGE": {
+      "cells": 300,
+      "examples": [],
+      "max_absolute_difference": "2914.4287109375",
+      "outside_half_printed_digit": 0
+    },
+    "VACANCY": {
+      "cells": 300,
+      "examples": [
+        {
+          "column": 3,
+          "decoded": "0.8079933929443359375",
+          "difference": "6.070556640625E-7",
+          "native": "8079.94E-04",
+          "row": 6
+        },
+        {
+          "column": 3,
+          "decoded": "0.932991485595703125",
+          "difference": "5.14404296875E-7",
+          "native": "9329.92E-04",
+          "row": 9
+        },
+        {
+          "column": 2,
+          "decoded": "0.07999994754791259765625",
+          "difference": "5.245208740234375E-8",
+          "native": "8000.00E-05",
+          "row": 20
+        }
+      ],
+      "max_absolute_difference": "0.000005443115234375",
+      "outside_half_printed_digit": 8
+    }
+  },
+  "files": [
+    {
+      "path": "E2RECOIL.sav",
+      "sha256": "a09053e8b4efc319358f19f3cff03347f18da2a27c18a2d0a0a7eb3e7670ee15",
+      "size_bytes": 3600
+    },
+    {
+      "path": "IONIZ.SAV",
+      "sha256": "203348be764675384a05c48e7ab8d94b4f61c1f69eb02060cb18e3d8fbcc32aa",
+      "size_bytes": 3600
+    },
+    {
+      "path": "Ioniz3D.sav",
+      "sha256": "87ae0c94a60c8c8e203f9bb5086baa59d7857999ac2b14890fbfa7d7589ca7c9",
+      "size_bytes": 77344
+    },
+    {
+      "path": "NOVAC.sav",
+      "sha256": "06bbf69fb99e7be3b04d61dd0af95918000b3eca6a2804fc8ab02288f0cf20d9",
+      "size_bytes": 600
+    },
+    {
+      "path": "NoVac3D.sav",
+      "sha256": "e657027762ccc4fe8c610e420f2743fb067d1a2e76b6c3e8285a09ceddbaca15",
+      "size_bytes": 27784
+    },
+    {
+      "path": "PHONON.sav",
+      "sha256": "7f9d7165e9922e0aa7ac92f83c6ff657521193893a659456c0ca42a42e52866d",
+      "size_bytes": 3600
+    },
+    {
+      "path": "Phonon3D.sav",
+      "sha256": "d0453ee72c8597f93ae7c0310fb3927617cbb67964c631a73ce9ab3fd6fc3800",
+      "size_bytes": 62688
+    },
+    {
+      "path": "Range3D.sav",
+      "sha256": "e918a3070e97a8df981bd6d70fe34e148bfbf5937b1f87bb090a3348ba5bce1f",
+      "size_bytes": 20396
+    },
+    {
+      "path": "Recoil3D.sav",
+      "sha256": "913e449dada913f6a7b5949a0cf934f8aca73fd8f4a99568b7d688641a8f191a",
+      "size_bytes": 33128
+    },
+    {
+      "path": "SPUTTER.sav",
+      "sha256": "a13997b872c5f98eac57f8adc99f66a9d5097c5caba135cea8c76962f78e923b",
+      "size_bytes": 1044
+    },
+    {
+      "path": "STOPPING.sav",
+      "sha256": "c6326362ba595ccc8eea810f2b883accba075ccbde994a456ea8de450a4e2eda",
+      "size_bytes": 36000
+    },
+    {
+      "path": "TDATA.sav",
+      "sha256": "8309009b52460b45ebc5e312d24550f589d03270a13808438ebe1842455239cd",
+      "size_bytes": 2638
+    },
+    {
+      "path": "TRIMIN.sav",
+      "sha256": "94173471390f486d0cee0bf631691a39d8f831705bb56aaece276ed1ec682044",
+      "size_bytes": 938
+    },
+    {
+      "path": "VACANCY.sav",
+      "sha256": "ce3e12c1ce8e724a92801bdb485911a96968c2cc13820f47c016aa9b73c0ff83",
+      "size_bytes": 1200
+    },
+    {
+      "path": "Vac3D.sav",
+      "sha256": "86bca3aaaf6c9e9461d1d4a2135a634c9be77d52c2238045cf4eb265c51ba1e8",
+      "size_bytes": 32212
+    },
+    {
+      "path": "XRANGE.sav",
+      "sha256": "0d706bbc9ae4f59c8799a88413cd8837cf14795d452ae058ab04f3a4afdbc829",
+      "size_bytes": 1016
+    },
+    {
+      "path": "YZRADIAL#.sav",
+      "sha256": "5cc4473d620e6af69b961b025d7ad0b4ae6036d73e2576b7b98ff205279996ec",
+      "size_bytes": 1600
+    },
+    {
+      "path": "YZRANGE#.sav",
+      "sha256": "343bcedca37f30b247e4019819448b06b1424ebffa751952f6156a51dd35d698",
+      "size_bytes": 1600
+    },
+    {
+      "path": "native/E2RECOIL.txt",
+      "sha256": "0318323e86970228703f0b53b142820d3abbad8b0707374452b7fd5d9f2466f2",
+      "size_bytes": 5155
+    },
+    {
+      "path": "native/IONIZ.txt",
+      "sha256": "726d71694305590d8e63af94856b101f3c9110cf91ae9fc149580b32048f6d84",
+      "size_bytes": 4896
+    },
+    {
+      "path": "native/LATERAL.txt",
+      "sha256": "76ff3a726b3a8bb555abfea57a9200a921d6f7e2b592977f217d5f5ee95d7242",
+      "size_bytes": 9146
+    },
+    {
+      "path": "native/NOVAC.txt",
+      "sha256": "07450ebe8e32e2128ab1160983ba3551cec4350a3b0fa271d3e135d98e4ed0f6",
+      "size_bytes": 3841
+    },
+    {
+      "path": "native/PHONON.txt",
+      "sha256": "a65492675f83afa1efc21ea67f923342c00105381e557670c218fd4a95587d8a",
+      "size_bytes": 4836
+    },
+    {
+      "path": "native/RANGE.txt",
+      "sha256": "ae46661fa0bb84536f0d7efc83ad84e45abe7f004bd75735981a13b2bb667bed",
+      "size_bytes": 5343
+    },
+    {
+      "path": "native/TDATA.txt",
+      "sha256": "daee2a44c8ea505b5749ab5a0b365247a0b9c577abc164330ef30f481769ca6e",
+      "size_bytes": 1688
+    },
+    {
+      "path": "native/VACANCY.txt",
+      "sha256": "adfccdd17563be5a8ce38aed882d2a7bd0bcfc3316911f7008a4c22001c0f3ef",
+      "size_bytes": 5759
+    }
+  ],
+  "input_mode": 3,
+  "installation": "srim_2013_std",
+  "source": ".cache\\popup-review\\mode-version-matrix\\srim_2013_std\\mode-03\\no-cascade"
+}

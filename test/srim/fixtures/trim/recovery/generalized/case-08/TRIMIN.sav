@@ -1,0 +1,39 @@
+==> SRIM input boundary investigation
+Ion: Z Mass Energy Angle Number Bragg Autosave
+18 39.962 50 0 1 0 99999
+Cascades Seed Reminders
+1 12345 0
+Diskfiles
+0 0 0 0 0 0
+Target material
+"Boundary check" 12 1
+PlotType Depths
+5 0 0
+Target Elements
+Atom 1 = Si =   14 28.086
+Atom 2 = Si =   14 28.086
+Atom 3 = Si =   14 28.086
+Atom 4 = Si =   14 28.086
+Atom 5 = Si =   14 28.086
+Atom 6 = Si =   14 28.086
+Atom 7 = Si =   14 28.086
+Atom 8 = Si =   14 28.086
+Atom 9 = Si =   14 28.086
+Atom 10 = Si =  14 28.086
+Atom 11 = Si =  14 28.086
+Atom 12 = Si =  14 28.086
+Layer Layer Name Width Density Stoichiometry
+Number Description Angstrom g/cm3
+1 "Silicon" 300 2.3212 1 1 1 1 1 1 1 1 1 1 1 1
+0 Target layer phases
+0
+Target Compound Corrections
+1
+Displacement
+15 15 15 15 15 15 15 15 15 15 15 15
+Lattice
+2 2 2 2 2 2 2 2 2 2 2 2
+Surface
+4.7 4.7 4.7 4.7 4.7 4.7 4.7 4.7 4.7 4.7 4.7 4.7
+Stopping Power Version
+0
