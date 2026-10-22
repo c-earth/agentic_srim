@@ -217,7 +217,7 @@ Run all three test directories explicitly; top-level discovery alone does not di
 
 Tests use synthetic installations and controlled native-process substitutes; passing tests do not establish universal numerical accuracy or SRIM compatibility. Recorded native checks cover representative installations and cases, not every element, mode, or checkpoint scenario. Interactive dialogs and event-mode limitations can prevent unattended completion. Hash verification proves byte identity and provenance, not physical correctness or atomic capture of a live external process.
 
-Known non-TRIM contract discrepancies remain in the [review](doc/reviews/non-trim-review.md), including direct default-recovery restrictions and preparation progress reporting. Do not rely on progress callbacks always reaching their declared total. Consult the current guides and source when historical proposals describe planned behavior.
+The four findings in the [non-TRIM review](doc/reviews/non-trim-review.md) are resolved; the review retains historical reproductions and closeout verification. Correction progress completion covers contributions, not whole-runtime preparation. Consult the current guides and source when historical proposals describe planned behavior.
 
 ## Further documentation
 

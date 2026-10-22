@@ -36,9 +36,65 @@ class TestSRRuntime(unittest.TestCase):
     fixtures isolate writes and are removed by registered cleanup.
     """
 
+    def test_range_request_containment(self: TestSRRuntime) -> None:
+        """Reject self's unrelated range and accept containment without exact endpoints; return None."""
+        request = deepcopy(self.request)
+        request["parameters"]["energy"].update(minimum_keV="1", maximum_keV="2")
+        with self.assertRaisesRegex(ValueError, "row 1.*bounds"):
+            parse_sr_output(self.engine_output, request)
+        request["parameters"]["energy"].update(minimum_keV="9", maximum_keV="10001")
+        result = parse_sr_output(self.engine_output, request)
+        self.assertEqual(result, parse_sr_output(self.engine_output, self.request))
+
+    def test_range_printed_boundary_precision(self: TestSRRuntime) -> None:
+        """Check self's mixed-unit boundary rounding, equality and just-outside rejection; return None."""
+        lines = self.engine_output.decode("ascii").splitlines()
+        heading = next(index for index, line in enumerate(lines) if " ".join(line.split()) == "Ion dE/dx dE/dx Projected Longitudinal Lateral")
+        first = heading + 3
+        footer = next(index for index in range(first, len(lines)) if lines[index] and set(lines[index]) == {"-"})
+        for unit, token in (("eV", "10000.00"), ("keV", "10.00"), ("MeV", "0.01000"), ("GeV", "1.000E-5")):
+            with self.subTest(unit=unit):
+                row = lines[first].split()
+                row[0], row[1] = token, unit
+                payload = ("\r\n".join(lines[:first] + [" ".join(row)] + lines[footer:]) + "\r\n").encode("ascii")
+                request = deepcopy(self.request)
+                request["parameters"]["energy"].update(minimum_keV="10", maximum_keV="11")
+                result = parse_sr_output(payload, request)
+                self.assertEqual(result["rows"][0]["energy"], {"value": token, "unit": unit})
+                request["parameters"]["energy"].update(minimum_keV="10.000001", maximum_keV="11")
+                parse_sr_output(payload, request)
+                request["parameters"]["energy"].update(minimum_keV="9", maximum_keV="9.999999")
+                parse_sr_output(payload, request)
+                request["parameters"]["energy"].update(minimum_keV="11", maximum_keV="12")
+                with self.assertRaisesRegex(ValueError, "bounds"):
+                    parse_sr_output(payload, request)
+        row = lines[first].split()
+        row[0], row[1] = "10.00", "keV"
+        payload = ("\r\n".join(lines[:first] + [" ".join(row)] + lines[footer:]) + "\r\n").encode("ascii")
+        for bound, accepted in (("9.994995", True), ("9.99498", False)):
+            request = deepcopy(self.request)
+            request["parameters"]["energy"].update(minimum_keV="9", maximum_keV=bound)
+            if accepted:
+                parse_sr_output(payload, request)
+            else:
+                with self.assertRaisesRegex(ValueError, "bounds"):
+                    parse_sr_output(payload, request)
+        for token, lower, upper, accepted in (("5.00001", "4", "5", True), ("5.00002", "4", "5", False), ("4.99999", "5", "6", True), ("4.99998", "5", "6", False)):
+            row[0] = token
+            payload = ("\r\n".join(lines[:first] + [" ".join(row)] + lines[footer:]) + "\r\n").encode("ascii")
+            request = deepcopy(self.request)
+            request["parameters"]["energy"].update(minimum_keV=lower, maximum_keV=upper)
+            if accepted:
+                parse_sr_output(payload, request)
+            else:
+                with self.assertRaisesRegex(ValueError, "bounds"):
+                    parse_sr_output(payload, request)
+
     def setUp(self: TestSRRuntime) -> None:
         """Create self's temporary project, installation, selections, allocations, and mock process configuration; return None, register cleanup, and propagate setup errors."""
-        self.temporary = TemporaryDirectory(dir=Path(__file__).parent)
+        temporary_root = Path(__file__).resolve().parents[2] / ".cache/srim-trim-closeout/tests"
+        temporary_root.mkdir(parents=True, exist_ok=True)
+        self.temporary = TemporaryDirectory(dir=temporary_root)
         self.addCleanup(self.temporary.cleanup)
         self.paths = get_project_paths(Path(self.temporary.name).absolute())
         create_base_directories(self.paths)

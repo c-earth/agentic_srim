@@ -18,16 +18,85 @@ from unittest.mock import MagicMock, Mock, patch
 from _fixtures import fake_bragg_run, make_test_project
 from src.backend.records import CreateRequest, create_directories
 from src.backend.resources import _hash_file, _write_json
-from src.srim.cab_cache import load_cab_entry
+from src.srim.cab_cache import load_cab_entry, publish_cab_entry
 from src.srim.cab_constants import SR_BONDS
 from src.srim.cab_recovery import _capture_correction, _estimate_bond_count, _prepare_capture_runtime, _recover_core_value, _render_mock_compound, populate_default_cab, resolve_default_bond, resolve_default_core
-from src.srim.defaults import read_sr_defaults
+from src.srim.defaults import read_sr_defaults, switch_sr_defaults
 from src.srim.storage import cleanup_sr_batch
 from src.srim.metadata import read_simulation
 
 
 class TestCABRecovery(unittest.TestCase):
     """Use inherited unittest construction and isolated synthetic capture evidence."""
+
+    def test_core_publication_rejects_wrong_element(self: TestCABRecovery) -> None:
+        """Reject self's equal-value oxygen dependency before publishing a carbon entry; return None."""
+        sequence = [self.captures[(1, bond, count)] for bond in SR_BONDS for count in (1, 3, 2)]
+        sequence.extend(self.captures[(z, bond, 1)] for z in (6, 8) for bond in SR_BONDS)
+        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery._capture_mock", side_effect=sequence):
+            carbon = resolve_default_core(self.paths, self.config, self.worker, self.defaults, 6)
+            oxygen = resolve_default_core(self.paths, self.config, self.worker, self.defaults, 8)
+        original = load_cab_entry(self.paths, carbon.reference)
+        invalid = deepcopy(original)
+        invalid["dependency"]["entries"][0] = load_cab_entry(self.paths, oxygen.reference)["dependency"]["entries"][0]
+        directory = self.paths.resources / "cab" / "core"
+        before = sorted(str(path) for path in directory.rglob("*"))
+        with self.assertRaisesRegex(ValueError, "Core lower-level dependencies mismatch"):
+            publish_cab_entry(self.paths, carbon.reference.dataset, invalid)
+        self.assertEqual(before, sorted(str(path) for path in directory.rglob("*")))
+        self.assertEqual(load_cab_entry(self.paths, carbon.reference), original)
+
+    def test_inactive_missing_recovery_rejected(self: TestCABRecovery) -> None:
+        """Reject self's inactive missing bond/core despite restored matching installation bytes; return None."""
+        executable = self.config.srim_root / "SR.exe"
+        original = executable.read_bytes()
+        executable.write_bytes(b"different generation")
+        switch_sr_defaults(self.paths, self.config)
+        executable.write_bytes(original)
+        with patch("src.srim.cab_recovery.resolve_bragg") as bragg, patch("src.srim.cab_recovery._capture_mock") as capture:
+            with self.assertRaisesRegex(ValueError, "inactive default generation"):
+                resolve_default_bond(self.paths, self.config, self.worker, self.defaults, SR_BONDS[0])
+            with self.assertRaisesRegex(ValueError, "inactive default generation"):
+                resolve_default_core(self.paths, self.config, self.worker, self.defaults, 6)
+        bragg.assert_not_called()
+        capture.assert_not_called()
+
+    def test_inactive_cached_recovery_allowed(self: TestCABRecovery) -> None:
+        """Reuse self's inactive verified core/bond/H cache without recovery; return None."""
+        sequence = [self.captures[(1, bond, count)] for bond in SR_BONDS for count in (1, 3, 2)]
+        sequence.extend(self.captures[(6, bond, 1)] for bond in SR_BONDS)
+        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery._capture_mock", side_effect=sequence):
+            core = resolve_default_core(self.paths, self.config, self.worker, self.defaults, 6)
+            bond = resolve_default_bond(self.paths, self.config, self.worker, self.defaults, SR_BONDS[0])
+        (self.config.srim_root / "SR.exe").write_bytes(b"different generation")
+        switch_sr_defaults(self.paths, self.config)
+        with patch("src.srim.cab_recovery.resolve_bragg") as bragg, patch("src.srim.cab_recovery._capture_mock") as capture:
+            self.assertEqual(resolve_default_core(self.paths, self.config, self.worker, self.defaults, 6).reference, core.reference)
+            self.assertEqual(resolve_default_bond(self.paths, self.config, self.worker, self.defaults, SR_BONDS[0]).reference, bond.reference)
+            self.assertFalse(resolve_default_core(self.paths, self.config, self.worker, self.defaults, 1).calculated)
+        bragg.assert_not_called()
+        capture.assert_not_called()
+
+    def test_default_switch_stops_next_capture(self: TestCABRecovery) -> None:
+        """Stop self's second capture after a simulated generation switch, retaining the first; return None."""
+        newer = deepcopy(self.defaults)
+        newer["baseline_id"] = "0" * 64
+        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery._capture_correction", side_effect=self._fake_capture) as capture, patch("src.srim.cab_recovery.read_sr_defaults", side_effect=[self.defaults, self.defaults, self.defaults, newer]):
+            with self.assertRaisesRegex(ValueError, "inactive default generation") as caught:
+                resolve_default_bond(self.paths, self.config, self.worker, self.defaults, SR_BONDS[0])
+        self.assertEqual(capture.call_count, 1)
+        self.assertTrue(any("retained captures" in note and "correction.json" in note for note in caught.exception.__notes__))
+        self.assertTrue(list(self.paths.simulation_memory.glob("*/output/raw/runtime/correction.json")))
+
+    def test_default_switch_stops_missing_nested_bond(self: TestCABRecovery) -> None:
+        """Stop self's missing nested bond after core dependency admission when defaults switch; return None."""
+        newer = deepcopy(self.defaults)
+        newer["baseline_id"] = "0" * 64
+        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery.read_sr_defaults", side_effect=[self.defaults, self.defaults, newer]), patch("src.srim.cab_recovery._capture_mock") as capture:
+            with self.assertRaisesRegex(ValueError, "inactive default generation"):
+                resolve_default_core(self.paths, self.config, self.worker, self.defaults, 6)
+        capture.assert_not_called()
+        self.assertTrue(list(self.paths.simulation_memory.glob("*/output/parsed/result.json")))
 
     def _fake_capture(self: TestCABRecovery, runtime: Path, compound_name: str, output_path: Path, *, timeout_seconds: float) -> str:
         """Write runtime's controlled correction at output_path for self's storage test.
@@ -86,16 +155,21 @@ class TestCABRecovery(unittest.TestCase):
 
     def setUp(self: TestCABRecovery) -> None:
         """Create self's project and controlled native capture fixtures where needed; return None and register cleanup."""
-        self.temporary = TemporaryDirectory(dir=Path(__file__).parent)
+        temporary_root = Path(__file__).resolve().parents[2] / ".cache/srim-trim-closeout/tests"
+        temporary_root.mkdir(parents=True, exist_ok=True)
+        self.temporary = TemporaryDirectory(dir=temporary_root)
         self.addCleanup(self.temporary.cleanup)
         self.paths, self.config, self.worker = make_test_project(Path(self.temporary.name).absolute())
         self.defaults = read_sr_defaults(self.paths)
         self.captures = {}
-        if self._testMethodName in ("test_bond_threshold_recovery", "test_zero_initial_capture", "test_core_estimates"):
-            bonds = SR_BONDS if self._testMethodName == "test_core_estimates" else SR_BONDS[:1]
+        core_cases = ("test_core_estimates", "test_core_publication_rejects_wrong_element", "test_inactive_cached_recovery_allowed")
+        if self._testMethodName in ("test_bond_threshold_recovery", "test_zero_initial_capture", *core_cases):
+            bonds = SR_BONDS if self._testMethodName in core_cases else SR_BONDS[:1]
             cases = [(1, bond, count) for bond in bonds for count in (1, 3, 2)]
-            if self._testMethodName == "test_core_estimates":
+            if self._testMethodName in core_cases:
                 cases.extend((6, bond, 1) for bond in bonds)
+            if self._testMethodName == "test_core_publication_rejects_wrong_element":
+                cases.extend((8, bond, 1) for bond in bonds)
             for z, bond, count in cases:
                 runtime = _prepare_capture_runtime(self.paths, self.config, create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0], self.worker, self.defaults, _render_mock_compound(z, bond, count))
                 correction = str(Decimal("0.4") * count) if z == 1 else "0.8"

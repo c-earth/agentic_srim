@@ -176,7 +176,7 @@ Parsed output has exactly `schema_version=1`, `energy_mode`, `source`, `stopping
 
 List rows have `energy={value,unit="keV"}`, `electronic_stopping`, `nuclear_stopping`, `requested_energy_keV`. They preserve requested order and duplicates. Printed-energy matching permits half the last printed place plus `abs(requested) * 1e-6` for engine rounding.
 
-Range rows have `energy={value,unit}`, electronic/nuclear stopping strings, and `projected_range`, `longitudinal_straggling`, `lateral_straggling`, each `{value,unit}`. Accepted energy units are eV/keV/MeV/GeV; lengths are A/um/mm/cm/m. No automatic common-unit conversion is returned. The conversion footer is validated but is not emitted as a separate conversion-factor table. Parsing is a syntax/units/row check with stronger list-energy matching; it does not fully verify physical header identity or range bounds.
+Range rows have `energy={value,unit}`, electronic/nuclear stopping strings, and `projected_range`, `longitudinal_straggling`, `lateral_straggling`, each `{value,unit}`. Accepted energy units are eV/keV/MeV/GeV; lengths are A/um/mm/cm/m. No automatic common-unit conversion is returned. The conversion footer is validated but is not emitted as a separate conversion-factor table. Range energies must lie inside the requested bounds, allowing half the last printed place plus `abs(boundary) * 1e-6`, evaluated in the row's unit. The parser does not require exact endpoints or complete grid coverage, and it does not fully verify physical header identity. Original printed values and source hashes remain preserved.
 
 ## Persistent layout and lifecycle
 

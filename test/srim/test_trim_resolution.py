@@ -23,6 +23,28 @@ from src.srim.trim_resolution import resolve_trim_inputs, verify_trim_resolution
 class TestTRIMResolution(unittest.TestCase):
     """Use inherited unittest construction and owned cache projects for layered contracts."""
 
+    def test_complete_layer_progress(self: TestTRIMResolution) -> None:
+        """Check self's two layers retain tags, complete counters and replay for skipped corrections; return None."""
+        with TemporaryDirectory(dir=CACHE) as td:
+            paths, config, worker = make_test_project(Path(td))
+            for name, payload in TRIM_INSTALLATION_FILES.items():
+                (config.srim_root / name).write_bytes(payload)
+            switch_sr_defaults(paths, config)
+            switch_trim_defaults(paths, config)
+            request, selections = deepcopy(TRIM_REQUEST), deepcopy(TRIM_SELECTIONS)
+            layer = request["parameters"]["layers"][0]
+            layer["correction"] = {"mode": "derived"}
+            layer["material"]["bonds"] = {}
+            request["parameters"]["layers"].append(deepcopy(layer))
+            events: list[dict] = []
+            bundle = resolve_trim_inputs(paths, config, worker, request, selections, progress=events.append)
+            self.assertEqual(verify_trim_resolution(bundle), bundle.effective_request)
+            self.assertEqual(set(event["layer_index"] for event in events), {1, 2})
+            for index in (1, 2):
+                selected = [event for event in events if event["layer_index"] == index]
+                self.assertEqual([event["completed"] for event in selected], list(range(1, selected[-1]["total"] + 1)))
+                self.assertTrue(all(event["state"] == "skipped" for event in selected))
+
     def test_multilayer_direct_and_compound(self: TestTRIMResolution) -> None:
         """Resolve mixed direct/atomic/mass compound layers with stable columns; return None."""
         with TemporaryDirectory(dir=CACHE) as td:
@@ -122,6 +144,8 @@ class TestTRIMResolution(unittest.TestCase):
                 bundle = resolve_trim_inputs(paths, config, worker, request, selections, progress=events.append)
             self.assertEqual([Decimal(row["correction_factor"]) for row in bundle.effective_request["parameters"]["layers"]], [Decimal("0.4"), Decimal("0.4")])
             self.assertTrue(all("layer_index" in event for event in events))
+            self.assertEqual([event["state"] for event in events], ["resolved", "calculated", "cached", "resolved", "cached", "cached"])
+            self.assertEqual([event["completed"] for event in events], [1, 2, 3, 1, 2, 3])
             self.assertEqual(verify_trim_resolution(bundle), bundle.effective_request)
             bad = deepcopy(bundle.resolved)
             bad["layers"][0]["correction"]["bond_entries"][0]["value"] = "20"

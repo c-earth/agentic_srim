@@ -163,4 +163,4 @@ The queue lives only in the calling process. Interruption stops new dispatch, ca
 
 **Worker scaling: RETEST REQUIRED.** The existing comparison of 16 short SRModule calculations at 1, 2, 4 and 8 workers is preliminary. Performance conclusions are deferred until the same worker-count comparison can be repeated with a representative TRIM workload after TRIM execution is implemented.
 
-The existing preparation progress callback is advisory and can omit cached core/bond events or finish below its reported total. The dedicated bulk APIs report each selected entry. See the [review findings](../reviews/non-trim-review.md) for unresolved behavior discrepancies.
+Derived-correction progress reports every bond and Bragg/core contribution, including cached, resolved, fallback and skipped work, and reaches its fixed total on successful contribution resolution. That total does not mean runtime preparation or later evidence verification has finished. Callback exceptions propagate; completed evidence remains retained. The dedicated bulk APIs report each selected entry.

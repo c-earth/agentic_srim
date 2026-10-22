@@ -569,6 +569,17 @@ def _capture_mock(paths: ProjectPaths, config: Config, worker: CreatedDirectory,
             raise
 
 
+def _require_active_recovery_generation(paths: ProjectPaths, defaults: JSONObject) -> None:
+    """Require paths' verified active generation to equal validated defaults.
+
+    Return None without writes when generations match; raise ValueError for an
+    inactive, uninitialized or invalid active generation. Filesystem errors
+    propagate. This boundary check does not lock out later default switches.
+    """
+    if read_sr_defaults(paths) != defaults:
+        raise ValueError("An inactive default generation cannot recover missing entries")
+
+
 def resolve_default_bond(paths: ProjectPaths, config: Config, worker: CreatedDirectory, defaults: JSONObject, bond: BondKey, *, capture_timeout_seconds: float = 30.0, dependency_timeout_seconds: float = 60.0) -> CABEntryResult:
     """Resolve bond from pinned all-default inputs using paths/config/worker and per-operation timeouts.
 
@@ -576,7 +587,10 @@ def resolve_default_bond(paths: ProjectPaths, config: Config, worker: CreatedDir
     count reuse, verify the displayed threshold and publish the immutable strength.
     Return reference plus calculation state. Zero initial capture or threshold
     failure raises without search/retry, retaining all capture/dependency evidence.
-    Never mix baselines; propagate cancellation after owned cleanup.
+    Never mix baselines; propagate cancellation after owned cleanup. Check active
+    defaults before missing recovery dependencies and each capture; cached inactive
+    entries remain readable. A switch stops the next checked operation, not an
+    already admitted operation or publication of its pinned result.
     """
     from src.srim.defaults import _validate_default_generation
     from src.srim.resolution import _make_dependency_inputs, _resolve_selection
@@ -602,6 +616,7 @@ def resolve_default_bond(paths: ProjectPaths, config: Config, worker: CreatedDir
         reference = CABEntryReference(dataset, path.parent.name, identifier, checksum, size)
         load_cab_entry(paths, reference)
         return CABEntryResult(reference, False)
+    _require_active_recovery_generation(paths, defaults)
     baseline = _read_json(paths.resources / "baselines" / f'{defaults["baseline_id"]}.json')
     verify_sr_baseline(paths, config, baseline)
     resources: JSONObject = {}
@@ -613,6 +628,7 @@ def resolve_default_bond(paths: ProjectPaths, config: Config, worker: CreatedDir
     recorded = {"generation": defaults, "sha256": hashlib.sha256(encoded).hexdigest(), "size_bytes": len(encoded)}
     engine = {"SRModule.exe": _read_regular_bytes(config.srim_root / "SR Module" / "SRModule.exe"), "VERSION": read_module_version(config.srim_root)[1], "SCOEF03.dat": snapshots["resources/electronic/effective"], "SNUC03.dat": snapshots["resources/nuclear/effective"]}
     inputs = _make_dependency_inputs(recorded, resources, parse_atomdata(snapshots["resources/atomdata/effective"]), engine)
+    _require_active_recovery_generation(paths, defaults)
     hydrogen = resolve_bragg(paths, config, worker, inputs, 1, timeout_seconds=dependency_timeout_seconds)
     hydrogen_value = load_cab_entry(paths, hydrogen.reference)["value"]
     dependency = json.loads(json.dumps(descriptor["dependency"]))
@@ -623,12 +639,14 @@ def resolve_default_bond(paths: ProjectPaths, config: Config, worker: CreatedDir
     captures: list[JSONObject] = []
     observed: dict[int, tuple[str, int]] = {}
     try:
+        _require_active_recovery_generation(paths, defaults)
         first = _capture_mock(paths, config, worker, defaults, 1, canonical, 1, timeout_seconds=capture_timeout_seconds)
         observed[1] = (first["correction"], 0)
         captures.append(first["evidence"])
         count = _estimate_bond_count(first["correction"])
         for requested_count in ([count, count - 1] if count > 1 else [count]):
             if requested_count not in observed:
+                _require_active_recovery_generation(paths, defaults)
                 capture = _capture_mock(paths, config, worker, defaults, 1, canonical, requested_count, timeout_seconds=capture_timeout_seconds)
                 observed[requested_count] = (capture["correction"], len(captures))
                 captures.append(capture["evidence"])
@@ -653,7 +671,10 @@ def resolve_default_core(paths: ProjectPaths, config: Config, worker: CreatedDir
     H returns fixed zero. Missing non-H values use elemental Bragg and all 18 default
     bonds, then capture each one-bond estimate and publish its validated mean/spread.
     Return reference/calculation state. Retain evidence on error/interruption and
-    never recover with a different baseline or clamp negative estimates.
+    never recover with a different baseline or clamp negative estimates. Check
+    active defaults before missing dependencies and every capture; inactive cache
+    entries remain readable. Switches stop the next checked operation without
+    rolling back completed evidence or forbidding an admitted result's publication.
     """
     from src.srim.defaults import _validate_default_generation
     from src.srim.resolution import _make_dependency_inputs, _resolve_selection
@@ -680,6 +701,7 @@ def resolve_default_core(paths: ProjectPaths, config: Config, worker: CreatedDir
         return CABEntryResult(reference, False)
     if atomic_number == 1:
         raise ValueError("Published H core convention entry is missing")
+    _require_active_recovery_generation(paths, defaults)
     baseline = _read_json(paths.resources / "baselines" / f'{defaults["baseline_id"]}.json')
     verify_sr_baseline(paths, config, baseline)
     resources: JSONObject = {}
@@ -691,6 +713,7 @@ def resolve_default_core(paths: ProjectPaths, config: Config, worker: CreatedDir
     recorded = {"generation": defaults, "sha256": hashlib.sha256(encoded).hexdigest(), "size_bytes": len(encoded)}
     engine = {"SRModule.exe": _read_regular_bytes(config.srim_root / "SR Module" / "SRModule.exe"), "VERSION": read_module_version(config.srim_root)[1], "SCOEF03.dat": snapshots["resources/electronic/effective"], "SNUC03.dat": snapshots["resources/nuclear/effective"]}
     inputs = _make_dependency_inputs(recorded, resources, parse_atomdata(snapshots["resources/atomdata/effective"]), engine)
+    _require_active_recovery_generation(paths, defaults)
     elemental = resolve_bragg(paths, config, worker, inputs, atomic_number, timeout_seconds=dependency_timeout_seconds)
     elemental_value = load_cab_entry(paths, elemental.reference)["value"]
     references: list[JSONObject] = [asdict(elemental.reference)]
@@ -708,6 +731,7 @@ def resolve_default_core(paths: ProjectPaths, config: Config, worker: CreatedDir
     observations: list[JSONObject] = []
     try:
         for bond, reference in zip(SR_BONDS, references[1:], strict=True):
+            _require_active_recovery_generation(paths, defaults)
             capture = _capture_mock(paths, config, worker, defaults, atomic_number, bond, 1, timeout_seconds=capture_timeout_seconds)
             observations.append({"bond": reference["entry_id"], "correction": capture["correction"], "capture_index": len(captures)})
             captures.append(capture["evidence"])

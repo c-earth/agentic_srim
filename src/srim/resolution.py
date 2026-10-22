@@ -264,7 +264,11 @@ def resolve_material_correction(
     composition, bonds, atomdata, defaults, resources and snapshots supply validated
     material intent and immutable sources. dependency_inputs is required for derived
     mode; completed_entries accumulates retained published dependency references.
-    Timeouts bound dependency operations; progress reports existing CAB events.
+    Timeouts bound dependency operations. For derived correction, progress emits
+    one event per bond and Bragg/core contribution, including cached, resolved,
+    fallback and skipped values, reaching the fixed total on successful nonempty
+    contribution resolution. None/supplied modes emit no events. Later evidence
+    verification can still fail after that total; callback exceptions propagate.
     Return copied effective correction and dependency references. May run/publish
     SR/CAB dependencies and invoke callbacks, but never a main simulation. Preserve
     existing ValueError/OSError/interruption behavior and mutate only the explicit
@@ -318,6 +322,7 @@ def resolve_material_correction(
             value = values_by_kind["bond"].get(key)
             entry_reference = None
             origin = "dataset"
+            state = "resolved"
             override_index = None
             for index, operation in enumerate(resources["bond"]["overrides"]):
                 normalized = next(iter(_normalize_entries("bond", {operation["key"]: "0"})))
@@ -338,18 +343,22 @@ def resolve_material_correction(
                 completed_entries.append(entry_reference)
                 entry = load_cab_entry(paths, result.reference)
                 value, origin = entry["value"], "recovered-default"
-                if progress is not None:
-                    progress({"kind": "bond", "entry_id": identifier, "state": "calculated" if result.calculated else "cached", "completed": completed + 1, "total": total})
+                state = "calculated" if result.calculated else "cached"
             elif value is None:
                 value, origin = "0", "zero-fallback"
                 omissions.append({"dataset": "bond", "entry_id": identifier, "reason": "unsupported-default-bond" if recovered["bond"] else "missing-user-entry"})
             elif origin == "dataset" and identifier in available["bond"]:
                 entry_reference, origin = available["bond"][identifier], "recovered-default"
+                state = "cached"
+            if origin == "zero-fallback":
+                state = "fallback"
             if entry_reference is not None:
                 all_entries[json.dumps(entry_reference, sort_keys=True)] = entry_reference
             strengths[bond["identifier"]] = value
             bond_entries.append({"entry_id": identifier, "value": value, "origin": origin, "entry_reference": entry_reference, "snapshot": resources["bond"]["effective"] if origin in ("dataset", "override") else None, "override_index": override_index if origin == "override" else None})
             completed += 1
+            if progress is not None:
+                progress({"kind": "bond", "entry_id": identifier, "state": state, "completed": completed, "total": total})
         if any(Decimal(bond["count"]) > 0 and Decimal(strengths[bond["identifier"]]) != 0 for bond in bonds):
             from src.srim.bragg import resolve_bragg
             for atom in composition:
@@ -367,12 +376,14 @@ def resolve_material_correction(
                     progress({"kind": "bragg", "entry_id": identifier, "state": "calculated" if result.calculated else "cached", "completed": completed, "total": total})
                 value = values_by_kind["core"].get(z)
                 entry_reference, origin, override_index = None, "dataset", None
+                state = "resolved"
                 for index, operation in enumerate(resources["core"]["overrides"]):
                     normalized = next(iter(_normalize_entries("core", {operation["key"]: "0"})))
                     if normalized == z and operation["operation"] == "set":
                         origin, override_index = "override", index
                 if identifier in removed_by_kind["core"] or (value is None and not recovered["core"]):
                     value, origin, entry_reference = stopping[z], "bragg-fallback", bragg_entries[-1]
+                    state = "fallback"
                     omissions.append({"dataset": "core", "entry_id": identifier, "reason": "removed-entry" if identifier in removed_by_kind["core"] else "missing-user-entry"})
                 elif value is None:
                     if resources["core"]["reference"] != generation["resources"]["core"]:
@@ -382,15 +393,23 @@ def resolve_material_correction(
                     entry_reference = asdict(result.reference)
                     completed_entries.append(entry_reference)
                     value, origin = load_cab_entry(paths, result.reference)["value"], "recovered-default"
-                    if progress is not None:
-                        progress({"kind": "core", "entry_id": identifier, "state": "calculated" if result.calculated else "cached", "completed": completed + 1, "total": total})
+                    state = "calculated" if result.calculated else "cached"
                 elif origin == "dataset" and identifier in available["core"]:
                     entry_reference, origin = available["core"][identifier], "convention" if z == 1 else "recovered-default"
+                    state = "cached"
                 if entry_reference is not None:
                     all_entries[json.dumps(entry_reference, sort_keys=True)] = entry_reference
                 cores[z] = value
                 core_entries.append({"entry_id": identifier, "value": value, "origin": origin, "entry_reference": entry_reference, "snapshot": resources["core"]["effective"] if origin in ("dataset", "override") else None, "override_index": override_index if origin == "override" else None})
                 completed += 1
+                if progress is not None:
+                    progress({"kind": "core", "entry_id": identifier, "state": state, "completed": completed, "total": total})
+        else:
+            for atom in composition:
+                for kind in ("bragg", "core"):
+                    completed += 1
+                    if progress is not None:
+                        progress({"kind": kind, "entry_id": f'z{atom["atomic_number"]:03d}', "state": "skipped", "completed": completed, "total": total})
         calculation = _calculate_cab(composition, bonds, cores, strengths, stopping)
         with localcontext() as context:
             context.prec, context.rounding = CAB_PRECISION, CAB_ROUNDING

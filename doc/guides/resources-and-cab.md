@@ -117,7 +117,9 @@ This operation can launch SRModule dependencies and visible SR GUI windows. It u
 
 Bulk APIs report `{kind, entry_id, state, completed, total}` after each selected entry, with state `cached` or `calculated`, and stop on the first error. A callback exception propagates after completed work is retained. A later call reuses successful matching entries; this is resume through cache reuse, not automatic retry.
 
-For an explicitly selected inactive default version, preparation permits existing entries but rejects missing recovery. The direct `resolve_default_core`/`resolve_default_bond` APIs do not fully enforce the same active-generation restriction; use the current generation with these APIs. Preparation's progress callback can omit reused core/bond events and never report `completed == total`. These are open [review findings](../reviews/non-trim-review.md), not guarantees to build orchestration around.
+For an explicitly selected inactive default version, preparation permits existing entries but rejects missing recovery. The direct `resolve_default_core`/`resolve_default_bond` APIs also permit verified inactive cache entries but require the supplied generation to equal the verified active defaults before missing dependency work and each capture. A concurrent default switch stops the next checked operation; completed evidence remains reusable. Checks do not exclude a switch after admission or prevent publication of an already admitted pinned result.
+
+Derived-correction progress reports every bond and Bragg/core contribution with states `calculated`, `cached`, `resolved`, `fallback` or `skipped`. Its fixed total is `len(bonds) + 2 * len(composition)`; successful contribution resolution reaches that total, including skipped unused Bragg/core work. `none`/`supplied` modes emit no dependency events. Later evidence verification and preparation may still fail; callback failures propagate with evidence retained. [The review](../reviews/non-trim-review.md) preserves the historical reproductions.
 
 ## Evidence and retention
 

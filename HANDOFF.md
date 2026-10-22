@@ -1,8 +1,18 @@
 # Handoff - 2026-10-21
 
+## SR/TRIM closeout and next MCP work — 2026-10-22
+
+The four non-TRIM review findings are fixed: prepublication elemental dependency identity, active-generation checks before missing CAB work/captures, complete shared correction progress, and printed-precision SR range containment. Current contracts and qualifications are in [the closeout record](doc/reviews/non-trim-review.md#correctness-closeout--2026-10-22). All 333 tests passed with warnings as errors: 41 backend, 273 SRIM (including 152 TRIM), and 19 knowledge. Changed-code style/annotations, documentation links and whitespace passed. No new native run was performed. Local supporting hashes are in `.cache/srim-trim-closeout/verification.json`; the approved proposal is alongside it. No implementation remains pending under this four-fix scope.
+
+Recent TRIM checkpoint-first continuation and signed-recoil parsing are complete; see [the current direction](doc/TRIM_DIRECTION.md) and [TRIM handoff](doc/TRIM_HANDOFF.md). This closeout did not modify their execution/recovery/parser source. Older next-step statements below are historical and superseded by these current records.
+
+The user's next requested work is a thin MCP adapter over the existing SR/TRIM Python capabilities. A complete adapter design has not yet been presented or approved; transport, tool catalogue, run/status/cancel handling and dependencies still need specification. The established architectural direction is to retain the existing calculation APIs as foundational tools, with higher-level workflow, analysis and skill collections initially empty but their structure and handlers available. The coordinator handles work initially; repeated tasks can later become reusable capabilities through the approved self-improvement process. This is a target design, not authorization to delete existing records or repository skills.
+
+Postprocessing and external-import planning are explicitly deferred. Their saved opinions are local at `.cache/deferred-project-planning/planning-opinions.md`; no implementation or NERSC migration is authorized. Worker-scaling benchmarks do not block this delivery. The self-improvement review recorded fixture-cost evidence at `.cache/workflow-improvement/events/b8677a48-b010-4992-a79a-bcc4c78c513a.json`; no workflow change or trial was proposed.
+
 ## Current TRIM continuation decision — 2026-10-22
 
-Follow [TRIM continuation direction](doc/TRIM_DIRECTION.md): the user selected `.sav` recovery and explicitly abandoned F-button/chooser result exports. Earlier export plans and popup-review next steps below are historical. The approved export-code cleanup is complete; checkpoint-result/lifecycle integration is the next design task.
+Follow [TRIM continuation direction](doc/TRIM_DIRECTION.md): the user selected `.sav` recovery and explicitly abandoned F-button/chooser result exports. Earlier export plans and popup-review next steps below are historical. Export-code cleanup and checkpoint-result/lifecycle integration are complete; current verification and supported completion behavior are recorded in that direction document.
 
 ## Scientific figure storage update
 

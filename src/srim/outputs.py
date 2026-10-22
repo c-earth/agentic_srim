@@ -82,8 +82,10 @@ def _parse_range(lines: list[str], request: JSONObject) -> list[JSONObject]:
     Require range headers, data separators, increasing positive energies, known
     energy/length units, nonnegative values, and all eight conversion-footer
     entries with closing separator and copyright. Preserve printed strings and
-    mixed units. request supplies the expected range mode. Raise ValueError on
-    malformed or truncated output; perform no mutation or filesystem operations.
+    mixed units. request supplies range mode and bounds; require row containment
+    allowing half the printed place plus 1e-6 of the boundary in the row's unit.
+    Do not require endpoint coverage. Raise ValueError on malformed, truncated,
+    out-of-range or unsupported-precision output; perform no mutation or I/O.
     """
     if request["parameters"]["energy"]["mode"] != "range":
         raise ValueError("Expected a range request")
@@ -101,7 +103,15 @@ def _parse_range(lines: list[str], request: JSONObject) -> list[JSONObject]:
         tokens = lines[index].split()
         if len(tokens) != 10 or tokens[1] not in ENERGY_FACTORS or any(tokens[position] not in LENGTH_UNITS for position in (5, 7, 9)):
             raise ValueError(f"Invalid range output row {len(result) + 1}")
-        energy = _parse_number(tokens[0], "energy") * ENERGY_FACTORS[tokens[1]]
+        try:
+            factor = ENERGY_FACTORS[tokens[1]]
+            energy = _parse_number(tokens[0], "energy") * factor
+            minimum = Decimal(request["parameters"]["energy"]["minimum_keV"])
+            maximum = Decimal(request["parameters"]["energy"]["maximum_keV"])
+            if (energy < minimum and not _matches_printed(tokens[0], format(minimum / factor, "f"))) or (energy > maximum and not _matches_printed(tokens[0], format(maximum / factor, "f"))):
+                raise ValueError(f"Range output row {len(result) + 1} lies outside requested energy bounds")
+        except DecimalException as error:
+            raise ValueError("Energy precision exceeds supported decimal arithmetic") from error
         if energy <= previous:
             raise ValueError("Range energies must be positive and strictly increasing")
         previous = energy

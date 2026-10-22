@@ -502,7 +502,7 @@ def publish_cab_entry(paths: ProjectPaths, dataset: ResourceReference, entry: JS
     if entry["kind"] == "bond" and (len(lower) != 1 or lower[0]["kind"] != "bragg" or lower[0]["entry_id"] != "z001" or Decimal(lower[0]["value"]) != Decimal(entry["calculation"]["hydrogen_stopping"])):
         raise ValueError("Bond hydrogen stopping dependency mismatch")
     if entry["kind"] == "core" and entry["entry_id"] != "z001":
-        stopping = [entry for entry in lower if entry["kind"] == "bragg" and entry["entry_id"] == entry["entry_id"]]
+        stopping = [dependency for dependency in lower if dependency["kind"] == "bragg" and dependency["entry_id"] == entry["entry_id"]]
         bonds = {entry["entry_id"]: entry["value"] for entry in lower if entry["kind"] == "bond"}
         if len(lower) != 19 or len(stopping) != 1 or Decimal(stopping[0]["value"]) != Decimal(entry["calculation"]["elemental_stopping"]) or any(estimate["bond"] not in bonds or Decimal(estimate["bond_strength"]) != Decimal(bonds[estimate["bond"]]) for estimate in entry["calculation"]["estimates"]):
             raise ValueError("Core lower-level dependencies mismatch")

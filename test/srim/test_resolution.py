@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from decimal import Decimal
+from functools import partial
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -24,9 +25,93 @@ from src.srim.runtime import prepare_sr_simulation
 class TestSRResolution(unittest.TestCase):
     """Use inherited unittest construction with isolated synthetic project and intent."""
 
+    def test_complete_material_progress(self: TestSRResolution) -> None:
+        """Check self's dataset, override, fallback and cached contributions reach their total; return None."""
+        request = deepcopy(self.request)
+        request["parameters"]["target"]["elements"] = [{"atomic_number": 1, "stoichiometry": "1"}]
+        request["parameters"]["target"]["bonds"] = {"H-H": "1"}
+        selections = deepcopy(self.selections)
+        selections["bond"] = {"source": {"kind": "inline", "data": json.loads(_encode_payload("bond", {"H-H": "10"}))}, "overrides": [], "create_version": False}
+        for core_mode in ("default", "sparse", "override", "removed"):
+            with self.subTest(core=core_mode):
+                selections["core"] = deepcopy(self.selections["core"])
+                if core_mode == "sparse":
+                    selections["core"] = {"source": {"kind": "inline", "data": json.loads(_encode_payload("core", {}))}, "overrides": [], "create_version": False}
+                elif core_mode == "override":
+                    selections["core"]["overrides"] = [{"operation": "set", "key": "H", "value": "2"}]
+                elif core_mode == "removed":
+                    selections["core"]["overrides"] = [{"operation": "remove", "key": "H"}]
+                events: list[dict] = []
+                with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run):
+                    bundle = resolve_sr_inputs(self.paths, self.config, self.worker, request, selections, progress=events.append)
+                self.assertEqual([event["kind"] for event in events], ["bond", "bragg", "core"])
+                self.assertEqual([event["completed"] for event in events], [1, 2, 3])
+                self.assertEqual([event["total"] for event in events], [3, 3, 3])
+                self.assertEqual(events[0]["state"], "resolved")
+                self.assertEqual(events[1]["state"], "calculated" if core_mode == "default" else "cached")
+                self.assertEqual(events[2]["state"], {"default": "cached", "sparse": "fallback", "override": "resolved", "removed": "fallback"}[core_mode])
+                self.assertEqual(verify_sr_resolution(self.paths, request, selections, bundle.resolved, dict(bundle.snapshots)), bundle.effective_request)
+        from test_cab_recovery import TestCABRecovery
+        for expected in ("calculated", "cached"):
+            events = []
+            with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run), patch("src.srim.cab_recovery._capture_correction", side_effect=partial(TestCABRecovery._fake_capture, self)):
+                bundle = resolve_sr_inputs(self.paths, self.config, self.worker, request, self.selections, progress=events.append)
+            self.assertEqual([event["state"] for event in events], [expected, "cached", "cached"])
+            self.assertEqual(events[-1]["completed"], 3)
+            self.assertEqual(verify_sr_resolution(self.paths, request, self.selections, bundle.resolved, dict(bundle.snapshots)), bundle.effective_request)
+
+    def test_skipped_material_progress(self: TestSRResolution) -> None:
+        """Check self's unused contributions complete without dependencies and explicit modes stay silent; return None."""
+        for bonds in ({}, {"H-O": "0"}, {"H-O": "2"}):
+            with self.subTest(bonds=bonds):
+                request, selections = deepcopy(self.request), deepcopy(self.selections)
+                request["parameters"]["target"]["bonds"] = bonds
+                selections["bond"] = {"source": {"kind": "inline", "data": json.loads(_encode_payload("bond", {}))}, "overrides": [], "create_version": False}
+                events: list[dict] = []
+                with patch("src.srim.bragg.resolve_bragg", side_effect=AssertionError("unneeded dependency")):
+                    bundle = resolve_sr_inputs(self.paths, self.config, self.worker, request, selections, progress=events.append)
+                total = len(bonds) + 4
+                self.assertEqual([event["completed"] for event in events], list(range(1, total + 1)))
+                self.assertTrue(all(event["state"] == "skipped" for event in events[len(bonds):]))
+                self.assertEqual(bundle.resolved["cab"]["applied_factor"], "1.0")
+                if bonds:
+                    self.assertEqual(events[0]["state"], "fallback")
+        for mode in ("none", "supplied"):
+            request = deepcopy(self.request)
+            request["parameters"]["correction"] = {"mode": mode, "applied_factor": "1.0"}
+            if mode == "supplied":
+                request["parameters"]["correction"].update(source="test", reason="explicit factor")
+            events = []
+            resolve_sr_inputs(self.paths, self.config, self.worker, request, self.selections, progress=events.append)
+            self.assertEqual(events, [])
+
+    def test_material_progress_callback_failure(self: TestSRResolution) -> None:
+        """Propagate self's callback failure after calculated Bragg evidence remains preserved; return None."""
+        request, selections = deepcopy(self.request), deepcopy(self.selections)
+        request["parameters"]["target"]["elements"] = [{"atomic_number": 1, "stoichiometry": "1"}]
+        request["parameters"]["target"]["bonds"] = {"H-H": "1"}
+        selections["bond"] = {"source": {"kind": "inline", "data": json.loads(_encode_payload("bond", {"H-H": "10"}))}, "overrides": [], "create_version": False}
+        callback = unittest.mock.Mock(side_effect=[None, RuntimeError("callback failure")])
+        with patch("src.srim.execution.subprocess.run", side_effect=fake_bragg_run):
+            with self.assertRaisesRegex(RuntimeError, "callback failure"):
+                resolve_sr_inputs(self.paths, self.config, self.worker, request, selections, progress=callback)
+        self.assertTrue(list(self.paths.simulation_memory.glob("*/output/parsed/result.json")))
+
+    def test_preparation_progress_forwarding(self: TestSRResolution) -> None:
+        """Verify self's preparation forwards the complete correction progress without running native code; return None."""
+        request = deepcopy(self.request)
+        request["parameters"]["target"]["bonds"] = {}
+        created = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
+        events: list[dict] = []
+        prepare_sr_simulation(self.paths, self.config, created, self.worker, request, self.selections, progress=events.append)
+        self.assertEqual(events[-1]["completed"], events[-1]["total"])
+        self.assertTrue(all(event["state"] == "skipped" for event in events))
+
     def setUp(self: TestSRResolution) -> None:
         """Create self's temporary project/worker/request/selections; return None and register cleanup."""
-        self.temporary = TemporaryDirectory(dir=Path(__file__).parent)
+        temporary_root = Path(__file__).resolve().parents[2] / ".cache/srim-trim-closeout/tests"
+        temporary_root.mkdir(parents=True, exist_ok=True)
+        self.temporary = TemporaryDirectory(dir=temporary_root)
         self.addCleanup(self.temporary.cleanup)
         self.paths, self.config, self.worker = make_test_project(Path(self.temporary.name).absolute())
         self.request, self.selections = make_test_request(), make_test_selections()

@@ -2,7 +2,18 @@
 
 Reviewed 2026-10-20. [Documentation index](../README.md) · [Current API](../reference/api.md) · [Formats](../reference/data-formats.md) · [Native evidence](../CAB_HANDOFF.md)
 
-The review covered all 20 implementation modules in `src/backend` and `src/srim`, their embedded contracts, existing tests and non-TRIM documentation. Four behavior/validation findings remain open. The approved work changed documentation only; it did not fix implementation, tests or settings. Passing existing tests does not contradict the additional targeted reproductions below.
+The original review covered all 20 implementation modules in `src/backend` and `src/srim`, their embedded contracts, existing tests and non-TRIM documentation. That review changed documentation only. The four findings below preserve the original reproductions; the separately approved 2026-10-22 closeout implements their corrections. Verification of that closeout is recorded below.
+
+## Correctness closeout — 2026-10-22
+
+All four findings are resolved under the separately approved closeout proposal:
+
+- R1: publication validates the core's exact elemental Bragg identity before creating staging or publishing the entry. Wrong-element regression evidence has equal stopping values, so numerical equality alone cannot hide the mismatch. Rejection leaves the existing entry inventory unchanged.
+- R2: verified inactive bond/core/H cache entries remain readable. Missing recovery checks the verified active coordinated generation before dependency work and each capture. A switch stops the next checked operation and retains completed evidence; admission is not an atomic exclusion of later switches or a publication-time restriction.
+- R3: shared material-correction progress emits every advertised bond and Bragg/core contribution, including cached, resolved, fallback and skipped work. Successful contribution resolution reaches its fixed total; later evidence verification/preparation can still fail. TRIM preserves layer tagging and resets counters per layer. Explicit correction modes remain silent.
+- R4: SR range rows must lie within requested bounds, allowing half the last printed place plus `abs(boundary) * 1e-6` in the row's unit. Exact endpoints/grid coverage and full physical header identity remain outside this fix; list parsing and printed result values are preserved.
+
+Verification passed **333 tests with warnings as errors**: 41 backend (3.245 seconds), 273 SRIM (611.131 seconds, including all 152 TRIM tests), and 19 knowledge (12.845 seconds). Focused recovery, shared-resolution, TRIM-resolution and SR-parser tests also passed. The eight changed Python files passed syntax, module/class/function docstring, complete argument/return annotation and no-comment checks. Changed documentation links and diff whitespace passed. Test data and native process boundaries were synthetic; no new native calculation or independent scientific validation was performed. Recent TRIM checkpoint-first execution, recovery and parser source files were not modified. No historical cache repair or migration was performed.
 
 ## Review boundary and method
 
@@ -10,7 +21,7 @@ Reviewed configuration, path/record allocation, resource storage, material parsi
 
 Compared documented contracts and cross-file data flow with implementation, ran both existing test directories with warnings as errors, and performed targeted synthetic-fixture probes of suspected discrepancies. No installed native executable was launched during this review. Existing native evidence availability and embedded generated-asset hashes were checked separately. Four pre-existing documentation modifications were preserved in the reorganization: root handoff, CAB handoff, integration tracker and documentation index.
 
-## Open implementation findings
+## Historical implementation findings
 
 ### R1: Core publication checks element identity after publication
 
@@ -95,7 +106,7 @@ No process or filesystem mutation was needed. List mode has stronger requested-e
 | Broad canonical-JSON language does not describe every writer | Default pointers/descriptors/calculated entries use sorted canonical JSON, but runtime manifest and GUI correction JSON writers do not universally sort keys. Current formats describe the distinction and hashing of actual bytes. |
 | Coefficient import can be mistaken for complete semantic validation | Source-only variant APIs preserve opaque bytes. Effective selection resolution checks row structure/order, and replacement mode checks complete tables; numerical meanings of all coefficient fields are not interpreted. Current guide/reference state these limits. |
 | Worker directories look disposable despite being referenced evidence | CAB entry verification hashes linked worker capture files and dependency simulations; generic deletion performs no reference checks. Added retention guidance and documented the absence of reference-aware garbage collection. |
-| Several contracts describe behavior more strongly than observed | R1–R4 remain explicitly open; current guides/reference describe actual limitations without silently changing approved implementation design. |
+| Several contracts describe behavior more strongly than observed | The original documentation review left R1–R4 open. The separately approved 2026-10-22 closeout corrects them with regression coverage and updates the current guides/reference. Historical reproductions remain below. |
 
 ## Module coverage
 
