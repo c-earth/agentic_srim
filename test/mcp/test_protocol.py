@@ -80,7 +80,7 @@ class TestProtocol(Fixture, unittest.IsolatedAsyncioTestCase):
         project_parameters = StdioServerParameters(command="D:\\projects\\agentic_srim\\.venv\\Scripts\\python.exe", args=["-W", "error", "-m", "src.mcp.project_mcp", "--root", str(self.root)], cwd=str(self.repository))
         async with Client(science_parameters, read_timeout_seconds=15) as science, Client(project_parameters, read_timeout_seconds=15) as project:
             self.assertEqual(len((await science.list_tools()).tools), 38)
-            self.assertEqual(len((await project.list_tools()).tools), 32)
+            self.assertEqual(len((await project.list_tools()).tools), 33)
             duplicate_process = await asyncio.to_thread(subprocess.run, ["D:\\projects\\agentic_srim\\.venv\\Scripts\\python.exe", "-W", "error", "-m", "src.mcp.project_mcp", "--root", str(self.root)], cwd=str(self.repository), input=b"", stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
             self.assertEqual(duplicate_process.returncode, 1)
             self.assertEqual(duplicate_process.stdout, b"")

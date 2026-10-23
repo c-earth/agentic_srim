@@ -24,10 +24,16 @@ def read_improvement_status(paths: ProjectPaths, *, proposal_id: str | None = No
 
     Optional proposal_id filters a UUID. Return observed states/events/issues;
     preserve malformed/conflicting evidence and never mutate lifecycle state.
+    Return additive assessment summaries and pending findings. Validate all events
+    before filtering; per-record failures become issues, unsafe store paths raise
+    OSError. Assessment filtering follows valid proposal-observation links.
     """
     if proposal_id is not None and str(UUID(proposal_id)) != proposal_id:
         raise ValueError("Invalid proposal UUID")
     root = paths.root / ".local" / "workflow-improvement"
+    for entry in (*reversed(root.parents), root):
+        if entry.is_symlink() or entry.is_junction():
+            raise OSError("Unsafe improvement store path")
     events, issues, hashes = [], [], {}
     for path in sorted((root / "events").glob("*.json")):
         try:
@@ -36,9 +42,8 @@ def read_improvement_status(paths: ProjectPaths, *, proposal_id: str | None = No
             validate_improvement_event(event)
             if path.stem != event["event_id"]:
                 raise ValueError("Event filename identity mismatch")
-            if proposal_id is None or event["proposal_id"] == proposal_id:
-                events.append(event)
-                hashes[event["event_id"]] = hashlib.sha256(payload).hexdigest()
+            events.append(event)
+            hashes[event["event_id"]] = hashlib.sha256(payload).hexdigest()
         except (ValueError, OSError) as error:
             issues.append({"path": path.relative_to(paths.root).as_posix(), "message": str(error)})
     by_id = {event["event_id"]: event for event in events}
@@ -128,7 +133,12 @@ def read_improvement_status(paths: ProjectPaths, *, proposal_id: str | None = No
             issues.append({"proposal_id": identity, "message": "Trial completion lacks a recorded start"})
             valid = False
         states.append({"proposal_id": identity, "state": current if valid else None, "valid": valid, "transition_event_id": previous, "trial_started_ids": sorted(started), "trial_completed_ids": sorted(completed), "completed_task_count": len(completed), "restoration": None if previous is None else transitions[previous]["details"]["restoration"], "boundary_qualification": "Evaluate eligibility, task maximum, early stops and current source bytes against the human-reviewed plan; no autonomous expiry is claimed", "enforcement": "instruction-based; no automatic trial execution or restoration"})
-    return {"events": events, "event_hashes": hashes, "proposals": states, "issues": issues}
+    assessments, pending, assessment_issues = _summarize_assessments(by_id, states, proposal_id)
+    issues.extend(assessment_issues)
+    selected = events if proposal_id is None else [event for event in events if event["proposal_id"] == proposal_id]
+    selected_hashes = {event["event_id"]: hashes[event["event_id"]] for event in selected}
+    selected_states = states if proposal_id is None else [state for state in states if state["proposal_id"] == proposal_id]
+    return {"events": selected, "event_hashes": selected_hashes, "proposals": selected_states, "issues": issues, "assessments": assessments, "pending_assessments": pending}
 
 
 def record_observation(paths: ProjectPaths, config: Config, details: JSONObject, request_id: str) -> JSONObject:
@@ -195,12 +205,18 @@ def validate_improvement_event(event: JSONObject) -> None:
     """Validate existing protocol event schemas, UUIDs, hashes and measurements.
 
     Return None without I/O; malformed or nonfinite fields raise ValueError.
+    Version 1 retains existing kinds; version 2 permits only assessments.
     Validation does not authenticate an approval or authorize a lifecycle change.
     """
     fields = {"schema_version", "event_id", "recorded_at", "kind", "proposal_id", "task_ref", "details"}
-    if not isinstance(event, dict) or set(event) != fields or type(event["schema_version"]) is not int or event["schema_version"] != 1 or str(UUID(event["event_id"])) != event["event_id"] or not isinstance(event["task_ref"], str) or not isinstance(event["recorded_at"], str) or datetime.fromisoformat(event["recorded_at"]).utcoffset() is None:
+    if not isinstance(event, dict) or set(event) != fields or type(event["schema_version"]) is not int or event["schema_version"] not in (1, 2) or not isinstance(event["event_id"], str) or not isinstance(event["kind"], str) or str(UUID(event["event_id"])) != event["event_id"] or not isinstance(event["task_ref"], str) or not isinstance(event["recorded_at"], str) or datetime.fromisoformat(event["recorded_at"]).utcoffset() is None:
         raise ValueError("Invalid improvement event envelope")
     kind, details = event["kind"], event["details"]
+    if event["schema_version"] == 2:
+        if kind != "assessment" or event["proposal_id"] is not None:
+            raise ValueError("Version 2 is reserved for unassigned assessments")
+        _validate_assessment_details(details)
+        return
     required = {"observation": {"problem", "evidence", "sources", "criteria", "measurements", "uncertainty"}, "proposal": {"path", "revision", "observation_ids"}, "approval": {"gate", "decision", "approval_ref", "revision"}, "trial_task": {"task_id", "eligibility", "measurements", "quality_outcome", "deviations", "status"}, "transition": {"previous_state", "next_state", "reason", "restoration", "predecessor_event_id"}, "evaluation": {"evidence_ids", "results", "limitations", "recommendation"}}
     if kind not in required or not isinstance(details, dict) or set(details) != required[kind]:
         raise ValueError("Invalid improvement event details")
@@ -239,3 +255,143 @@ def validate_improvement_event(event: JSONObject) -> None:
         for result in details["results"]:
             if not isinstance(result, dict) or set(result) != {"criterion", "baseline", "trial", "conclusion"} or result["criterion"] not in ("time", "cost", "user_effort", "quality") or any(not isinstance(value, str) for value in result.values()):
                 raise ValueError("Invalid evaluation result")
+
+def _validate_assessment_details(details: JSONObject) -> None:
+    """Validate closed assessment details without I/O; return None.
+
+    details must contain canonical UUID arrays, a supported disposition,
+    public rationale, uncertainty, follow-up and an optional predecessor.
+    Raise ValueError for malformed values; this checks no referenced files.
+    """
+    fields = {"observation_ids", "disposition", "rationale", "uncertainty", "follow_up", "related_proposal_ids", "predecessor_assessment_id"}
+    if not isinstance(details, dict) or set(details) != fields:
+        raise ValueError("Invalid assessment details")
+    for key in ("observation_ids", "related_proposal_ids"):
+        values = details[key]
+        if not isinstance(values, list) or any(not isinstance(value, str) for value in values):
+            raise ValueError("Invalid assessment UUID array")
+        if len(values) != len(set(values)) or any(str(UUID(value)) != value for value in values):
+            raise ValueError("Invalid assessment UUID array")
+    predecessor = details["predecessor_assessment_id"]
+    if predecessor is not None and (not isinstance(predecessor, str) or str(UUID(predecessor)) != predecessor):
+        raise ValueError("Invalid assessment predecessor")
+    if not details["observation_ids"] or details["disposition"] not in ("proposal_needed", "deferred_insufficient_evidence", "already_addressed", "no_reusable_change"):
+        raise ValueError("Invalid assessment disposition")
+    if any(not isinstance(details[key], str) for key in ("rationale", "uncertainty", "follow_up")) or not details["rationale"].strip():
+        raise ValueError("Invalid assessment explanation")
+    if details["disposition"] in ("proposal_needed", "deferred_insufficient_evidence") and not details["follow_up"].strip():
+        raise ValueError("Assessment requires follow-up")
+    if (details["disposition"] == "already_addressed") != bool(details["related_proposal_ids"]):
+        raise ValueError("Only already-addressed assessments link existing proposals")
+
+
+def _summarize_assessments(
+    events: dict[str, JSONObject],
+    proposal_states: list[JSONObject],
+    proposal_id: str | None,
+) -> tuple[list[JSONObject], list[JSONObject], list[JSONObject]]:
+    """Derive assessments, pending findings and issues without I/O or writes.
+
+    events contains structurally validated UUID-keyed events; proposal_states
+    contains existing hash/lifecycle verification results. proposal_id optionally
+    limits summaries to observations linked by valid proposals with that UUID.
+    Return three lists; invalid references, overlapping groups and broken chains
+    are reported as issues and conflict summaries rather than accepted decisions.
+    """
+    valid_ids = {state["proposal_id"] for state in proposal_states if state["valid"]}
+    links: dict[str, set[str]] = {}
+    for event in events.values():
+        if event["kind"] == "proposal" and event["proposal_id"] in valid_ids:
+            links.setdefault(event["proposal_id"], set()).update(event["details"]["observation_ids"])
+    selected = None if proposal_id is None else links.get(proposal_id, set())
+    groups: dict[tuple[str, ...], list[JSONObject]] = {}
+    for event in events.values():
+        if event["kind"] == "assessment":
+            key = tuple(sorted(event["details"]["observation_ids"]))
+            groups.setdefault(key, []).append(event)
+    summaries: list[JSONObject] = []
+    pending: list[JSONObject] = []
+    issues: list[JSONObject] = []
+    assigned = {identity for key in groups for identity in key}
+    for key, records in sorted(groups.items()):
+        identities = {event["event_id"] for event in records}
+        errors: list[str] = []
+        if any(events.get(identity, {}).get("kind") != "observation" for identity in key):
+            errors.append("Assessment references a missing or invalid observation")
+        if any(set(key).intersection(other) for other in groups if other != key):
+            errors.append("Overlapping assessment observation groups")
+        successors: dict[str | None, list[str]] = {}
+        for event in records:
+            details = event["details"]
+            predecessor = details["predecessor_assessment_id"]
+            if predecessor is not None and predecessor not in identities:
+                errors.append("Assessment predecessor is missing or belongs to another group")
+            successors.setdefault(predecessor, []).append(event["event_id"])
+            related = details["related_proposal_ids"]
+            if related and (any(identity not in links for identity in related) or not set(key) <= set().union(*(links.get(identity, set()) for identity in related))):
+                errors.append("Assessment proposal links do not validly cover the observations")
+        visited: set[str] = set()
+        current = None
+        latest = None
+        while successors.get(current):
+            children = successors[current]
+            if len(children) != 1 or children[0] in visited:
+                errors.append("Conflicting or cyclic assessment successors")
+                break
+            current = children[0]
+            visited.add(current)
+            latest = events[current]
+        if visited != identities:
+            errors.append("Orphaned or cyclic assessment chain")
+        if selected is not None and not set(key).intersection(selected):
+            visible = False
+        else:
+            visible = True
+        if errors:
+            issues.append({"assessment_event_ids": sorted(identities), "message": "; ".join(sorted(set(errors)))})
+            if visible:
+                summaries.append({"observation_ids": list(key), "event_id": None, "valid": False, "disposition": None, "rationale": "", "uncertainty": "", "follow_up": "", "related_proposal_ids": [], "covering_proposal_ids": []})
+                pending.append({"observation_ids": list(key), "assessment_event_id": None, "reason": "conflict"})
+            continue
+        if latest is None:
+            continue
+        details = latest["details"]
+        covering = sorted(identity for identity, observations in links.items() if set(key).intersection(observations))
+        covered = set().union(*(links[identity] for identity in covering)) if covering else set()
+        reason = "proposal_required" if details["disposition"] == "proposal_needed" and not set(key) <= covered else "deferred" if details["disposition"] == "deferred_insufficient_evidence" else None
+        if visible:
+            summaries.append({"observation_ids": list(key), "event_id": latest["event_id"], "valid": True, "disposition": details["disposition"], "rationale": details["rationale"], "uncertainty": details["uncertainty"], "follow_up": details["follow_up"], "related_proposal_ids": details["related_proposal_ids"], "covering_proposal_ids": covering})
+            if reason is not None:
+                pending.append({"observation_ids": list(key), "assessment_event_id": latest["event_id"], "reason": reason})
+    for identity, event in sorted(events.items()):
+        if event["kind"] == "observation" and identity not in assigned and (selected is None or identity in selected):
+            pending.append({"observation_ids": [identity], "assessment_event_id": None, "reason": "unassessed"})
+    return summaries, pending, issues
+
+
+def record_assessment(paths: ProjectPaths, config: Config, details: JSONObject, request_id: str) -> JSONObject:
+    """Preserve one immutable assessment of existing observations.
+
+    paths selects the local store, config supplies record time, details follows
+    assessment v2, and request_id is a canonical UUID for traceability. Return
+    event/reference using the existing observation result shape. Validate the
+    candidate against current references/chains before writing. Raise ValueError
+    for malformed inputs or conflicting evidence; propagate filesystem errors
+    while preserving partial output. Never approve, apply or activate a change.
+    This primary-writer procedure provides no cross-process transaction lock.
+    """
+    if not isinstance(request_id, str) or str(UUID(request_id)) != request_id:
+        raise ValueError("Invalid request UUID")
+    event = {"schema_version": 2, "event_id": str(uuid4()), "recorded_at": _record_time(config, None).isoformat(), "kind": "assessment", "proposal_id": None, "task_ref": "MCP assessment " + request_id, "details": details}
+    validate_improvement_event(event)
+    status = read_improvement_status(paths)
+    events = {item["event_id"]: item for item in status["events"]}
+    events[event["event_id"]] = event
+    summaries, pending, issues = _summarize_assessments(events, status["proposals"], None)
+    if any(event["event_id"] in issue["assessment_event_ids"] for issue in issues):
+        raise ValueError("Assessment references or chain conflict")
+    if not any(summary["event_id"] == event["event_id"] and summary["valid"] for summary in summaries):
+        raise ValueError("Assessment does not extend an unambiguous chain")
+    path = paths.root / ".local" / "workflow-improvement" / "events" / (event["event_id"] + ".json")
+    evidence = write_record_json(path, event)
+    return {"event": event, "reference": {"kind": "improvement-event", "id": event["event_id"], "revision": None, "path": path.relative_to(paths.root).as_posix(), "sha256": evidence["sha256"], "size_bytes": evidence["size_bytes"]}}

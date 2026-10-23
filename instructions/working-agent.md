@@ -41,13 +41,13 @@ agent reports success.
 
 ## Self-improvement
 
-Observe recurring inefficiencies or substantial avoidable failures. Use the
-self-improvement protocol to propose a specific change when evidence supports
-one. An improvement may change a skill, workflow, procedure, helper or agent
-instruction. Delegate approved implementation when coding is necessary.
-Keep evaluation evidence separate from authorization. Stop trials at their
-approved boundaries and report actual outcomes, remaining uncertainty and
-restoration status.
+Review substantial avoidable failures, recurring ineffective attempts and
+material user corrections when they affect the next action, and review
+meaningful findings at task completion. Follow the self-improvement skill
+for evidence assessment, saved dispositions, supported proposals and selective
+independent review. Save supported proposals without waiting for a separate
+request; drafting does not authorize implementation. Honor explicit user
+limits, preserve approval gates and stop trials at their approved boundaries.
 
 ## Reporting
 

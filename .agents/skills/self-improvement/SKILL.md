@@ -1,34 +1,31 @@
 ---
 name: self-improvement
-description: Review efficiency evidence for this repository's agent skills, workflows, procedures, and sub-agent definitions; prepare specific improvements and manage user-approved trials and adoption. Consult at task completion and before using trial behavior.
+description: Review this repository's agent skills, workflows, procedures and sub-agent definitions after substantial avoidable failures, repeated ineffective attempts, material user corrections, and at task completion. Assess reusable improvements, save supported proposals without a separate request, and manage explicitly approved trials and adoption.
 ---
 
 # Self-improvement
 
-Improve working methods within this repository using evidence. Follow existing repository instructions and the user's current task scope.
+Improve working methods using evidence within the user's task scope. Read [the protocol](references/protocol.md) before recording findings, preparing proposals or managing trials.
 
-Store supporting records under repository-root `.local/workflow-improvement/`.
-Keep preserved cache dependencies under protected `.local/.cache/` and consult
-`.local/migrations/` inventories for historical path mappings. Skill definitions
-remain tracked; these persistent local stores are Git-ignored, not a durable backup.
+Review substantial avoidable failures, recurring ineffective attempts and material corrections when they can affect the next action; recover the user's task first when necessary. Briefly review meaningful findings at task completion. A correction triggers assessment, not an automatic proposal. Ordinary successful work needs no persistent record unless it supplies meaningful evidence.
 
-Read [the protocol](references/protocol.md) before recording evidence, preparing proposals, or managing trials.
+For a meaningful finding, inspect relevant prior records, assess evidence and save a disposition using the protocol. When evidence supports a specific reusable change, prepare and save the complete proposal without waiting for the user to request one. If evidence or design is incomplete, state what remains and the next useful step; do not treat an observation alone as completed follow-through. Honor explicit user instructions to stop or exclude improvement work.
 
-At task completion, briefly review meaningful efficiency observations and relevant accumulated evidence. Evidence recording and review are authorized. Do not record every action or manufacture evidence. Suggest a change only for a recurring pattern across comparable tasks or one substantial avoidable inefficiency with a clear cause. Explain why evidence is sufficient; consolidate duplicates and avoid repeating addressed suggestions without new evidence.
+Evidence review, assessment and proposal drafting within scope are authorized. Implementation requires the applicable explicit approval and workspace role. Trial activation and permanent adoption retain their separate approval gates. Do not create background jobs, expand scope, manufacture measurements or run unapproved benchmarks.
 
-Prepare the exact proposed change, benefits, sacrifices, uncertainty, evaluation overhead, and trial boundaries. Obtain explicit approval of the complete proposal before applying it. At the trial boundary, stop trial behavior, restore the baseline when safe, and report actual results. Offer adopt, decline, or more data. Permanent adoption requires a separate approval. More data requires an additional concrete trial plan and approval before reactivation.
+Use the protocol's selective independent review when warranted and authorized there. The primary agent owns the assessment, reconciliation, saved proposal and lifecycle; a reviewer cannot approve or apply changes.
 
-Before using trial behavior, check its recorded state and reconcile interruptions or expiration. Preserve evidence and decisions. Changing a sub-agent definition does not authorize spawning an agent. Do not create background jobs, expand task scope, or execute unapproved benchmark work.
-## Improvement targets and storage
+Before trial behavior, reconcile its recorded state, interruptions and boundaries. At the boundary stop trial behavior, restore the baseline safely, and report actual results with adopt, decline or more-data options. Preserve the baseline recovery protocol when trialing changes to this mechanism.
 
-Skills and sub-agent definitions are distinct agent structures. Workflows and procedures describe content within skills; they are not additional native file types.
+Store evidence and proposals under repository-root `.local/workflow-improvement/`; preserved cache dependencies belong under protected `.local/.cache/`. These are Git-ignored local state, not a durable backup. Consult `.local/migrations/` for historical mappings without rewriting old evidence.
 
-| Concept | Storage | Purpose |
-| --- | --- | --- |
-| Skill | `.agents/skills/<name>/SKILL.md` | An independently discoverable capability. |
-| Workflow | Skill body or `references/<name>.md` | A sequence of stages, decisions, and coordination. |
-| Procedure | Skill body or `references/<name>.md` | Focused instructions for one operation. |
-| Sub-agent | `.codex/agents/<name>.toml` | A delegated role and its configuration. |
-| Helper script | Skill's `scripts/` directory | A repeatable executable operation. |
+## Improvement targets
 
-A workflow or procedure needs a separate skill only when independent discovery is useful. A sub-agent is appropriate when work needs a delegated role; documenting a sequence alone does not require one. Every proposal must identify the concept being improved and its actual storage location. This self-improvement skill contains an improvement workflow and procedures for evidence recording, trials, and restoration.
+| Concept | Storage |
+| --- | --- |
+| Skill | `.agents/skills/<name>/SKILL.md` |
+| Workflow or procedure | Skill body or `references/<name>.md` |
+| Sub-agent role | `.codex/agents/<name>.toml` |
+| Helper script | Skill's `scripts/` directory |
+
+Identify the actual concept and storage location in every proposal. Separate a workflow into a discoverable skill only when independent discovery is useful; a sequence alone does not require a sub-agent.

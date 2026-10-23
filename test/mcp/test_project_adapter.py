@@ -35,3 +35,18 @@ class TestProjectAdapter(Fixture):
         tools = build_catalog(self.project)["tools"]
         for forbidden in ("run_submit", "analysis_run", "publish_capability", "approve", "trial_start", "skill_edit"):
             self.assertNotIn(forbidden, tools)
+
+    def test_assessment_dispatch_and_cancellation(self: TestProjectAdapter) -> None:
+        """Record evidence/assessment with no native calls, and cancel before writing."""
+        self.events = []
+        observation = {"problem": "Fixture issue", "evidence": "Fixture evidence", "sources": [], "criteria": ["quality"], "measurements": [], "uncertainty": ""}
+        with patch("src.srim.sr.execution.run_sr_simulation", side_effect=AssertionError("No physics")), patch("src.srim.trim.execution.run_trim_simulation", side_effect=AssertionError("No physics")):
+            source = write_operation("improvement_observe", {"request_id": str(uuid4()), "details": observation}, self.project, self.cancel, self.progress)
+            details = {"observation_ids": [source["data"]["event"]["event_id"]], "disposition": "no_reusable_change", "rationale": "Isolated fixture", "uncertainty": "", "follow_up": "", "related_proposal_ids": [], "predecessor_assessment_id": None}
+            result = write_operation("improvement_assess", {"request_id": str(uuid4()), "details": details}, self.project, self.cancel, self.progress)
+            self.assertEqual(result["outcome"], "succeeded")
+            self.assertEqual(result["data"]["event"]["kind"], "assessment")
+            before = read_operation("improvement_status", {"proposal_id": None}, self.project)
+            cancelled = write_operation("improvement_assess", {"request_id": str(uuid4()), "details": details}, self.project, lambda: True, self.progress)
+            self.assertEqual(cancelled["outcome"], "cancelled")
+            self.assertEqual(before, read_operation("improvement_status", {"proposal_id": None}, self.project))

@@ -102,4 +102,4 @@ may require explicit mapped paths before separately authorized reuse.
 
 # Self-improvement
 
-- At task completion, consult `.agents/skills/self-improvement/SKILL.md` to record meaningful efficiency evidence and determine whether a proposal is warranted. Before using trial behavior, consult the skill to reconcile its status.
+- Consult `.agents/skills/self-improvement/SKILL.md` after substantial avoidable failures, recurring ineffective attempts and material user corrections when they affect the next action, and at task completion. Follow its assessment and proposal procedure within the user's scope. Before trial behavior, consult it to reconcile recorded state and boundaries.

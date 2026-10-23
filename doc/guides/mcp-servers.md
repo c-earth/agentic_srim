@@ -1,6 +1,6 @@
 # Local MCP servers
 
-The two independent local servers expose the [current MCP interfaces](../reference/mcp-format.md). srim_mcp exposes 38 scientific/discovery tools; project_mcp exposes 32 management/discovery tools.
+The two independent local servers expose the [current MCP interfaces](../reference/mcp-format.md). srim_mcp exposes 38 scientific/discovery tools; project_mcp exposes 33 management/discovery tools.
 
 Both servers use local stdio. Their adapters live under `src/mcp/srim_mcp/` and `src/mcp/project_mcp/`, with shared infrastructure under `src/mcp/common/`. Existing calculation APIs remain separate.
 
@@ -19,7 +19,7 @@ One agent session can create and work with multiple cases. Each operation select
 | project_mcp | Run references | runs_list, run_get, run_source, physics_job_get |
 | project_mcp | Analysis records | analyses_list, analysis_get, analysis_create, analysis_revise, analysis_attach, analysis_finish |
 | project_mcp | Reusable capabilities | collections_list, collection_entries, collection_entry_get, candidates_list, candidate_get, candidate_create, repository_skills_list |
-| project_mcp | Self-improvement evidence | improvement_status, improvement_observe, improvement_proposal_create |
+| project_mcp | Self-improvement evidence | improvement_status, improvement_observe, improvement_assess, improvement_proposal_create |
 
 srim_mcp owns native calculation execution and verified result access. project_mcp organizes cases, references and analysis evidence. Initial reusable collections are empty, and analysis recording does not execute an unspecified scientific method. Individual TRIM execution supports cooperative cancellation; active SR execution uses its configured timeout. See the [interface reference](../reference/mcp-format.md) and [project guide](project-management.md) for record contracts, side effects and limitations. Use `schema_get` and `capability_get` for exact current tool arguments.
 

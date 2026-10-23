@@ -16,7 +16,7 @@ from src.knowledge.source import project_simulation_inputs
 from src.mcp.common.contracts import ServerContext
 from src.mcp.common.files import safe_path
 from src.plan.catalog import create_candidate, inventory_repository_skills, list_candidates, list_capabilities, list_collections, read_candidate, read_capability
-from src.plan.improvement import create_improvement_proposal, read_improvement_status, record_observation
+from src.plan.improvement import create_improvement_proposal, read_improvement_status, record_assessment, record_observation
 from src.srim.common.types import JSONObject
 from src.srim.common.files import _read_json
 from src.srim.common.records import read_simulation
@@ -124,6 +124,8 @@ def write_operation(name: str, arguments: JSONObject, context: ServerContext, ca
         data = create_candidate(context.paths, context.config, request_id=request_id, allowed_roots=allowed_roots, **args)
     elif name == "improvement_observe":
         data = record_observation(context.paths, context.config, request_id=request_id, **args)
+    elif name == "improvement_assess":
+        data = record_assessment(context.paths, context.config, request_id=request_id, **args)
     elif name == "improvement_proposal_create":
         data = create_improvement_proposal(context.paths, context.config, request_id=request_id, **args)
     else:
