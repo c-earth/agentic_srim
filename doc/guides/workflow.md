@@ -97,6 +97,16 @@ src/mcp/                      Two separate adapters and shared protocol/job infr
 .cache/                       Auxiliary examples, exports, probes, and renders
 ```
 
+The contents of `memory/`, `case/` and `worker/` are local runtime state and are
+Git-ignored, except for `.gitkeep` directory placeholders. This includes imported
+and calculated resources, simulation and analysis records, input-search catalogs,
+reusable capability and candidate snapshots, MCP journals and artifacts, and
+worker runtimes. New checkouts do not receive these records from Git. Preserve
+them through separately verified copies or archives; Git exclusion provides no
+backup and does not authorize deletion. Source, packaged defaults, test fixtures,
+published reference assets and shared project configuration remain versioned in
+their documented locations.
+
 Each permanent simulation record contains `metadata.json`, `input/` for requests/selections/effective inputs and provenance, and `output/` for raw evidence and parsed results. The stopped runtime is preserved under `output/raw/runtime/`. SR's parsed result is `output/parsed/result.json`; TRIM uses `output/parsed/results.json` plus `saved-values.json`. Available files depend on how far execution reached; preflight failures may have no parsed output.
 
 Keep `memory/resources` and permanent dependency simulation records together when archiving. CAB GUI captures have permanent records with engine identity `sr-capture`. Older entries can still reference worker capture directories; preserve those too. Deleting linked evidence breaks cache verification. Generic deletion is not a reference-aware garbage collector, and there is no complete historical installation archive. Use a persistent destination instead of `.cache` for exports you need to retain.
