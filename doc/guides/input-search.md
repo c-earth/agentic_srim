@@ -29,6 +29,17 @@ result = search_inputs(paths, filters)
 
 Different clauses AND; the projectile list accepts helium or argon. Omit filters for all eligible registered runs. `execution_status` can restrict succeeded/failed; both default. Numeric equality is exact after explicit unit conversion, bounds inclusive. SR lists match any requested value; continuous ranges match membership/overlap. Results retain `energy.kind`, so an interval is not confused with output sample points. Event projectile and energy filters must share one event.
 
+Decimal strings are limited to 256 characters, including signs and exponent
+notation. Their decimal scaling exponent must be between -1024 and +1024,
+inclusive, before and after unit conversion. Fractional places count toward that
+exponent: `0.1e-1023` has scaling exponent -1024. Over-limit values produce a clear
+validation error before exact arithmetic or fixed-point expansion. Ordinary
+values retain exact precision. These are per-number processing limits; native
+SR/TRIM physical-input validation is separate. Existing search projections
+outside these limits are rejected/excluded through normal validation without
+rewriting the saved native inputs. See the [numeric contract](../reference/input-search-format.md#numeric-processing-limits)
+for conversion boundaries.
+
 ## Targets and unknowns
 
 `target_label` matches a supplied label without inferring composition. `target.elements` accepts `contains_all`/`contains_any` with integer Z lists. `target.composition` compares exact atomic ratios independent of scale/order. Every query component has atomic_number, mass_amu, atomic_proportion; all masses null means elemental matching, all specified means mass-specific matching.

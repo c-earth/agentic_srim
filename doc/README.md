@@ -34,7 +34,6 @@ Start with [your first SR calculation](guides/getting-started.md), or use the
 
 - [Verification commands and recorded native coverage](reference/validation.md)
 - [Current TRIM continuation decision](decisions/trim-continuation.md)
-- [Project review and unresolved findings, 2026-10-22](reviews/project-review-20261022.md)
 
 Guides describe how to perform a task; references define exact interfaces and
 formats; decisions state active constraints. Only current material is kept here.

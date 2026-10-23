@@ -66,6 +66,45 @@ Clauses AND, in/contains_any OR. Numeric bounds inclusive and ordered with at le
 
 SR list energies match any requested value; SR ranges membership/overlap, never output sampling. TRIM event projectile and energy predicates share one event. SR density/composition use homogeneous target 1, thickness/count unknown. No planned-depth, collection or origin-choice filters yet.
 
+### Numeric processing limits
+
+Every interpreted decimal string in numeric filters, query composition masses
+and proportions, and SearchRecord input quantities has a maximum length of
+256 characters, inclusive. Signs, decimal points and e/E notation count toward
+that limit. The existing ASCII decimal grammar permits scientific notation;
+whitespace and nonfinite values remain invalid.
+
+The coefficient's decimal scaling exponent, as returned by
+`Decimal.as_tuple().exponent`, must be within -1024..1024 inclusive. The same
+limit applies after the unit exponent shift. Both the original and converted
+exponents must pass; conversion cannot rescue an already over-limit input. Zero
+and trailing zeros obey these representation limits without normalization.
+
+| Value and conversion | Result |
+| --- | --- |
+| `1e1024` or `1e-1024`, same units | Accepted exactly |
+| `0.1e-1023`, same units | Accepted; scaling exponent is -1024 |
+| `0.1e-1024`, same units | Rejected; scaling exponent is -1025 |
+| `1e1021`, MeV to keV | Accepted; converted exponent is 1024 |
+| `1e1022`, MeV to keV | Rejected; converted exponent is 1025 |
+| `1e-1021`, eV to keV | Accepted; converted exponent is -1024 |
+| `1e-1022`, eV to keV | Rejected; converted exponent is -1025 |
+
+Length is checked before parsing; exponent limits are checked before Fraction
+construction or fixed-point formatting. Limit failures raise ValueError with
+`quantity: numeric string exceeds 256 characters` or
+`quantity: decimal exponent outside -1024..1024`. MCP maps these to
+`invalid-argument`, including when no catalog exists. No mutation job is accepted.
+Exact unit conversion and comparison within the limits retain their precision;
+integer-count validation and native SR/TRIM request validation are unchanged.
+
+Historical search projections outside these limits become rejected/excluded
+through the existing validation/indexing error handling. No automatic catalog
+migration or native-evidence rewrite occurs. These per-number limits do not
+establish a total runtime bound for large collections or many composition
+components. Arbitrary observation values without numeric interpretation retain
+their existing contract.
+
 Result ordering stable native ID; offset>=0, limit 1..1000 default 100. Generation UUID commits with rows, no-op updates retain it, absent catalog returns null. Pin a non-null generation when paging. Current evidence damage excludes a source even if catalog generation matches.
 
 ## Storage and concurrency

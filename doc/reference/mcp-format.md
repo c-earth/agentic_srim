@@ -51,6 +51,36 @@ Runtime paths are derived from IDs and verified by existing native APIs. TRIM re
 
 Adapter journals are under memory/mcp/<server>/jobs/job_<uuid> with request.json, state.json, numbered progress files and sealed result/error JSON. Objects and exported artifacts are under that server's objects/ and artifacts/. Existing native records remain under memory/srim, immutable resources under memory/resources, and workers under worker/worker_N. No host registration is performed by starting either server.
 
+Initial acceptance writes and synchronizes request.json and queued state.json in
+`jobs/.admission-job_<uuid>/`, then renames that complete directory to
+`jobs/job_<uuid>/` before registering it with the scheduler. Failed staging is
+retained and reported; it is never scheduled or replayed. An explicit retry of
+an unpublished staged request UUID may create a fresh job. A complete published
+admission interrupted before acknowledgement retains its accepted identity and
+becomes interrupted on restart under the normal durable-job rules.
+
+`jobs_list` includes `issues_total` and `issues` for recognized incomplete
+admissions alongside the existing `total`, `offset`, `limit` and `matches`:
+
+```text
+issues = [{id, code: "incomplete-admission", path, message, request_id, worker_ids}]
+```
+
+The id is a canonical job ID; path is its repository-relative directory location.
+Unpublished stages and empty/temporary-only legacy allocations have null
+request_id and empty worker_ids. A valid legacy request.json without state.json
+reports its UUID and explicit workers. Stages are checked as safe directories
+without parsing unfinished contents. Visible legacy allocations may otherwise
+contain only regular `.mcp-<lowercase-alphanumeric-or-underscore>` temporary
+files. Other unexpected or malformed committed evidence still prevents startup.
+
+Issues are copied snapshots collected at startup and on failed publication,
+deduplicated and sorted by path. They are independently paged with the same
+offset/limit, regardless of the accepted-job state filter; total/matches count
+accepted jobs only. These paths support inspection; partial admissions are not
+accepted jobs or immutable artifact references. No background scan or repair
+occurs.
+
 ## Limits and ownership
 
 mcp.toml is separate from the strict existing settings.toml. Defaults are four scientific parallel slots, one management slot, 64 pending jobs per server, 16-MiB requests, 1-MiB structured replies, 64-MiB parsed JSON files and 256-KiB verified file chunks. These are adapter limits, not physical/native caps. Large saved results remain readable through chunks rather than silent truncation. Analysis/candidate attachment caps are 64 MiB per file and 256 MiB per operation.
@@ -64,6 +94,19 @@ allowed_input_roots adds explicit read-only external directories; an empty list 
 Queued jobs can be cancelled before dispatch. Active individual TRIM execution uses the existing cooperative cancellation callback and records completion only after owned native shutdown/preservation. Active SR is timeout-only; preparation/CAB, publication and active batches have queued-only cancellation. A racing successful completion remains success. TRIM timeout can be null; an unlimited active TRIM batch can delay graceful shutdown indefinitely. Disconnect/shutdown cannot invent cancellation support the backend lacks.
 
 Graceful shutdown stops admissions, cancels queued jobs, requests supported cancellation and waits for active finalization. Forced termination can leave SR children or partial publication. On restart, unfinished jobs become interrupted, their workers are quarantined, and requests are never automatically re-executed. There is no MCP auto-release tool: reconcile native activity/evidence explicitly before an approved recovery change, or use newly allocated workers. Released Python locks alone do not prove native processes stopped. Exactly-once native execution after a crash is not guaranteed.
+
+Recognized incomplete admissions are retained as listing issues while unrelated
+valid jobs remain accessible. A visible request-only legacy admission reserves
+its UUID and quarantines its explicit workers; retrying that UUID conflicts
+until explicitly reconciled. New sequence numbers exceed those in both complete
+journals and valid visible request-only admissions. Hidden unpublished staging
+reserves neither workers nor sequence numbers. Complete accepted journals remain
+authoritative when an older incomplete attempt shares a UUID or sequence with a
+later retry; the issue names that accepted identity. Workers named by the old
+visible attempt remain conservatively quarantined even when its later retry
+completed successfully. No missing state is synthesized and no native activity
+is inferred from a missing journal. Directory rename provides atomic visibility,
+without guaranteeing durability through every hardware/filesystem failure.
 
 TRIM continuation keeps the approved checkpoint-first lifecycle, saved-value checks, configuration qualifications and recovery provenance. Stable checkpoints do not prove atomic binary saving or independent physical accuracy. Fresh native-text and recovered checkpoint results remain distinct. Quick-mode uncalculated quantities remain unavailable. F-button/chooser exports and external collection imports are outside this interface.
 

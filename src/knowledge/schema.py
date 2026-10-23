@@ -12,6 +12,10 @@ import uuid
 from src.srim.common.types import JSONObject, JSONValue
 
 
+_MAX_NUMERIC_CHARACTERS = 256
+_MAX_DECIMAL_EXPONENT = 1024
+
+
 UNITS = {
     "eV": ("energy", -3), "keV": ("energy", 0), "MeV": ("energy", 3), "GeV": ("energy", 6),
     "A": ("length", -1), "nm": ("length", 0), "um": ("length", 3),
@@ -39,6 +43,39 @@ SHAPES = {
 }
 
 
+def _bounded_decimal(value: str, *, exponent_shift: int = 0) -> Decimal:
+    """Return exact value shifted by exponent_shift within numeric processing limits.
+
+    Args:
+        value: ASCII finite decimal string of at most 256 characters.
+        exponent_shift: Actual integer base-ten unit shift, excluding bool.
+
+    Returns:
+        Exact Decimal with original and shifted scaling exponents in ±1024.
+        Preserve sign and coefficient without rounding, formatting or I/O.
+
+    Raises:
+        ValueError: Type, grammar, finiteness or representation limits fail.
+    """
+    if not isinstance(value, str) or type(exponent_shift) is not int:
+        raise ValueError("quantity: invalid decimal value or exponent shift")
+    if len(value) > _MAX_NUMERIC_CHARACTERS:
+        raise ValueError("quantity: numeric string exceeds 256 characters")
+    if re.fullmatch(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?", value) is None:
+        raise ValueError("quantity: invalid decimal value")
+    try:
+        number = Decimal(value)
+    except InvalidOperation as error:
+        raise ValueError("quantity: malformed decimal") from error
+    if not number.is_finite():
+        raise ValueError("quantity: nonfinite decimal")
+    parts = number.as_tuple()
+    exponent = parts.exponent + exponent_shift
+    if abs(parts.exponent) > _MAX_DECIMAL_EXPONENT or abs(exponent) > _MAX_DECIMAL_EXPONENT:
+        raise ValueError("quantity: decimal exponent outside -1024..1024")
+    return Decimal((parts.sign, parts.digits, exponent))
+
+
 def validate_search_document(document: JSONObject, kind: str) -> None:
     """Validate document of kind recursively, returning None without side effects.
 
@@ -47,7 +84,8 @@ def validate_search_document(document: JSONObject, kind: str) -> None:
         kind: reference, file, issue, observation, record, filters, result or update-report.
 
     Returns:
-        None when the envelope and all applicable nested invariants are valid.
+        None when the envelope and all applicable nested invariants are valid,
+        including decimal strings bounded to 256 characters and exponents ±1024.
 
     Raises:
         ValueError: An unknown kind, malformed field, quantity or invariant is found.
@@ -138,12 +176,10 @@ def validate_search_document(document: JSONObject, kind: str) -> None:
                 quantities.append((event["energy_keV"], True))
         for value, positive in quantities:
             if value is not None:
-                try:
-                    if not isinstance(value, str) or re.fullmatch(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?", value) is None or not Decimal(value).is_finite() or Decimal(value) < 0 or (positive and Decimal(value) == 0):
-                        raise ValueError("record.inputs: invalid decimal quantity")
-                except InvalidOperation as error:
-                    raise ValueError("record.inputs: invalid decimal") from error
-        if energy is not None and energy["kind"] == "range" and Decimal(energy["minimum_keV"]) >= Decimal(energy["maximum_keV"]):
+                number = _bounded_decimal(value)
+                if number < 0 or (positive and number == 0):
+                    raise ValueError("record.inputs: invalid decimal quantity")
+        if energy is not None and energy["kind"] == "range" and _bounded_decimal(energy["minimum_keV"]) >= _bounded_decimal(energy["maximum_keV"]):
             raise ValueError("record.inputs.energy: unordered range")
     elif kind == "filters":
         if not isinstance(document["clauses"], list):
@@ -178,7 +214,7 @@ def validate_search_document(document: JSONObject, kind: str) -> None:
                         token = component[key]
                         if token is None and key == "mass_amu":
                             continue
-                        if not isinstance(token, str) or re.fullmatch(r"[+]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?", token) is None or not Decimal(token).is_finite() or Decimal(token) <= 0:
+                        if _bounded_decimal(token) <= 0:
                             raise ValueError("filters.composition: invalid positive decimal")
                     masses.add(component["mass_amu"] is None)
                     identity = (component["atomic_number"], None if component["mass_amu"] is None else Fraction(component["mass_amu"]))
@@ -196,11 +232,7 @@ def validate_search_document(document: JSONObject, kind: str) -> None:
                     if category in ("integer", "elements") and (type(item) is not int or item < (0 if field == "random_seed" else 1)):
                         raise ValueError("filters.value: expected nonnegative/positive integer")
                     if category == "number":
-                        try:
-                            if not isinstance(item, str) or re.fullmatch(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?", item) is None or not Decimal(item).is_finite():
-                                raise ValueError("filters.value: expected finite decimal string")
-                        except InvalidOperation as error:
-                            raise ValueError("filters.value: invalid decimal") from error
+                        _bounded_decimal(item)
                 if operator == "between" and all(item is not None for item in values) and Fraction(values[0]) > Fraction(values[1]):
                     raise ValueError("filters.value: unordered bounds")
                 if field in ("engine", "execution_status") and any(item not in ({"sr", "trim"} if field == "engine" else {"succeeded", "failed"}) for item in values):
@@ -242,26 +274,21 @@ def convert_quantity(value: str, source_unit: str, target_unit: str) -> str:
     """Return value exactly converted between source_unit and target_unit.
 
     Args:
-        value: Finite decimal string, preserving its input significant digits.
+        value: Finite decimal string of at most 256 characters, preserving digits.
         source_unit: Registered original dimensional unit.
         target_unit: Registered unit of the same dimension.
 
     Returns:
         Fixed-point decimal string without rounding or filesystem effects.
+        Original and converted Decimal scaling exponents must be within ±1024.
 
     Raises:
-        ValueError: A quantity/unit is invalid or dimensions differ.
+        ValueError: A quantity/unit is invalid, limits fail or dimensions differ.
     """
-    if not isinstance(value, str) or re.fullmatch(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?", value) is None or not isinstance(source_unit, str) or not isinstance(target_unit, str) or source_unit not in UNITS or target_unit not in UNITS or UNITS[source_unit][0] != UNITS[target_unit][0]:
+    if not isinstance(source_unit, str) or not isinstance(target_unit, str) or source_unit not in UNITS or target_unit not in UNITS or UNITS[source_unit][0] != UNITS[target_unit][0]:
         raise ValueError("quantity: invalid value or incompatible units")
-    try:
-        number = Decimal(value)
-        if not number.is_finite():
-            raise ValueError("quantity: nonfinite decimal")
-    except InvalidOperation as error:
-        raise ValueError("quantity: malformed decimal") from error
-    parts = number.as_tuple()
-    return format(Decimal((parts.sign, parts.digits, parts.exponent + UNITS[source_unit][1] - UNITS[target_unit][1])), "f")
+    number = _bounded_decimal(value, exponent_shift=UNITS[source_unit][1] - UNITS[target_unit][1])
+    return format(number, "f")
 
 
 def matches_filters(record: JSONObject, filters: JSONObject) -> bool:

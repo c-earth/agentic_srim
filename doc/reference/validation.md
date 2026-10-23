@@ -1,6 +1,6 @@
 # Verification, native coverage and limits
 
-[Documentation index](../README.md) · [Current project findings](../reviews/project-review-20261022.md) · [TRIM continuation policy](../decisions/trim-continuation.md)
+[Documentation index](../README.md) · [TRIM continuation policy](../decisions/trim-continuation.md)
 
 ## Software checks
 
@@ -18,10 +18,18 @@ Run all seven test directories explicitly; top-level discovery alone does not di
 
 Tests use synthetic installations and controlled native-process substitutes; passing tests do not establish universal numerical accuracy or SRIM compatibility. Recorded native checks cover representative installations and cases, not every element, mode, or checkpoint scenario. Interactive dialogs and event-mode limitations can prevent unattended completion. Hash verification proves byte identity and provenance, not physical correctness or atomic capture of a live external process.
 
-Test counts in a dated report describe that tested snapshot. Run the families
-relevant to a change and report their actual results. The current
-[project review](../reviews/project-review-20261022.md) records additional known
-defects; passing existing tests does not establish their absence.
+Recorded test counts describe their tested snapshots. Run the families relevant
+to a change and report their actual results; passing tests does not establish
+universal correctness.
+
+Numeric search regressions cover decimal-string length and exponent boundaries,
+unit shifts, query composition, SearchRecord quantities, rejection before exact
+arithmetic, and real MCP endpoint responses. The exact limits and historical
+projection compatibility are specified in the
+[input-search reference](input-search-format.md#numeric-processing-limits). The C1
+closeout passed 22 knowledge and 21 MCP tests with warnings treated as errors;
+these are results from that development working-tree snapshot. No native
+calculation or exhaustion benchmark was performed.
 
 ## CAB native checks
 
@@ -74,6 +82,8 @@ retains measured cell discrepancies and the continued-versus-uninterrupted
 comparison. Some saved blobs are preserved and hashed but not decoded. Hashes
 establish byte identity, not atomic native publication, complete structural
 validation of every saved field, or independent scientific accuracy.
+Resumed optional recoil-history coverage has no equivalent live acceptance case
+in the two-mode continuation matrix.
 
 ## Native input investigations
 
@@ -93,5 +103,28 @@ work/captures, complete shared correction progress, and printed-precision SR
 range containment. The recorded closeout passed 333 tests with warnings treated
 as errors: 41 backend, 273 SRIM and 19 knowledge. It performed no new native run.
 Those totals are historical closeout evidence, not a new check of the current
-tree. The later [project review](../reviews/project-review-20261022.md) tracks
-separate additional findings.
+tree.
+
+## Resolved reliability review
+
+The subsequent development review closed four retained findings:
+
+- MCP initial admission publishes the complete request/state directory before
+  scheduling. Recognized partial admissions are retained and reported without
+  replay; uncertain legacy request IDs and explicit workers stay reserved.
+- Completed analyses require each declared code_artifacts attachment to have
+  role code or method, preserving written procedures as valid method evidence.
+- Case/analysis listings report recognizable initial publications missing their
+  current pointer without repairing or promoting a revision.
+- Input search bounds decimal-string length and original/converted scaling
+  exponents before exact arithmetic or fixed-point expansion.
+
+The first three fixes passed 70 tests with warnings treated as errors: backend
+44, analysis 4, case 2 and MCP 20. The subsequent numeric-limit fix passed 43:
+knowledge 22 and MCP 21. These are separate implementation snapshots with
+overlapping MCP coverage, not a combined full-suite result. Fourteen regression
+tests were added in total. No native simulation or exhaustion benchmark was run.
+
+The current contracts and retained recovery/compatibility boundaries are in the
+[MCP reference](mcp-format.md), [project guide](../guides/project-management.md)
+and [input-search reference](input-search-format.md#numeric-processing-limits).

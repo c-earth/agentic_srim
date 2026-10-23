@@ -128,7 +128,9 @@ def list_records(paths: ProjectPaths, kind: Literal["case", "analysis"], *, stat
     """Return paged record summaries and independent corrupt-record issues.
 
     Inputs select kind/status and integer paging; invalid filters raise ValueError.
-    Read no native engines and never initialize old allocations implicitly.
+    Include recognizable interrupted initial publications in issues, independent
+    of filters/paging. Read no native engines, repair no pointers and never
+    initialize old allocations implicitly. Per-record I/O errors become issues.
     """
     states = ("open", "paused", "completed", "archived") if kind == "case" else ("draft", "completed", "failed")
     if kind not in ("case", "analysis") or status is not None and status not in states or type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 1000:
@@ -136,9 +138,27 @@ def list_records(paths: ProjectPaths, kind: Literal["case", "analysis"], *, stat
     parent = paths.cases if kind == "case" else paths.postprocessing_memory
     matches, issues = [], []
     for target in sorted(parent.iterdir() if parent.exists() else []):
-        if target.name.startswith(".") or not (target / "current.json").exists():
+        if target.name.startswith("."):
             continue
         try:
+            pointer = target / "current.json"
+            for entry in (*reversed(pointer.parents), pointer):
+                if entry.is_symlink() or entry.is_junction():
+                    raise OSError(errno.ELOOP, "Unsafe record allocation or pointer", str(entry))
+            if not os.path.lexists(pointer):
+                prefix = "case" if kind == "case" else "post"
+                if re.fullmatch(prefix + r"_[0-9]{8}_[0-9]{6}_[1-9][0-9]*", target.name) is None:
+                    continue
+                initialized = False
+                for marker in target.iterdir():
+                    if marker.name == "revisions" or marker.name.startswith(".project-"):
+                        if marker.is_symlink() or marker.is_junction():
+                            raise OSError(errno.ELOOP, "Unsafe record publication marker", str(marker))
+                        if marker.name == "revisions" and marker.is_dir() or marker.name.startswith(".project-") and marker.is_file():
+                            initialized = True
+                if initialized:
+                    issues.append({"id": target.name, "message": "Incomplete publication: revision or staging artifacts exist, but current.json is missing."})
+                continue
             result = read_record(paths, kind, target.name)
             if status is None or result["record"]["status"] == status:
                 matches.append({"reference": result["reference"], "title": result["record"]["title"], "status": result["record"]["status"]})

@@ -26,6 +26,14 @@ The second case can describe a layered-target continuation study and use a fresh
 
 Case status open/paused/completed/archived is an organizational label. Completing or archiving a case neither certifies calculations nor deletes any native evidence. Case revisions are immutable JSON under case/<case_id>/revisions, with a verified current.json pointer and preceding revision hash. Explicitly named empty backend allocations can be initialized; unknown older layouts are not migrated implicitly.
 
+Case and analysis listings report an `issues` entry when a recognizable allocation
+has revision or publication staging artifacts but no current.json pointer. Valid
+records remain listed, and untouched empty allocations remain omitted. Issues
+are independent of status filters and match pagination. A listing never repairs
+the pointer or promotes an unpointed revision. During creation an interrupted
+publication can appear as such an issue; a failed later update with a valid
+pointer continues to expose the last published revision.
+
 ## Attach calculations explicitly
 
 Submit the actual calculation through srim_mcp, then add a case member with a fresh member_id, role, note and reference. A live job member pins server/job/request hash but remains visibly unsealed. It never silently becomes a successful terminal result.
@@ -41,6 +49,16 @@ analysis_create records a draft question, explicit method, selected source/files
 The three eligibility flags are required: allow_failed_runs, allow_checkpoint_recovery and require_complete_parser. They prevent an agent from silently treating diagnostic failures, partial output or recovered checkpoints as equivalent to successful fresh native results. Recovered input retains its source hashes, availability, precision and inferred-geometry warnings.
 
 The coordinating agent carries out the chosen method separately within its authorized task. analysis_attach snapshots local method/code/data/figure/report files into immutable hash-addressed analysis artifacts, after root/cap/source-stability checks. Original source files can later change without redefining the snapshot. Attach reproducible method evidence and then call analysis_finish with findings, limitations and explicit completed/failed status. Completion verifies the declared provenance/artifact contract; findings remain caller-attributed scientific claims.
+
+For completed analyses, each exact case-sensitive filename in
+`method.code_artifacts` must identify an attachment with role `code` or `method`.
+Written method documents remain valid for manual analyses. Missing names and
+other roles produce a clear error before publishing a revision. Completion still
+requires nonempty findings and at least one attachment, including when the
+declared list is empty; registered-method schema checks also apply. Failed
+completion retains its existing evidence and failure-reason requirements. This
+rule checks metadata consistency and does not execute or scientifically validate
+the method. Historical terminal records remain readable without rewriting them.
 
 Analysis records use backend post IDs under memory/post and their own revision schema. Completed/failed analyses are terminal; further work gets a new analysis record. A completed analysis revision can be referenced by multiple cases. Cross-record commits are explicit: finalizing an analysis does not silently revise its cases. artifact_read accepts exact listed case/analysis revision and analysis artifact references; native files remain accessible through the scientific source reader.
 

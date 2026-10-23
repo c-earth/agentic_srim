@@ -53,5 +53,5 @@ secondary-recoil limit. Fresh and other input checks remain byte-exact.
 
 The continuation matrix covers two modes on three installations. Stable hashes
 do not prove atomic native saving, every-mode unattended support or independent
-physical accuracy. Remaining code findings are tracked in the
-[project review](../reviews/project-review-20261022.md).
+physical accuracy. The [validation reference](../reference/validation.md) records
+review closeouts and coverage qualifications.

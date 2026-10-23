@@ -1,6 +1,6 @@
 # Python API reference
 
-[Documentation index](../README.md) · [First calculation](../guides/getting-started.md) · [Data formats](data-formats.md) · [Current findings](../reviews/project-review-20261022.md)
+[Documentation index](../README.md) · [First calculation](../guides/getting-started.md) · [Data formats](data-formats.md)
 
 This reference describes the shared backend and SR APIs, with links to TRIM's input and execution references. Import from `src.backend.<module>` or `src.srim.<package>.<module>` while running from the repository root.
 

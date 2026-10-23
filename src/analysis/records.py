@@ -160,7 +160,9 @@ def attach_analysis_artifacts(paths: ProjectPaths, config: Config, analysis_id: 
 def finish_analysis(paths: ProjectPaths, config: Config, analysis_id: str, expected_revision: int, status: Literal["completed", "failed"], findings: str, limitations: str, failure: JSONObject | None, request_id: str) -> JSONObject:
     """Finalize analysis_id with explicit status/narratives/failure and CAS/request_id.
 
-    Reverify inputs and artifacts; completed requires reproducible method evidence.
+    Reverify inputs and artifacts; completed requires findings, attachments and
+    code/method roles for each declared code_artifacts name. Failed completion
+    and empty declaration lists retain their existing evidence requirements.
     Return terminal revision or raise ValueError/OSError without scientific claims.
     """
     if status not in ("completed", "failed"):
@@ -170,9 +172,14 @@ def finish_analysis(paths: ProjectPaths, config: Config, analysis_id: str, expec
     if current["issues"]:
         raise ValueError("integrity: analysis evidence is stale or missing")
     if status == "completed":
-        names = {artifact["name"] for artifact in old["artifacts"]}
-        if not findings.strip() or not names or any(name not in names for name in old["method"]["code_artifacts"]):
+        artifacts = {artifact["name"]: artifact for artifact in old["artifacts"]}
+        if not findings.strip() or not artifacts:
             raise ValueError("Completed analysis requires findings and method/artifact evidence")
+        for name in old["method"]["code_artifacts"]:
+            if name not in artifacts:
+                raise ValueError("Completed analysis code_artifacts reference is missing: " + name)
+            if artifacts[name]["role"] not in ("code", "method"):
+                raise ValueError(f"Completed analysis code_artifacts reference {name!r} has role {artifacts[name]['role']!r}; expected code or method")
         if old["method"]["kind"] == "registered":
             from src.plan.catalog import read_capability
             method = read_capability(paths, old["method"]["reference"])["manifest"]

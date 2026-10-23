@@ -13,11 +13,66 @@ from uuid import uuid4
 from mcp import Client
 from mcp.client.stdio import StdioServerParameters
 
+from src.mcp.common.files import publish_json
 from test_contracts import Fixture
+from test_jobs import _request_fixture
 
 
 class TestProtocol(Fixture, unittest.IsolatedAsyncioTestCase):
-    """Use SDK clients against synthetic workspaces; never launch native SRIM/TRIM."""
+    """Check SDK numeric limits and journals in temporary workspaces without native runs."""
+
+    async def test_numeric_filter_limits(self: TestProtocol) -> None:
+        """Reject costly numeric filters through self's real SDK server before catalog access."""
+        parameters = StdioServerParameters(command="D:\\projects\\agentic_srim\\.venv\\Scripts\\python.exe", args=["-W", "error", "-m", "src.mcp.srim_mcp", "--root", str(self.root)], cwd=str(self.repository))
+        ordinary = {"field": "energy", "operator": "eq", "value": "100", "unit": "keV", "layer": None}
+        async with Client(parameters, read_timeout_seconds=15) as science:
+            for value in ("100", "1e1024", "1e-1024", "1" * 256):
+                response = (await science.call_tool("inputs_search", {"filters": {"schema_version": 1, "clauses": [{**ordinary, "value": value}]}})).structured_content
+                self.assertTrue(response["ok"], response)
+                self.assertEqual(response["data"]["total"], 0)
+            clauses = [
+                {**ordinary, "value": "1e1000000"},
+                {**ordinary, "value": "1e-1000000"},
+                {**ordinary, "value": "1" * 257},
+                {**ordinary, "operator": "between", "value": ["1", "1e1000000"]},
+                {"field": "target.composition", "operator": "eq", "value": [{"atomic_number": 8, "mass_amu": None, "atomic_proportion": "1e1000000"}], "unit": None, "layer": "any"},
+            ]
+            for clause in clauses:
+                with self.subTest(clause=clause):
+                    response = (await science.call_tool("inputs_search", {"filters": {"schema_version": 1, "clauses": [clause]}})).structured_content
+                    self.assertFalse(response["ok"], response)
+                    self.assertEqual(response["error"]["code"], "invalid-argument")
+                    expected = "exceeds 256 characters" if isinstance(clause["value"], str) and len(clause["value"]) > 256 else "exponent outside -1024..1024"
+                    self.assertIn(expected, response["error"]["message"])
+            self.assertTrue((await science.call_tool("inputs_search", {"filters": {"schema_version": 1, "clauses": [ordinary]}})).structured_content["ok"])
+        self.assertFalse((self.root / "memory/knowledge/index.sqlite").exists())
+        self.assertFalse((self.root / "no-native-installation").exists())
+
+    async def test_incomplete_admission_visibility(self: TestProtocol) -> None:
+        """Expose legacy partial admissions through SDK calls and reject unsafe retries."""
+        arguments = {"engine": "sr", "worker_ids": ["worker_1"]}
+        request = _request_fixture(self.science, operation="workers_cleanup", arguments=arguments)
+        directory = self.root / "memory" / "mcp" / "srim_mcp" / "jobs" / request["id"]
+        directory.mkdir(parents=True)
+        publish_json(directory / "request.json", request)
+        parameters = StdioServerParameters(command="D:\\projects\\agentic_srim\\.venv\\Scripts\\python.exe", args=["-W", "error", "-m", "src.mcp.srim_mcp", "--root", str(self.root)], cwd=str(self.repository))
+        async with Client(parameters, read_timeout_seconds=15) as science:
+            listing = (await science.call_tool("jobs_list", {})).structured_content
+            self.assertTrue(listing["ok"], listing)
+            self.assertEqual(listing["data"]["total"], 0)
+            self.assertEqual(listing["data"]["issues_total"], 1)
+            issue = listing["data"]["issues"][0]
+            self.assertEqual(issue["request_id"], request["request_id"])
+            self.assertEqual(issue["worker_ids"], ["worker_1"])
+            self.assertTrue((await science.call_tool("capabilities_list", {"family": "sr"})).structured_content["ok"])
+            for identity, message in ((request["request_id"], "incomplete admission"), (str(uuid4()), "quarantined")):
+                rejected = (await science.call_tool("workers_cleanup", {**arguments, "request_id": identity})).structured_content
+                self.assertFalse(rejected["ok"], rejected)
+                self.assertEqual(rejected["error"]["code"], "conflict")
+                self.assertIn(message, rejected["error"]["message"])
+            self.assertEqual((await science.call_tool("jobs_list", {})).structured_content["data"]["total"], 0)
+        self.assertEqual([path.name for path in directory.iterdir()], ["request.json"])
+        self.assertFalse((self.root / "no-native-installation").exists())
 
     async def test_two_servers_and_multiple_cases(self: TestProtocol) -> None:
         """Verify cases, local observation reads and rejection of old-root ownership."""

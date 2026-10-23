@@ -39,9 +39,8 @@ for the full calculation and storage lifecycle.
 Continued TRIM results use preserved checkpoint recovery under the
 [current continuation decision](doc/decisions/trim-continuation.md). Fresh native
 text, recovered values and unavailable quantities retain their distinct meanings.
-Read the [validation coverage](doc/reference/validation.md) and
-[current project findings](doc/reviews/project-review-20261022.md) before relying
-on a particular native mode or result.
+Read the [validation coverage](doc/reference/validation.md) before relying on a
+particular native mode or result.
 
 Agents should start with [AGENTS.md](AGENTS.md); documentation maintenance rules
 are in [instructions/documentation.md](instructions/documentation.md).
