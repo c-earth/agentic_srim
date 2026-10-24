@@ -28,6 +28,27 @@ features use the dependencies in [requirements-mcp.txt](requirements-mcp.txt).
 Configure your native installation in [settings.toml](settings.toml); adapter
 limits and permitted input roots are in [mcp.toml](mcp.toml).
 
+## Agent workspace setup
+
+When using an agent in this repository, choose a role for each checkout or
+worktree and create `.local/agent-role.json` with exactly these two fields:
+
+```json
+{
+  "schema_version": 1,
+  "role": "working"
+}
+```
+
+- `working`: Use the agent for calculations, analysis and project tasks through
+  existing tools. Implementation changes belong in a separate development worktree.
+- `development`: Use the agent to implement explicitly approved code changes in
+  a designated development worktree. Set `"role": "development"` in the example.
+
+The marker selects the applicable [agent instructions](AGENTS.md). It is local,
+Git-ignored configuration: configure each new worktree separately, since cloning,
+branching and merging do not supply it. Preserve `.local/` during cleanup.
+
 ## Results and limitations
 
 SR provides stopping values and engine-generated range grids. TRIM supports
