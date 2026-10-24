@@ -96,6 +96,10 @@ may require explicit mapped paths before separately authorized reuse.
 - Do not create repository-root `tmp/` or `output/` directories for this auxiliary work. Use descriptive subdirectories within `.cache/` instead.
 - The scientific-figure and self-improvement artifact stores and their protected dependencies use the `.local/` locations specified above instead. Figure-version checks remain within their figure records as required by the figure skill.
 
+# File editing
+
+- Never use the `apply_patch` tool or command. Use another file-editing method, such as PowerShell or the required project Python executable.
+
 # Git command execution
 
 - Never use standalone `--` in Git commands; it triggers sandbox permission errors. Use `./` for filenames starting with `-`.
