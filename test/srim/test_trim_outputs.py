@@ -152,6 +152,39 @@ class TestTRIMOutputs(unittest.TestCase):
         result = parse_trim_outputs({"TDATA.txt": data, "SRIM Outputs/TDATA.txt": data})
         self.assertIsNotNone(result["summary"])
 
+    def test_padded_boron_identity(self: TestTRIMOutputs) -> None:
+        """Parse both preserved boron summaries with padded atomic numbers; return None."""
+        for case in ("case-05", "case-06"):
+            with self.subTest(case=case):
+                source = FIXTURES / "recovery/generalized" / case / "native/TDATA.txt"
+                result = parse_trim_summary(source.read_bytes())
+                self.assertEqual(result["projectile"]["symbol"], "B")
+                self.assertEqual(result["projectile"]["atomic_number"], 5)
+                self.assertEqual(result["projectile"]["mass_amu"], "011.0000")
+
+    def test_padded_nitrogen_identity(self: TestTRIMOutputs) -> None:
+        """Parse synthetic nitrogen padding variants without altering printed mass; return None."""
+        source = (FIXTURES / "2013/TDATA.txt").read_bytes()
+        original = b"Ion = Ar (18)   Ion Mass= 039.9620"
+        self.assertIn(original, source)
+        for number in (b"7", b" 7", b"7 ", b" 7 "):
+            with self.subTest(number=number):
+                replacement = b"Ion =  N (" + number + b")   Ion Mass= 015.0001"
+                result = parse_trim_summary(source.replace(original, replacement))
+                self.assertEqual(result["projectile"]["symbol"], "N")
+                self.assertEqual(result["projectile"]["atomic_number"], 7)
+                self.assertEqual(result["projectile"]["mass_amu"], "015.0001")
+
+    def test_malformed_projectile_identity(self: TestTRIMOutputs) -> None:
+        """Reject empty, fractional, signed, split and duplicate identities; return None."""
+        source = (FIXTURES / "2013/TDATA.txt").read_bytes()
+        for token in (b"()", b"( )", b"(7.0)", b"(-7)", b"(1 8)"):
+            with self.subTest(token=token):
+                with self.assertRaisesRegex(ValueError, "missing/ambiguous native identity"):
+                    parse_trim_summary(source.replace(b"(18)", token))
+        with self.assertRaisesRegex(ValueError, "missing/ambiguous native identity"):
+            parse_trim_summary(source + b"\nIon =  B ( 5)   Ion Mass= 011.0000\n")
+
     def test_incomplete_summary(self: TestTRIMOutputs) -> None:
         """Reject a summary missing its mandatory projectile/count evidence; return None."""
         with self.assertRaises(ValueError):

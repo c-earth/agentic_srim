@@ -103,7 +103,7 @@ def parse_trim_summary(contents: bytes) -> JSONObject:
     lines = _trim_text(contents, "TDATA.txt")
     text = "\n".join(lines)
     versions = re.findall(r"^\s*(SRIM-(?:2008|2013)\.[\w.]+)\s*$", text, re.M)
-    ion = re.findall(rf"Ion\s*=\s*(\S+)\s*\((\d+)\)\s+Ion Mass=\s*({NUMBER})", text)
+    ion = re.findall(rf"Ion\s*=\s*(\S+)\s*\(\s*(\d+)\s*\)\s+Ion Mass=\s*({NUMBER})", text)
     energy = re.findall(rf"^Energy\s*=\s*({NUMBER})\s+keV\s*$", text, re.M)
     angle = re.findall(rf"Ion Angle to Surface\s*=\s*({NUMBER})\s+degrees", text)
     counts: JSONObject = {}
