@@ -110,6 +110,33 @@ class TestTRIMOutputs(unittest.TestCase):
         self.assertIsNone(aggregate["columns"][2]["symbol"])
         self.assertIn("aggregate", aggregate["columns"][2]["label"])
 
+    def test_depth_grid_printed_precision(self: TestTRIMOutputs) -> None:
+        """Accept preserved native depth rounding without changing tokens; return None."""
+        root = FIXTURES / "recovery/generalized/case-07/native"
+        files = {p.name: p.read_bytes() for p in root.glob("*.txt")}
+        report = parse_trim_outputs(files)
+        self.assertFalse(any("Depth grid" in issue["message"] for issue in report["issues"]))
+        self.assertEqual(report["profiles"]["RANGE.txt"]["rows"][66][0], "100500.E-01")
+        self.assertEqual(report["profiles"]["LATERAL.txt"]["rows"][66][0], "1005001.E-02")
+
+    def test_depth_grid_precision_boundary(self: TestTRIMOutputs) -> None:
+        """Accept the combined half-digit boundary and reject larger shifts; return None."""
+        root = FIXTURES / "2013"
+        files = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+        original = parse_trim_profile("LATERAL.txt", files["LATERAL.txt"])["rows"][0][0]
+        from decimal import Decimal
+        reference = Decimal(parse_trim_profile("RANGE.txt", files["RANGE.txt"])["rows"][0][0])
+        quantum = Decimal(1).scaleb(reference.as_tuple().exponent)
+        for shift, rejected in ((quantum, False), (quantum * 2, True)):
+            changed = dict(files)
+            token = str(reference + shift)
+            changed["LATERAL.txt"] = files["LATERAL.txt"].replace(original.encode(), token.encode(), 1)
+            report = parse_trim_outputs(changed)
+            issues = [issue for issue in report["issues"] if "Depth grid" in issue["message"]]
+            self.assertEqual(bool(issues), rejected)
+            if rejected:
+                self.assertFalse(report["complete"])
+
     def test_missing_and_truncated_profiles(self: TestTRIMOutputs) -> None:
         """Report absent profiles and reject truncation rather than invent zero rows; return None."""
         self.assertFalse(parse_trim_outputs({})["complete"])

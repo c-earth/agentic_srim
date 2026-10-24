@@ -436,7 +436,14 @@ def parse_trim_outputs(files: Mapping[str, bytes], request: JSONObject | None = 
             depths = [Decimal(row[0]) for row in profile["rows"]]
             if reference_depths is None:
                 reference_depths = depths
-            elif depths != reference_depths:
+            elif len(depths) != len(reference_depths) or any(
+                abs(actual - reference)
+                > (
+                    Decimal("0.5").scaleb(actual.as_tuple().exponent)
+                    + Decimal("0.5").scaleb(reference.as_tuple().exponent)
+                )
+                for actual, reference in zip(depths, reference_depths)
+            ):
                 result["issues"].append({"path": filename, "code": "inconsistent", "line": None, "message": "Depth grid differs from other native profiles"})
             header = "\n".join(_trim_text(selected[filename], filename))
             projectile = re.findall(rf"Ion\s*=\s*(\S+)\s+Energy\s*=\s*({NUMBER})\s*keV", header)
