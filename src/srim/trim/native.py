@@ -203,6 +203,44 @@ def _read_trim_windows(process_id: int) -> list[JSONObject]:
     return windows
 
 
+def _hide_trim_calculation_window(process_id: int) -> None:
+    """Request hiding of visible enabled calculation windows for process_id.
+
+    The caller must verify positive process_id belongs to its owned job.
+    Revalidate each observed handle, PID, class, visibility and enabled state
+    before asynchronously requesting SW_HIDE. Return None without changing
+    dialogs or other processes. Raise ValueError for invalid PID and OSError
+    for unsupported platforms, inspection failures or rejected hide requests.
+    """
+    windows = _read_trim_windows(process_id)
+    user = ctypes.WinDLL("user32", use_last_error=True)
+    user.IsWindow.argtypes = [wintypes.HWND]
+    user.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    user.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    user.IsWindowVisible.argtypes = [wintypes.HWND]
+    user.IsWindowEnabled.argtypes = [wintypes.HWND]
+    user.ShowWindowAsync.argtypes = [wintypes.HWND, ctypes.c_int]
+    user.ShowWindowAsync.restype = wintypes.BOOL
+    for window in windows:
+        if window["class"] != "ThunderRT5MDIForm" or not window["visible"] or not window["enabled"]:
+            continue
+        handle = window["handle"]
+        if not user.IsWindow(handle):
+            continue
+        pid = wintypes.DWORD()
+        if not user.GetWindowThreadProcessId(handle, ctypes.byref(pid)):
+            raise ctypes.WinError(ctypes.get_last_error())
+        if pid.value != process_id:
+            continue
+        class_buffer = ctypes.create_unicode_buffer(256)
+        if not user.GetClassNameW(handle, class_buffer, len(class_buffer)):
+            raise ctypes.WinError(ctypes.get_last_error())
+        if class_buffer.value != "ThunderRT5MDIForm" or not user.IsWindowVisible(handle) or not user.IsWindowEnabled(handle):
+            continue
+        if not user.ShowWindowAsync(handle, subprocess.SW_HIDE):
+            raise ctypes.WinError(ctypes.get_last_error())
+
+
 def _post_trim_command(process_id: int, window: JSONObject, command: JSONObject) -> JSONObject:
     """Revalidate process_id/window/command and post one asynchronous notification.
 
@@ -486,6 +524,8 @@ def execute_trim_process(executable: Path, runtime: Path, *, hide_window: bool, 
                                 raise ctypes.WinError(ctypes.get_last_error())
                             if not member.value:
                                 continue
+                            if hide_window:
+                                _hide_trim_calculation_window(pid)
                             if dialog_state is None:
                                 windows = _filter_trim_startup_windows(_read_trim_windows(pid), startup_state, elapsed)
                                 result["popups"].extend(window for window in windows if window["detection_reason"])

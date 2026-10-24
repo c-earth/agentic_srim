@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from test_trim_runtime import CACHE
-from src.srim.trim.native import _filter_trim_startup_windows, _observe_trim_dialogs, _post_trim_command, _probe_trim_saved_checkpoint, _read_trim_checkpoint_snapshot, _read_trim_window_text, _read_trim_windows, execute_trim_process
+from src.srim.trim.native import _hide_trim_calculation_window, _filter_trim_startup_windows, _observe_trim_dialogs, _post_trim_command, _probe_trim_saved_checkpoint, _read_trim_checkpoint_snapshot, _read_trim_window_text, _read_trim_windows, execute_trim_process
 from src.srim.trim.dialogs import ENGINES, initial_trim_dialog_state
 from test_trim_dialogs import POLICY, WINDOW
 from copy import deepcopy
@@ -456,7 +456,7 @@ class TestTRIMNative(unittest.TestCase):
             buffers = [ctypes.create_string_buffer(144), process_list]
             process = MagicMock(pid=43, returncode=1, _handle=44)
             process.poll.side_effect = [None, 1]
-            popup = {"detection_reason": "dialog", "title": "Native error", "controls": []}
+            popup = {"class": "#32770", "detection_reason": "dialog", "title": "Native error", "controls": []}
             with patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.subprocess.Popen", return_value=process), patch("src.srim.trim.native._read_trim_windows", return_value=[popup]), patch("src.srim.trim.native.ctypes.create_string_buffer", side_effect=buffers), patch("src.srim.trim.native.wintypes.BOOL", return_value=ctypes.c_long(1)), patch("src.srim.trim.native.ctypes.POINTER", return_value=ctypes.c_void_p):
                 report = execute_trim_process(root / "TRIM.exe", root, hide_window=True, timeout_seconds=5, stdout_path=root / "stdout", stderr_path=root / "stderr")
             self.assertEqual(report["termination"], "popup")
@@ -541,6 +541,61 @@ class TestTRIMNative(unittest.TestCase):
         self.assertEqual(text_report["title"], "")
         self.assertTrue(text_report["capture_errors"])
         text_api.SendMessageW.assert_not_called()
+
+    def test_hide_calculation_window(self: TestTRIMNative) -> None:
+        """Revalidate native identity and hide only visible enabled calculation windows; return None."""
+        base = {"handle": 100, "class": "ThunderRT5MDIForm", "visible": True, "enabled": True}
+        for kind in ("normal", "dialog", "disabled", "hidden", "stale", "other-pid", "other-class", "hide-failure", "inspection-failure"):
+            with self.subTest(kind=kind):
+                window = dict(base)
+                if kind == "dialog":
+                    window["class"] = "#32770"
+                if kind in ("disabled", "hidden"):
+                    window["enabled" if kind == "disabled" else "visible"] = False
+                api = MagicMock()
+                api.IsWindow.return_value = kind != "stale"
+                api.GetWindowThreadProcessId.return_value = kind != "inspection-failure"
+                api.ShowWindowAsync.return_value = kind != "hide-failure"
+                buffer = ctypes.create_unicode_buffer("Other" if kind == "other-class" else "ThunderRT5MDIForm", 256)
+                with patch("src.srim.trim.native._read_trim_windows", return_value=[window]), patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.wintypes.DWORD", return_value=ctypes.c_ulong(44 if kind == "other-pid" else 43)), patch("src.srim.trim.native.ctypes.POINTER", return_value=ctypes.c_void_p), patch("src.srim.trim.native.ctypes.create_unicode_buffer", return_value=buffer):
+                    if kind in ("hide-failure", "inspection-failure"):
+                        with self.assertRaises(OSError):
+                            _hide_trim_calculation_window(43)
+                    else:
+                        _hide_trim_calculation_window(43)
+                if kind in ("normal", "hide-failure"):
+                    api.ShowWindowAsync.assert_called_once_with(100, 0)
+                else:
+                    api.ShowWindowAsync.assert_not_called()
+
+    def test_hide_rejects_invalid_pid(self: TestTRIMNative) -> None:
+        """Reject invalid process identifiers before native access; return None."""
+        for pid in (0, -1, True):
+            with self.subTest(pid=pid), self.assertRaises(ValueError):
+                _hide_trim_calculation_window(pid)
+
+    def test_tenth_second_monitoring_and_hide_option(self: TestTRIMNative) -> None:
+        """Honor the hide option for owned PIDs and sleep a tenth second between checks; return None."""
+        for hidden in (False, True):
+            with self.subTest(hidden=hidden), TemporaryDirectory(dir=CACHE) as directory:
+                root = Path(directory)
+                (root / "TRIM.exe").write_bytes(b"fixture")
+                api = MagicMock()
+                api.NtResumeProcess.return_value = 0
+                api.CreateJobObjectW.return_value = 12
+                process_list = ctypes.create_string_buffer(1024)
+                struct.pack_into("IIQ", process_list, 0, 1, 1, 43)
+                buffers = [ctypes.create_string_buffer(144), process_list]
+                process = MagicMock(pid=43, returncode=1, _handle=44)
+                process.poll.return_value = 1
+                with patch("src.srim.trim.native.ctypes.WinDLL", return_value=api), patch("src.srim.trim.native.subprocess.Popen", return_value=process), patch("src.srim.trim.native._read_trim_windows", return_value=[]), patch("src.srim.trim.native._hide_trim_calculation_window") as hide, patch("src.srim.trim.native.ctypes.create_string_buffer", side_effect=buffers), patch("src.srim.trim.native.wintypes.BOOL", return_value=ctypes.c_long(1)), patch("src.srim.trim.native.ctypes.POINTER", return_value=ctypes.c_void_p), patch("src.srim.trim.native.sleep") as pause:
+                    report = execute_trim_process(root / "TRIM.exe", root, hide_window=hidden, timeout_seconds=None, stdout_path=root / "stdout", stderr_path=root / "stderr", cancel=MagicMock(side_effect=[False, True]))
+                self.assertEqual(report["termination"], "cancelled")
+                pause.assert_called_once_with(0.1)
+                if hidden:
+                    hide.assert_called_once_with(43)
+                else:
+                    hide.assert_not_called()
 
     def test_normal_window_allowed(self: TestTRIMNative) -> None:
         """Treat the enabled TRIM MDI calculation window as normal despite its owner; return None."""
