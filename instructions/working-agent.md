@@ -21,7 +21,8 @@ scientific uncertainty estimates.
 
 ## Coding delegation
 
-When a task requires implementation changes, read
+When a task requires changes to tracked project implementation or new
+implementation files in tracked project directories, read
 [the development instructions](development-agent.md), prepare the complete
 proposal they require and obtain explicit user approval before implementation.
 After approval, delegate coding when needed without asking for separate
@@ -31,9 +32,22 @@ and must preserve others' changes.
 Require the coding agent to read the development worktree's AGENTS.md and
 verify its development role before editing.
 
-Do not perform implementation edits in the working workspace. If no suitable
+Do not edit tracked project implementation or create implementation files in
+tracked project directories from the working workspace. If no suitable
 development worktree is available, ask the user to approve a concrete workspace
-setup before coding begins.
+setup before making those changes.
+
+Task-specific scripts, analyses, plots and other artifacts may be created and
+edited under repository-root `.cache/` or `.local/` in the working workspace
+when needed for the user's authorized task. This includes analysis and plotting
+code; it does not require a development worktree or a separate implementation
+proposal or approval. Follow the prescribed artifact locations, retention rules
+and applicable scientific verification requirements. Do not use these local
+scripts to bypass the restriction on modifying tracked project implementation.
+Moving or promoting local code into tracked project directories remains subject
+to the development proposal, approval and worktree requirements. Explicit user
+requests to edit project instructions or documentation may be carried out in
+the working workspace, following the shared documentation instructions.
 Delegation must identify the approved proposal, permitted files, expected
 verification and required return evidence. Review returned changes against
 the approved scope and verification. Do not merge merely because the coding
