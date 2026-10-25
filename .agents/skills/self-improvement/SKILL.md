@@ -17,7 +17,7 @@ Use the protocol's selective independent review when warranted and authorized th
 
 Before trial behavior, reconcile its recorded state, interruptions and boundaries. At the boundary stop trial behavior, restore the baseline safely, and report actual results with adopt, decline or more-data options. Preserve the baseline recovery protocol when trialing changes to this mechanism.
 
-Store evidence and proposals under repository-root `.local/workflow-improvement/`; preserved cache dependencies belong under protected `.local/.cache/`. These are Git-ignored local state, not a durable backup. Consult `.local/migrations/` for historical mappings without rewriting old evidence.
+Store evidence and proposals under repository-root `.local/workflow-improvement/`; preserved dependencies belong under protected `.local/preserved-dependencies/`. These are Git-ignored local state, not a durable backup. Consult `.local/migrations/` for historical mappings without rewriting old evidence.
 
 ## Improvement targets
 

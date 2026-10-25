@@ -63,8 +63,8 @@ Do not automatically clear self-improvement evidence, proposals or snapshots.
 
 Scientific-figure artifacts belong under `.local/scientific-figures/` and
 self-improvement records under `.local/workflow-improvement/`. Their preserved
-cache dependencies belong under `.local/.cache/`, which is protected persistent
-storage despite its name. Routine cleanup of repository-root `.cache/` must not
+dependencies belong under `.local/preserved-dependencies/`, which is protected
+persistent storage. Routine cleanup of repository-root `.cache/` must not
 touch these stores. They remain local ignored state, not a durable backup.
 
 For historical paths, consult the inventories and reports under

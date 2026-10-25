@@ -8,7 +8,7 @@ description: Design and review scientific conceptual figures and quantitative ch
 Communicate the scientific message clearly while preserving the evidence.
 
 Store figure artifacts and records under repository-root `.local/scientific-figures/`.
-Preserved supporting cache dependencies live under protected `.local/.cache/`.
+Preserved supporting dependencies live under protected `.local/preserved-dependencies/`.
 Use inventories under `.local/migrations/` to locate migrated historical paths;
 these mappings do not redirect reads automatically. The skill definitions stay tracked.
 
