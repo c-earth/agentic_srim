@@ -114,6 +114,45 @@ Observations use separate UUID-named files. The primary agent managing a proposa
 
 Validate skill frontmatter and references. Review normal completion, interrupted application/tasks, changed files, rejected adoption, more-data requests, malformed records, and missing measurements. Check approval revisions, trial boundaries, and byte-exact restoration. Apply appropriate verification for future code changes; do not run SR/TRIM calculations or unrelated tests to validate this instruction-only mechanism.
 
+## Evidence-based completion review
+
+Before delivery, check actual task state even when the scientific result or
+primary deliverable succeeded. Reading instructions, recalling a prior check or
+retrieving a status response without assessing its findings does not complete
+this review. Use current evidence for each relevant area:
+
+- Deliverables: verify the requested outputs, their locations and required
+  validation against the user's scope. Distinguish delivered results from
+  proposals, historical checks and unfinished artifacts.
+- Failed or stale records: inspect scoped jobs and simulations, including
+  dependencies, using run_closeout and relevant diagnostics. Account for every
+  failed, invalid or nonterminal record and its effect on the deliverable;
+  succeeded orchestration or scientific output does not clear other records.
+- Live processes: check native processes, background commands and other work
+  started or owned by this task using available ownership and stop evidence.
+  Distinguish stopped work, intentionally continuing work and unknown ownership.
+  An ended tool call, terminal job or released lock alone does not prove shutdown.
+- Outstanding obligations: reconcile requested follow-up, preservation/cleanup
+  commitments and relevant self-improvement status. Inspect pending assessments,
+  proposals still owed, conflicts and active/interrupted trial boundaries when
+  applicable. A saved observation does not discharge required proposal drafting;
+  a pending approval is not completed implementation. Do not reopen unrelated or
+  terminal records, or classify ordinary requested work as an improvement trial.
+
+For each applicable area retain a brief checked, blocked, unverified or
+not-applicable outcome with its evidence and any required next action in the
+existing task record or final response. Do not create a new event or log for
+every successful task merely to satisfy this review. Unknown or unavailable
+process/record evidence must remain unverified, not be reported as clear.
+
+Complete already-authorized follow-up before claiming full completion. If an
+obligation cannot be completed, deliver available results with an explicit
+remaining obligation, blocker, responsible owner when known and next action;
+do not report the whole task as complete. Keep the user-facing closeout concise.
+Review does not authorize additional native runs, process termination, evidence
+deletion or cleanup beyond the user's scope. This is an instruction-based gate,
+not an automatic process supervisor or proof of autonomous compliance.
+
 ## Assessment and independent review
 
 Review a substantial avoidable failure, recurring ineffective pattern or material correction before the next materially affected action when feasible; necessary task recovery takes priority. At completion, briefly review meaningful findings. Do not persist every action or force a proposal for ordinary success. Honor explicit user limits.
@@ -155,6 +194,6 @@ A valid proposal event links observations to exact proposal bytes. For proposal_
 
 ## Behavioral verification
 
-Verify these cases separately from JSON/schema checks: a user-requested instruction or skill edit follows ordinary project authorization without trial/adoption gates; a user-reported project defect followed by an approved fix stays ordinary project work; an additional agent-initiated workflow change retains trial/adoption gates; approval of an explicit trial does not imply adoption; a mistaken classification is closed without undoing the authorized direct change; substantial supported failure leads to unprompted assessment and proposal; recurring ineffective attempts trigger timely review; unknown causes produce a supported narrow correction or explicit deferral; ordinary success avoids forced records and delegation; an existing proposal avoids duplication; user stop/exclusion is honored; reviewer failure does not drop follow-through; missing approval prevents mutation; trial interruption/expiry uses baseline recovery and preserves changed files.
+Verify these cases separately from JSON/schema checks: successful scientific output with a failed/stale dependent run is not a clean closeout; unknown native-process ownership stays unverified; a supported proposal still owed is completed or explicitly reported as blocked; reading instructions alone does not satisfy completion review; an ordinary successful task needs no forced event; a user-requested instruction or skill edit follows ordinary project authorization without trial/adoption gates; a user-reported project defect followed by an approved fix stays ordinary project work; an additional agent-initiated workflow change retains trial/adoption gates; approval of an explicit trial does not imply adoption; a mistaken classification is closed without undoing the authorized direct change; substantial supported failure leads to unprompted assessment and proposal; recurring ineffective attempts trigger timely review; unknown causes produce a supported narrow correction or explicit deferral; ordinary success avoids forced records and delegation; an existing proposal avoids duplication; user stop/exclusion is honored; reviewer failure does not drop follow-through; missing approval prevents mutation; trial interruption/expiry uses baseline recovery and preserves changed files.
 
 Scenario walkthroughs test the design, not actual autonomous behavior. Use authorized real tasks or a separately approved replay to evaluate actions and saved outputs without reminders. Record user prompts, supported dispositions, duplicate/unnecessary proposals, actual review overhead and scope/approval violations. Never infer instruction compliance from valid event hashes alone.

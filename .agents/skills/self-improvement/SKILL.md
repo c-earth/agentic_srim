@@ -39,6 +39,15 @@ Use the protocol's selective independent review when warranted and authorized th
 
 Before trial behavior, reconcile its recorded state, interruptions and boundaries. At the boundary stop trial behavior, restore the baseline safely, and report actual results with adopt, decline or more-data options. Preserve the baseline recovery protocol when trialing changes to this mechanism.
 
+## Completion review
+
+Before delivery, perform the protocol's [evidence-based completion review](references/protocol.md#evidence-based-completion-review)
+of deliverables, failed/stale records, owned live processes and outstanding
+obligations. Scientific success does not discharge process cleanup or required
+follow-up. Reading instructions alone is not completion: check actual state,
+finish authorized obligations and explicitly report anything blocked or unverified.
+Keep this review task-scoped and retain the ordinary-project classification above.
+
 Store evidence and proposals under repository-root `.local/workflow-improvement/`; preserved dependencies belong under protected `.local/preserved-dependencies/`. These are Git-ignored local state, not a durable backup. Consult `.local/migrations/` for historical mappings without rewriting old evidence.
 
 ## Improvement targets
