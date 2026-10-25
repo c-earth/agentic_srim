@@ -183,34 +183,58 @@ Liquid water presents a solid-chemistry stopping-correction prompt. The user man
 
 ## Final coverage and counting
 
-The full original three-suite plan contains 9,232 GUI cases, including repeated baseline groups. The later remaining queue contained 8,404 planned cases before success-based skips. **Neither full plan completed.**
-
-The broad queue was stopped on request after a 20-minute window, by 2026-10-21 07:25:37 EDT (deadline 07:25:33). Its accumulated snapshot had 207 completed cases, 22 incomplete finalized attempts and one interrupted case excluded from the counts. The 234 low-count observations audited at that cutoff had no missing fields, identity errors, source-span mismatches, loaded-to-fresh changes or energy differences.
-
-The targeted plan initially covered all versions; the user then narrowed it to **2013 Standard only**. Fourteen Standard targeted cases had completed, 40 unfinished Standard cases were resumed and passed, and two additional Freon-12 default/phase checks closed the F/Cl gap exposed by changing to a Standard-only histogram: **56 Standard targeted cases, all complete**.
-
-Together with earlier unique Standard smoke captures, this gives **64 distinct successful preset/phase contexts: 25 default and 39 phase cases**. Each retained or freshly reselected element's three-energy vector counts as one observation. Repeated captures of the same source preset/phase context are deduplicated; incomplete captures and manual-order diagnostics are excluded. The two stages are not independent statistical replicates.
+Recorded 2013 Standard checks cover **64 distinct successful preset/phase
+contexts: 25 default and 39 phase cases**. Each element's three-energy vector
+counts as one observation. Repeated captures of the same preset/phase context
+are deduplicated; incomplete captures and manual-order diagnostics are excluded.
+The contributing stages are not independent statistical replicates.
 
 ![All 92 elements: 2013 Standard compound checks](../figures/trim-compound-check-coverage-2013-std.png)
 
-The plot has **404 observations across 53 represented elements**. All 92 are shown; 39 have no compound preset in these dictionaries and therefore zero compound observations. Their pure-element baselines and phase checks were completed separately. Forty-nine represented elements still have fewer than 20 Standard compound observations. Narrowing to Standard reduces the count relative to a combined-version histogram; repeated successes were not used merely to force the count to 20. The two panels use different vertical scales, explicitly labeled.
+The plot contains **404 observations across 53 represented elements**. All 92
+elements are shown; 39 have no compound preset in these dictionaries and
+therefore zero compound observations. Their pure-element baselines and phase
+checks were completed separately. Forty-nine represented elements have fewer
+than 20 Standard compound observations. The two panels use different, labeled
+vertical scales.
 
-All 404 retained/fresh rows passed the final field and identity audit. No loaded-to-fresh mass, stoichiometry or energy changes, source-byte errors, phase-state errors or energy discrepancies were found in these completed contexts. Runtime dictionary restoration and process cleanup passed, original installation hashes remained unchanged, and no copied TIN executable remained running at the final check.
+All 404 observations passed the recorded field and identity audit. No
+loaded-to-fresh mass, stoichiometry or energy changes, source-byte errors,
+phase-state errors or energy discrepancies were found in these contexts.
+Runtime dictionary restoration, installation-hash checks and owned-process
+cleanup passed in those checks. The full mode, mixture, ion, compound and
+compound-phase matrices were not completed.
 
 ## Automation and limitations
 
-The three standalone entry scripts are local, ignored research tools under `.cache/trim-default-checks/`: `element_context.py`, `compound_defaults.py` and `phase_defaults.py`, sharing `common.py`. They create isolated runtimes, record raw UI controls/actions and popup observations, and close only owned executables. They do not launch TRIM transport for ordinary default captures.
+The recorded checks include 21 different-element-layer phase cases. Exact-byte
+extraction/restoration checks covered all 1,059 presets (345/357/357 across the
+three installations), without native launching during that byte check. Native
+successes describe **isolated preset contexts** and do not prove equivalence
+with stock-dictionary interaction.
 
-The random-mixture matrix was generated for each Z=1–92 with one, two and three distinct companion elements; companion choices and integer proportions 1–100 use seed `20261021` and are identical across versions. The selected layer layouts are Si/C, C/Si and Si/O/Au. The incident-ion matrix is H/He/Ar/Au at 10/100/1000 keV. Supported modes are 1–7 for 2008 and 1–8 for 2013. These define approved coverage, not a claim all those cases ran. The 21 different-element-layer phase cases completed after a failed Standard capture was retried; the full remaining mode/mixture/ion matrices did not.
+Incomplete captures included foreground ownership failures, wrong identities
+during reselection and confirmation-text differences. These remain capture or
+interface uncertainties, not established scientific discrepancies. Unknown
+prompts must remain unhandled. A popup monitor can miss a brief event, and a
+forced stop can prevent the final capture record from being written.
 
-Stock-dictionary accessibility activation once selected a different material; its unexpected confirmation was recorded and rejected. Approved single-preset copies preserve exact original header, category, record/comments and final end marker. Exact-byte extraction/restoration checks passed for all 1,059 presets (345/357/357), without native launching during that byte check. Omitting the final marker initially caused an end-of-file error. Native successes describe **isolated preset contexts**, not proven equivalence with stock-dictionary interaction.
-
-Other incomplete cases include foreground ownership failures, wrong identities during fresh reselection, and confirmation-text differences such as W&W becoming WW in captured text. These are unresolved capture/interface issues, not established scientific discrepancies. Unknown prompts remain unhandled. A popup monitor can miss a sufficiently brief event; forced stop can prevent the in-flight case from writing its normal final record, so external cleanup/restoration evidence and incomplete coverage are retained.
-
-The approved resume option skips only complete, warning-free, cleaned-up exact case dictionaries with matching installed source hashes and successful dictionary restoration. The explicit known-chemistry option validates the exact message/title/stage/button layout and records its Yes decision. Neither option authorizes responses to arbitrary warnings.
+The historical helpers formerly under `.cache/trim-default-checks/` are
+unavailable in this workspace. Their recorded options are not current execution
+instructions or authorization for new captures.
 
 ## Retained evidence and next work
 
-Raw local evidence is ignored by Git and is not guaranteed to survive cache cleanup. This document, CSV and figure preserve the numerical findings independently of that cache. The [validation reference](validation.md#trim-native-checks) summarizes later execution coverage. Original investigation notes and evidence paths are preserved in the local documentation migration archive.
+The numerical findings and coverage summary remain in this reference, the
+[complete table](trim-elemental-defaults.csv) and the figure. The original raw
+investigation artifacts and a corresponding historical documentation archive
+are not available in this workspace. The
+[validation reference](validation.md#trim-native-checks) summarizes later
+execution coverage.
 
-Unfinished work is the full mode, mixture, ion, compound and compound-phase coverage, plus resolution of incomplete captures. Testing whether changing ATOMDATA actually changes TIN defaults would establish causality; it has not been performed. Any production integration or native-behavior amendment still needs its own design and verification. Preserve explicit per-entry user overrides rather than treating the measured defaults as universal physical values.
+The full mode, mixture, ion, compound and compound-phase coverage remains
+incomplete. Testing whether changing ATOMDATA changes TIN defaults would
+establish causality; that test has not been performed. Preserve explicit
+per-entry user overrides rather than treating measured defaults as universal
+physical values. Production integration or native-behavior changes require
+their own design and verification.

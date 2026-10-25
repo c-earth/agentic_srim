@@ -22,6 +22,12 @@ Recorded test counts describe their tested snapshots. Run the families relevant
 to a change and report their actual results; passing tests does not establish
 universal correctness.
 
+The [2026-10-25 workspace review](../reviews/2026-10-25-workspace-review.md)
+reconciled 478 passing tests out of 479 across the reviewed snapshot and required
+sandbox reruns. One stale queue-cleanup assertion failed; the suite was not fully
+green. The review records unresolved defects separately from test coverage and
+does not establish independent scientific validity.
+
 The unified/external retrieval release check passed 177 tests across backend
 (45), knowledge (69), case (2), analysis (4), plan (8) and MCP (49), with warnings
 treated as errors. These were synthetic software/stdio checks; no new native
@@ -78,11 +84,11 @@ live/preserved/direct-recovery results. Parent records, installations and settin
 were unchanged in the recorded checks.
 
 The concise aggregate was recorded at
-`.cache/trim-sav-live/checkpoint-first-verification.json`. Exact source notes and
-their evidence paths were preserved during documentation cleanup in the local
-migration archive. Check [the active decision](../decisions/trim-continuation.md)
-and [execution reference](trim-execution-format.md) for current behavior rather
-than interpreting old proposal-stage text as instructions.
+`.cache/trim-sav-live/checkpoint-first-verification.json`. That aggregate and its
+original source notes are unavailable in this workspace; no corresponding
+historical documentation archive is identifiable in the local migration
+inventory. Check [the active decision](../decisions/trim-continuation.md) and
+[execution reference](trim-execution-format.md) for current behavior.
 
 The [recovery guide](../guides/trim-checkpoint-recovery.md#precision-and-validation)
 retains measured cell discrepancies and the continued-versus-uninterrupted

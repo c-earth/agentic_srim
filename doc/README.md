@@ -34,6 +34,7 @@ Start with [your first SR calculation](guides/getting-started.md), or use the
 ## Check support and known limitations
 
 - [Verification commands and recorded native coverage](reference/validation.md)
+- [Open workspace review findings](reviews/2026-10-25-workspace-review.md)
 - [Current TRIM continuation decision](decisions/trim-continuation.md)
 
 Guides describe how to perform a task; references define exact interfaces and
