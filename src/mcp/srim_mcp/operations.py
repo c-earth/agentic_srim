@@ -20,6 +20,7 @@ from src.backend.resources import ResourceReference, resolve_resource, verify_re
 from src.knowledge.index import initialize_index, rebuild_index, update_index
 from src.knowledge.search import search_inputs
 from src.knowledge.source import project_simulation_inputs, read_source_record
+from src.mcp.common.diagnostics import read_run_diagnostics
 from src.mcp.common.contracts import ServerContext, canonical_bytes, load_json
 from src.mcp.common.files import allowed_source, publish_files, read_verified_chunk, safe_path
 from src.srim.cab.strengths import create_cab_variant
@@ -118,7 +119,7 @@ def read_operation(name: str, arguments: JSONObject, context: ServerContext) -> 
                 issues.append({"id": target.name, "message": str(error)})
         return {"total": len(matches), "offset": args["offset"], "limit": args["limit"], "matches": matches[args["offset"]:args["offset"] + args["limit"]], "issues": issues}
     if name == "simulation_get":
-        return {"metadata": read_simulation(paths, args["simulation_id"]), "verification": "structural metadata only; use source_get and verified file reads"}
+        return {"metadata": read_simulation(paths, args["simulation_id"]), "diagnostics": read_run_diagnostics(context, args["simulation_id"]), "verification": "structural metadata only; use source_get and verified file reads"}
     if name == "source_get":
         return project_simulation_inputs(paths, args["simulation_id"])
     if name == "source_read":
@@ -180,6 +181,8 @@ def read_operation(name: str, arguments: JSONObject, context: ServerContext) -> 
         return {"source_sha256": hashlib.sha256(compound_bytes).hexdigest(), "atomdata_sha256": hashlib.sha256(atom_bytes).hexdigest(), "total": len(matches), "offset": args["offset"], "limit": args["limit"], "matches": matches[args["offset"]:args["offset"] + args["limit"]]}
     if name in ("result_read", "table_read", "trim_availability_get"):
         simulation_id = args["simulation_id"]
+        if name == "result_read" and args["section"] == "diagnostics":
+            return read_run_diagnostics(context, simulation_id)
         source = project_simulation_inputs(paths, simulation_id)
         metadata = read_simulation(paths, simulation_id)
         if name == "trim_availability_get":
@@ -189,7 +192,7 @@ def read_operation(name: str, arguments: JSONObject, context: ServerContext) -> 
         if name == "result_read" and args["section"] in ("saved-values", "config-integrity", "availability"):
             result_path = "output/parsed/" + args["section"] + ".json"
         if result_path not in by_path:
-            raise ValueError("unavailable: requested saved result is absent")
+            raise ValueError("unavailable: requested saved result is absent; inspect simulation_get or result_read section diagnostics for recorded causes and unresolved gaps")
         file = by_path[result_path]
         if file["size_bytes"] > context.limits["max_result_bytes"]:
             raise ValueError("too-large: result JSON exceeds parsing cap; use source_get/source_read")

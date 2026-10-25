@@ -4,6 +4,46 @@
 
 Two independent local stdio servers expose the Python APIs. Scientific execution stays in srim_mcp; project organization stays in project_mcp. Their protocol code is grouped under src/mcp. Existing source APIs import no MCP modules. Each server has a separate workspace singleton lock, job journal and tool namespace.
 
+## Run diagnostic report
+
+Both servers publish `mcp.run-diagnostics.v1`. `simulation_get` and `run_get`
+include it as `diagnostics`; scientific `result_read` exposes the same object
+through section `diagnostics`, without requiring parsed output or input replay.
+Existing metadata, lifecycle status and job/error envelopes remain unchanged.
+
+The closed report contains `schema_version` (1), `simulation_id`, `run_status`,
+`investigation_status`, `recorded_failure`, `observations`, `unresolved`,
+`evidence`, `issues` and `omitted_observations`. Investigation status is
+`not-terminal`, `no-recorded-failure`, `reported` or `incomplete`; it is not a
+scientific validation status. `recorded_failure` preserves the existing metadata
+message/exit-code object or null.
+
+Each observation contains `category`, nullable `code`, `message`, `evidence` and
+`cause_status`. Categories distinguish native, parser, monitoring,
+input-validation, input-integrity, saved-value-mismatch, output-requirement,
+preservation, timeout, cancellation and unknown findings. `recorded` means
+producer-attributed; `unresolved` means no supported classification. Neither
+establishes an independent root-cause investigation. Evidence entries pair a
+simulation file reference with a JSON pointer; references pin exact hashes and
+sizes without requiring successful input reconstruction.
+
+The reader verifies inventoried execution, parsed-result, saved-value,
+configuration-integrity and availability JSON where present. It records missing
+execution evidence and rejects malformed, unsupported, unsafe, changed or
+oversized files as issues. It does not scan arbitrary files, parse native output
+again or expose exception stacks. Metadata changes during a read fail as stale.
+Existing metadata readers may create their normal lock files.
+
+Reports contain at most 64 observations and 64 distinct unresolved messages;
+messages have a 512-character limit with an explicit truncation marker.
+`omitted_observations` counts findings beyond the observation limit. Evidence
+references pin the original reports; full file reads retain existing source
+eligibility checks. They do not grant new artifact_read permissions. Reads use `max_result_bytes`
+per diagnostic file and retain the normal final `max_response_bytes` check.
+Raw native outputs remain available through existing verified file reads, subject
+to their eligibility checks. The report does not decide scientific exclusion,
+change execution state or launch recovery, retry or cleanup.
+
 ## Discovery and contracts
 
 Call capabilities_list for compact cards, capability_get for exact side effects/compatibility/units/examples, schema_get for expanded Draft 2020-12 schemas, and example_get for editable requests. A capability detail can describe an advanced Python-only API and intentionally have no executable tool_names. Implementation, MCP exposure, engine compatibility, reviewed automation, output availability and evidence strength are distinct fields.

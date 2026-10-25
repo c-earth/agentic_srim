@@ -58,6 +58,28 @@ After the calculation ends, call run_source or srim_mcp source_get to obtain the
 
 physics_job_get is a read-only view of the scientific server's journal; project_mcp cannot use it to start, cancel, retry, resume or edit a calculation. Newly allocated/running records are available through run metadata tools, while pinned native input evidence requires the existing terminal-source eligibility checks.
 
+## Investigate failed runs before exclusion
+
+Read `run_get` in project MCP or `simulation_get` in scientific MCP for a
+structured `diagnostics` report. Scientific MCP also accepts
+`result_read(section="diagnostics")`, even when parsed results are absent or
+input replay fails. These readers inspect existing evidence; they do not rerun,
+repair or reparse calculations.
+
+Review each independently recorded finding and its pinned file/JSON pointer.
+Native execution errors, parser rejections, monitoring failures and input
+validation errors are distinct. A clean native exit can accompany a parser
+rejection; a monitoring failure does not prove the native process failed.
+Unknown codes, missing evidence and unexplained root causes remain explicit.
+Record what failed, what evidence remains usable for the objective, the reason
+for exclusion and any unresolved cause. The report does not automatically decide
+scientific eligibility or exclusion.
+
+Reports preserve producer attribution rather than independently proving causes.
+Missing, malformed, altered or oversized diagnostic files become issues without
+hiding other verified findings. Nonterminal runs have no sealed final diagnostic
+report. Restart the owning MCP connections after updating the server code.
+
 ## Record an analysis
 
 analysis_create records a draft question, explicit method, selected source/files, parameters and required eligibility booleans. The method is ad-hoc with a full description or references an exact registered analysis version. Active registered collections initially contain no methods. No analysis_run or arbitrary Python executor is exposed.

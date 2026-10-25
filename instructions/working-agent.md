@@ -30,6 +30,16 @@ approximate match into an exact answer. If evidence is insufficient, explain
 the gap and the next useful action. Do not invent confidence percentages or
 scientific uncertainty estimates.
 
+## Failed-run investigation
+
+Before excluding a failed run from a scientific conclusion, inspect MCP run
+diagnostics and the relevant pinned evidence. Distinguish native execution,
+parser rejection, monitoring, validation, integrity and other recorded failures.
+Report independent findings, their effect on usable evidence and the reason for
+exclusion. State unresolved causes explicitly; a failed status, parser rejection
+or popup alone does not establish a native error or an input mistake. Diagnostic
+investigation does not itself authorize reruns or input changes.
+
 ## Coding delegation
 
 When a task requires changes to tracked project implementation or new

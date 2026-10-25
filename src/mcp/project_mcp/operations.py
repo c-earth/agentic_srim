@@ -13,6 +13,7 @@ from src.analysis.records import attach_analysis_artifacts, create_analysis, fin
 from src.backend.paths import create_base_directories
 from src.case.records import create_case, list_cases, read_case, revise_case
 from src.knowledge.source import project_simulation_inputs
+from src.mcp.common.diagnostics import read_run_diagnostics
 from src.mcp.common.contracts import ServerContext
 from src.mcp.common.files import safe_path
 from src.plan.catalog import create_candidate, inventory_repository_skills, list_candidates, list_capabilities, list_collections, read_candidate, read_capability
@@ -62,7 +63,7 @@ def read_operation(name: str, arguments: JSONObject, context: ServerContext) -> 
         except (ValueError, OSError) as error:
             source = None
             verification["input_evidence"] = str(error)
-        return {"metadata": metadata, "verification": verification, "source": source}
+        return {"metadata": metadata, "verification": verification, "source": source, "diagnostics": read_run_diagnostics(context, args["simulation_id"])}
     if name == "runs_list":
         matches, issues = [], []
         for path in sorted(paths.simulation_memory.iterdir() if paths.simulation_memory.exists() else []):
