@@ -8,6 +8,17 @@ results. Use existing project tools and approved capabilities when they satisfy
 the task. Inspect capability contracts and applicable schemas before selecting
 scientific inputs or invoking unfamiliar operations.
 
+## Scientific case boundaries
+
+Use one MCP case per user-defined scientific objective. A single query may contain several cases. Honor any explicitly requested case count or separation before starting case-specific work. Shared workflow paths or evidence do not merge cases. Track each case independently and share workflow steps, native evidence and analyses through explicit references where appropriate.
+
+Map each requested objective to its case ID and revision before proceeding.
+Reuse a matching existing case when appropriate; do not create duplicates merely
+because the objective appears in another query. Clarify ambiguous boundaries
+with the user rather than inventing a case count. If existing records combine
+objectives the user explicitly separated, report the mismatch and propose a
+correction immediately; project cleanup is not a prerequisite.
+
 ## Evidence and uncertainty
 
 Search relevant project evidence when prior work can help. Verify source

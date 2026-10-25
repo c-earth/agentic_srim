@@ -4,9 +4,25 @@
 
 Use project_mcp to organize evidence and srim_mcp to prepare/run calculations. An agent session can create multiple cases for different tasks, interleave updates to them, and attach the same run or analysis to several cases. Every update names its case ID and expected revision explicitly. There is no session-wide current-case pointer or exclusive session owner.
 
-## Multiple cases in one session
+## Scientific objectives define cases
 
-Call case_create twice with different request UUIDs and explicit specs, for example:
+Use one MCP case per user-defined scientific objective. A single query may contain several cases. Honor any explicitly requested case count or separation before starting case-specific work. Shared workflow paths or evidence do not merge cases. Track each case independently and share workflow steps, native evidence and analyses through explicit references where appropriate.
+
+Map objectives to explicit case IDs/revisions before proceeding. Reuse a matching
+existing case where appropriate. Different inputs or execution paths alone do
+not establish separate objectives. If boundaries are ambiguous, clarify them
+with the user. If existing records combine explicitly separated objectives,
+report the mismatch and propose a correction without waiting for project cleanup.
+The coordinating agent applies this rule; MCP does not parse a user query or
+automatically split existing records. No additional case fields are required.
+
+## Multiple cases in one query
+
+For example, a user may ask for two separate objectives using the same stopping
+calculations: compare stopping across energies and assess the range trend. Create
+a case for each objective with different request UUIDs and explicit specs. Two is
+only an example; use the user-defined objectives and requested separation.
+For the first objective:
 
 ```json
 {
@@ -22,7 +38,7 @@ Call case_create twice with different request UUIDs and explicit specs, for exam
 }
 ```
 
-The second case can describe a layered-target continuation study and use a fresh UUID. Poll each returned job, then read its result reference with artifact_read to obtain the distinct case IDs/revisions. Keep those references in the coordinating agent's task context. To edit one case, call case_revise with that case_id, expected_revision and a complete updated spec. Omitted fields are not silently retained; a stale revision fails with conflict rather than overwriting another task's work.
+For the second case, use a fresh UUID, title "Range trend study" and question "How does projected range change across the selected energies?". Both cases can reference the same eligible native runs, while retaining independent status and analysis findings. Poll each returned job, then read its result reference with artifact_read to obtain the distinct case IDs/revisions. Keep those references in the coordinating agent's task context. To edit one case, call case_revise with that case_id, expected_revision and a complete updated spec. Omitted fields are not silently retained; a stale revision fails with conflict rather than overwriting another task's work.
 
 Case status open/paused/completed/archived is an organizational label. Completing or archiving a case neither certifies calculations nor deletes any native evidence. Case revisions are immutable JSON under case/<case_id>/revisions, with a verified current.json pointer and preceding revision hash. Explicitly named empty backend allocations can be initialized; unknown older layouts are not migrated implicitly.
 

@@ -12,6 +12,13 @@ The scientific catalog exposes 38 tools, 61 capability cards and 28 examples. It
 
 environment_get reports installation.sr and installation.trim readiness and file identities independently. Default-resource readiness is separate from executable presence and from reviewed TRIM dialog-policy compatibility.
 
+Use one MCP case per user-defined scientific objective, including multiple cases
+within one query. Honor explicit case counts or separation before case-specific
+work; shared workflow paths or evidence do not merge cases. Track cases
+independently and share pinned evidence through explicit references. The agent
+applies these boundaries; MCP does not infer them from query text or add required
+target, recipe or validation fields. Cleanup is not a prerequisite.
+
 project_mcp exposes 33 tools. It records multiple independent cases, terminal native evidence, analysis provenance, unapproved capability candidates and improvement evidence. Active reusable workflow/analysis/skill collections start empty. It has no native execution, generic code executor, trial-approval or candidate-promotion tool.
 
 improvement_assess accepts closed project.assessment.v2 details plus the standard request_id and publishes one immutable version-2 assessment event through the normal mutation-job envelope. It grants no approval. Existing event kinds remain version 1. improvement_status retains its existing fields and adds assessments and pending_assessments; malformed records and chain conflicts remain issues. See the [protocol](../../.agents/skills/self-improvement/references/protocol.md#assessment-event-extension) for the exact record contract.
