@@ -75,6 +75,8 @@ Prepare tasks before dispatch. `run_sr_batch` accepts `PreparedSRTask` objects; 
 
 SR batches clean verified working runtimes after the whole batch finishes and retain empty workers. TRIM batches retain working runtimes by default; request `cleanup=True` explicitly. Separate `cleanup_sr_batch` and `cleanup_trim_batch` APIs provide verified cleanup. Unknown, active, changed, unsafe, or unpreserved contents are retained and reported. Direct runs do not automatically delete working runtimes. Cleanup outcomes are separate from calculation success.
 
+Execution failures attempt [failure finalization](../reference/api.md) independently of evidence-preservation failures. Forced orchestration termination can still leave a simulation marked `running`: an [interrupted MCP job](../reference/mcp-format.md) does not establish that its simulation failed or its native processes stopped. Closeout checks every started simulation, including dependencies, and reports stale or unresolved records with their evidence and recovery action until native ownership and terminal publication are resolved. Active long runs and unstarted preparations are distinguished from stale records.
+
 ## Files, evidence, and retention
 
 ```text

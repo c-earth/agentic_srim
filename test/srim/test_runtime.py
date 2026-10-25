@@ -670,12 +670,99 @@ class TestSRRuntime(unittest.TestCase):
         self.assertEqual(blocker.read_bytes(), b"keep")
         self.assertEqual(read_simulation(self.paths, self.created.path.name)["status"], "created")
 
+    def test_run_sr_unexpected_exception_finalizes(self: TestSRRuntime) -> None:
+        """Verify self's unexpected exception finalizes with isolated mocked execution; return None."""
+        runtime = _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
+        original = RuntimeError("unexpected execution failure")
+        self.process_error = original
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=self._fake_sr_run):
+            with self.assertRaises(type(original)) as caught:
+                run_sr_simulation(self.paths, self.config, self.created.path.name, runtime)
+        self.assertIs(caught.exception, original)
+        metadata = read_simulation(self.paths, self.created.path.name)
+        self.assertEqual(metadata["status"], "failed")
+        self.assertTrue(any("SR execution retained runtime" in note for note in original.__notes__))
+        self.assertEqual((self.created.path / "output/raw/stopping.txt").read_bytes(), self.engine_output)
+
+    def test_run_sr_system_exit_finalizes(self: TestSRRuntime) -> None:
+        """Verify self's system exit finalizes with isolated mocked execution; return None."""
+        runtime = _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
+        original = SystemExit("orchestration stopped")
+        self.process_error = original
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=self._fake_sr_run):
+            with self.assertRaises(type(original)) as caught:
+                run_sr_simulation(self.paths, self.config, self.created.path.name, runtime)
+        self.assertIs(caught.exception, original)
+        metadata = read_simulation(self.paths, self.created.path.name)
+        self.assertEqual(metadata["status"], "failed")
+        self.assertTrue(any("SR execution retained runtime" in note for note in original.__notes__))
+        self.assertEqual((self.created.path / "output/raw/stopping.txt").read_bytes(), self.engine_output)
+
+    def test_run_sr_preservation_failure_still_finalizes(self: TestSRRuntime) -> None:
+        """Verify self's preservation failure still finalizes with isolated mocked execution; return None."""
+        runtime = _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
+        original = RuntimeError("unexpected execution failure")
+        self.process_error = original
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=self._fake_sr_run), patch("src.srim.sr.execution.preserve_sr_runtime", side_effect=OSError("preservation unavailable")):
+            with self.assertRaises(type(original)) as caught:
+                run_sr_simulation(self.paths, self.config, self.created.path.name, runtime)
+        self.assertIs(caught.exception, original)
+        metadata = read_simulation(self.paths, self.created.path.name)
+        self.assertEqual(metadata["status"], "failed")
+        self.assertTrue(any("Runtime preservation also failed" in note for note in original.__notes__))
+        self.assertEqual((self.created.path / "output/raw/stopping.txt").read_bytes(), self.engine_output)
+
+    def test_run_sr_diagnostic_failure_still_finalizes(self: TestSRRuntime) -> None:
+        """Verify self's diagnostic failure still finalizes with isolated mocked execution; return None."""
+        runtime = _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
+        original = RuntimeError("unexpected execution failure")
+        self.process_error = original
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=self._fake_sr_run), patch("src.srim.sr.execution._write_json", side_effect=OSError("diagnostics unavailable")):
+            with self.assertRaises(type(original)) as caught:
+                run_sr_simulation(self.paths, self.config, self.created.path.name, runtime)
+        self.assertIs(caught.exception, original)
+        metadata = read_simulation(self.paths, self.created.path.name)
+        self.assertEqual(metadata["status"], "failed")
+        self.assertTrue(any("Execution diagnostics also failed" in note for note in original.__notes__))
+        self.assertEqual((self.created.path / "output/raw/stopping.txt").read_bytes(), self.engine_output)
+
+    def test_run_sr_finalization_failure_is_reported(self: TestSRRuntime) -> None:
+        """Verify self's finalization failure is reported with isolated mocked execution; return None."""
+        runtime = _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
+        original = RuntimeError("unexpected execution failure")
+        self.process_error = original
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=self._fake_sr_run), patch("src.srim.sr.execution.finish_simulation", side_effect=OSError("metadata unavailable")):
+            with self.assertRaises(type(original)) as caught:
+                run_sr_simulation(self.paths, self.config, self.created.path.name, runtime)
+        self.assertIs(caught.exception, original)
+        metadata = read_simulation(self.paths, self.created.path.name)
+        self.assertEqual(metadata["status"], "running")
+        self.assertTrue(any("Failed finalization also failed" in note for note in original.__notes__))
+        self.assertEqual((self.created.path / "output/raw/stopping.txt").read_bytes(), self.engine_output)
+
+    def test_run_sr_terminal_record_not_reclassified(self: TestSRRuntime) -> None:
+        """Keep self's published success unchanged when indexing is interrupted; return None."""
+        runtime = _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
+        original = KeyboardInterrupt("notification interrupted")
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=self._fake_sr_run), patch("src.knowledge.index.notify_simulation_finished", side_effect=original):
+            with self.assertRaises(KeyboardInterrupt) as caught:
+                run_sr_simulation(self.paths, self.config, self.created.path.name, runtime)
+        self.assertIs(caught.exception, original)
+        metadata = read_simulation(self.paths, self.created.path.name)
+        self.assertEqual(metadata["status"], "succeeded")
+        self.assertIsNone(metadata["failure"])
+        self.assertIsNotNone(metadata["finished_at"])
+        self.assertFalse(any("finalization also failed" in note for note in original.__notes__))
+
     def test_run_sr_interruption(self: TestSRRuntime) -> None:
         """Check self's interrupted child preserves output, records failed status, and reraises interruption; return None or assertions using mocks."""
         runtime = _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
-        self.process_error = KeyboardInterrupt()
-        with patch("src.srim.sr.execution.subprocess.run", side_effect=self._fake_sr_run), self.assertRaises(KeyboardInterrupt):
+        original = KeyboardInterrupt()
+        self.process_error = original
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=self._fake_sr_run), self.assertRaises(KeyboardInterrupt) as caught:
             run_sr_simulation(self.paths, self.config, self.created.path.name, runtime)
+        self.assertIs(caught.exception, original)
+        self.assertTrue(any("SR execution retained runtime" in note for note in original.__notes__))
         result = read_simulation(self.paths, self.created.path.name)
         self.assertEqual(result["status"], "failed")
         self.assertTrue(result["failure"]["message"].startswith("interrupted:"))

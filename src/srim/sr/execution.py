@@ -162,10 +162,12 @@ def run_sr_simulation(
     Return terminal metadata, including failed metadata for expected preflight,
     launch, timeout, nonzero-exit, integrity, missing-output, or parsing failures.
     Invalid caller/state/collision checks and worker contention raise before
-    ownership. Propagate filesystem/publication errors after best-effort failed
-    finalization, preserving evidence and exception notes. Interruptions are
-    re-raised after the same finalization attempt. Preserve the exact runtime
-    before terminal publication. Never retry or delete a worker here.
+    ownership. Propagate unexpected errors after independent best-effort evidence
+    preservation and failed finalization, retaining secondary failures in notes.
+    Interruptions are re-raised after the same finalization attempt. Normal
+    completion preserves the exact runtime before terminal publication; failure
+    publication is attempted even if preservation fails. Never retry or delete
+    a worker here.
     """
     if type(config.hide_sr_window) is not bool:
         raise ValueError("config.hide_sr_window must be a boolean")
@@ -271,26 +273,31 @@ def run_sr_simulation(
             failure = None if diagnostic["message"] is None else {"message": f'{diagnostic["stage"]}: {diagnostic["message"]}', "exit_code": diagnostic["exit_code"]}
             preserve_sr_runtime(paths, simulation_id, runtime)
             return finish_simulation(paths, config, simulation_id, failure)
-        except (OSError, ValueError, KeyboardInterrupt) as error:
+        except BaseException as error:
             if isinstance(error, OSError) and diagnostic["stage"] == "preflight" and error.errno in (errno.EACCES, errno.EAGAIN, errno.EDEADLK) and error.filename is None:
                 raise
-            if isinstance(error, KeyboardInterrupt):
+            if isinstance(error, (KeyboardInterrupt, SystemExit)):
                 diagnostic["stage"] = "interrupted"
             diagnostic["message"] = str(error) or type(error).__name__
             try:
                 if not preservation_attempted and not os.path.lexists(output_path):
                     _preserve_sr_output(runtime, record)
-            except (OSError, ValueError) as preservation_error:
+            except BaseException as preservation_error:
                 error.add_note(f"Output preservation also failed: {preservation_error}")
             try:
                 if not os.path.lexists(execution_path):
                     _write_json(execution_path, diagnostic)
-            except (OSError, ValueError) as diagnostic_error:
+            except BaseException as diagnostic_error:
                 error.add_note(f"Execution diagnostics also failed: {diagnostic_error}")
             try:
                 preserve_sr_runtime(paths, simulation_id, runtime)
-                finish_simulation(paths, config, simulation_id, {"message": f'{diagnostic["stage"]}: {diagnostic["message"]}', "exit_code": diagnostic["exit_code"]})
-            except (OSError, ValueError) as finalization_error:
+            except BaseException as preservation_error:
+                error.add_note(f"Runtime preservation also failed: {preservation_error}")
+            try:
+                current = read_simulation(paths, simulation_id)
+                if current["status"] in ("created", "running"):
+                    finish_simulation(paths, config, simulation_id, {"message": f'{diagnostic["stage"]}: {diagnostic["message"]}', "exit_code": diagnostic["exit_code"]})
+            except BaseException as finalization_error:
                 error.add_note(f"Failed finalization also failed: {finalization_error}")
             error.add_note(f"SR execution retained runtime {runtime} and record {record}")
             raise

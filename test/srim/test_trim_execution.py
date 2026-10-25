@@ -16,6 +16,7 @@ from _fixtures import make_test_project
 from test_trim_inputs import TRIM_INSTALLATION_FILES, TRIM_REQUEST, TRIM_SELECTIONS
 from test_trim_runtime import CACHE
 from src.backend.records import CreateRequest, create_directories
+from src.srim.common.records import read_simulation
 from src.srim.trim.defaults import switch_trim_defaults
 from src.srim.trim.execution import _trim_completion, run_trim_simulation
 from src.srim.trim.models import ResolvedTRIMInputs
@@ -285,7 +286,112 @@ class TestTRIMExecution(unittest.TestCase):
             with patch("src.srim.trim.execution.execute_trim_process", side_effect=KeyboardInterrupt):
                 with self.assertRaises(KeyboardInterrupt):
                     run_trim_simulation(paths, config, created.path.name, runtime)
+            self.assertEqual(read_simulation(paths, created.path.name)["status"], "failed")
             verify_preserved_trim_runtime(paths, created.path.name, runtime)
+
+    def test_preservation_failure_still_finalizes(self: TestTRIMExecution) -> None:
+        """Verify self's preservation failure still finalizes after a stopped native failure; return None."""
+        with TemporaryDirectory(dir=CACHE) as directory:
+            paths, config, worker = make_test_project(Path(directory))
+            for name, data in TRIM_INSTALLATION_FILES.items():
+                (config.srim_root / name).write_bytes(data)
+            switch_trim_defaults(paths, config)
+            inputs = resolve_trim_inputs(paths, config, worker, TRIM_REQUEST, TRIM_SELECTIONS)
+            created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
+            runtime = prepare_trim_simulation(paths, config, created, worker, inputs)
+            original = RuntimeError("native execution failed")
+            with patch("src.srim.trim.execution.execute_trim_process", side_effect=original), patch("src.srim.trim.execution.preserve_trim_runtime", side_effect=OSError("preservation unavailable")):
+                with self.assertRaises(RuntimeError) as caught:
+                    run_trim_simulation(paths, config, created.path.name, runtime)
+            self.assertIs(caught.exception, original)
+            metadata = read_simulation(paths, created.path.name)
+            self.assertEqual(metadata["status"], "failed")
+            self.assertTrue(any("TRIM runtime preservation failed" in note for note in original.__notes__))
+
+    def test_diagnostic_failure_still_finalizes(self: TestTRIMExecution) -> None:
+        """Verify self's diagnostic failure still finalizes after a stopped native failure; return None."""
+        with TemporaryDirectory(dir=CACHE) as directory:
+            paths, config, worker = make_test_project(Path(directory))
+            for name, data in TRIM_INSTALLATION_FILES.items():
+                (config.srim_root / name).write_bytes(data)
+            switch_trim_defaults(paths, config)
+            inputs = resolve_trim_inputs(paths, config, worker, TRIM_REQUEST, TRIM_SELECTIONS)
+            created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
+            runtime = prepare_trim_simulation(paths, config, created, worker, inputs)
+            original = RuntimeError("native execution failed")
+            with patch("src.srim.trim.execution.execute_trim_process", side_effect=original), patch("src.srim.trim.execution._write_json", side_effect=OSError("diagnostics unavailable")):
+                with self.assertRaises(RuntimeError) as caught:
+                    run_trim_simulation(paths, config, created.path.name, runtime)
+            self.assertIs(caught.exception, original)
+            metadata = read_simulation(paths, created.path.name)
+            self.assertEqual(metadata["status"], "failed")
+            self.assertTrue(any("TRIM execution diagnostics failed" in note for note in original.__notes__))
+
+    def test_finalization_failure_is_reported(self: TestTRIMExecution) -> None:
+        """Verify self's finalization failure is reported after a stopped native failure; return None."""
+        with TemporaryDirectory(dir=CACHE) as directory:
+            paths, config, worker = make_test_project(Path(directory))
+            for name, data in TRIM_INSTALLATION_FILES.items():
+                (config.srim_root / name).write_bytes(data)
+            switch_trim_defaults(paths, config)
+            inputs = resolve_trim_inputs(paths, config, worker, TRIM_REQUEST, TRIM_SELECTIONS)
+            created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
+            runtime = prepare_trim_simulation(paths, config, created, worker, inputs)
+            original = RuntimeError("native execution failed")
+            with patch("src.srim.trim.execution.execute_trim_process", side_effect=original), patch("src.srim.trim.execution.finish_simulation", side_effect=OSError("metadata unavailable")):
+                with self.assertRaises(RuntimeError) as caught:
+                    run_trim_simulation(paths, config, created.path.name, runtime)
+            self.assertIs(caught.exception, original)
+            metadata = read_simulation(paths, created.path.name)
+            self.assertEqual(metadata["status"], "running")
+            self.assertTrue(any("TRIM finalization failed" in note for note in original.__notes__))
+
+    def test_unstopped_process_remains_unresolved(self: TestTRIMExecution) -> None:
+        """Keep self's running record and live runtime unresolved after stop failure; return None."""
+        with TemporaryDirectory(dir=CACHE) as directory:
+            paths, config, worker = make_test_project(Path(directory))
+            for name, data in TRIM_INSTALLATION_FILES.items():
+                (config.srim_root / name).write_bytes(data)
+            switch_trim_defaults(paths, config)
+            inputs = resolve_trim_inputs(paths, config, worker, TRIM_REQUEST, TRIM_SELECTIONS)
+            created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
+            runtime = prepare_trim_simulation(paths, config, created, worker, inputs)
+            original = RuntimeError("native process could not be stopped")
+            original.trim_job_stopped = False
+            with patch("src.srim.trim.execution.execute_trim_process", side_effect=original), patch("src.srim.trim.execution.preserve_trim_runtime") as preserve:
+                with self.assertRaises(RuntimeError) as caught:
+                    run_trim_simulation(paths, config, created.path.name, runtime)
+            self.assertIs(caught.exception, original)
+            preserve.assert_not_called()
+            metadata = read_simulation(paths, created.path.name)
+            self.assertEqual(metadata["status"], "running")
+            self.assertIsNone(metadata["finished_at"])
+            self.assertTrue(any("process ownership unresolved" in note for note in original.__notes__))
+            report = json.loads((created.path / "output/raw/execution.json").read_bytes())
+            self.assertEqual(report["failure"]["code"], "monitor")
+            self.assertTrue(runtime.is_dir())
+
+    def test_terminal_record_not_reclassified(self: TestTRIMExecution) -> None:
+        """Keep self's published failure unchanged when indexing is interrupted; return None."""
+        with TemporaryDirectory(dir=CACHE) as directory:
+            paths, config, worker = make_test_project(Path(directory))
+            for name, data in TRIM_INSTALLATION_FILES.items():
+                (config.srim_root / name).write_bytes(data)
+            switch_trim_defaults(paths, config)
+            inputs = resolve_trim_inputs(paths, config, worker, TRIM_REQUEST, TRIM_SELECTIONS)
+            created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
+            runtime = prepare_trim_simulation(paths, config, created, worker, inputs)
+            original = KeyboardInterrupt("notification interrupted")
+            process = {"pid": 42, "exit_code": 0, "elapsed_seconds": 0.1, "termination": "exit", "popups": [], "monitor_errors": []}
+            with patch("src.srim.trim.execution.execute_trim_process", return_value=process), patch("src.knowledge.index.notify_simulation_finished", side_effect=original):
+                with self.assertRaises(KeyboardInterrupt) as caught:
+                    run_trim_simulation(paths, config, created.path.name, runtime)
+            self.assertIs(caught.exception, original)
+            metadata = read_simulation(paths, created.path.name)
+            self.assertEqual(metadata["status"], "failed")
+            self.assertIn("missing", metadata["failure"]["message"])
+            self.assertIsNotNone(metadata["finished_at"])
+            self.assertFalse(any("finalization failed" in note for note in original.__notes__))
 
     def test_resume_preserves_parent(self: TestTRIMExecution) -> None:
         """Stage complete opaque saved state into a new record with explicit totals; return None."""

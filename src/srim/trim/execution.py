@@ -95,7 +95,9 @@ def run_trim_simulation(paths: ProjectPaths, config: Config, simulation_id: str,
     runtime preservation, parsing and terminal metadata. Return succeeded/failed
     shared metadata for expected native failures. Never retry, click or delete.
     Invalid caller/state/collision raises before launch. I/O and BaseException
-    propagate after best-effort preservation/failure publication with notes.
+    propagate after independent best-effort preservation/failure publication
+    with notes. Explicitly unresolved process ownership leaves metadata running
+    and skips runtime preservation; diagnostics and exception notes flag it.
     """
     if (timeout_seconds is not None and (type(timeout_seconds) not in (int, float) or timeout_seconds <= 0 or not math.isfinite(timeout_seconds))) or type(config.hide_trim_window) is not bool or (cancel is not None and not callable(cancel)):
         raise ValueError("Invalid TRIM execution configuration")
@@ -219,19 +221,33 @@ def run_trim_simulation(paths: ProjectPaths, config: Config, simulation_id: str,
             return finish_simulation(paths, config, simulation_id, {"message": message, "exit_code": result["exit_code"]} if code is not None else None)
         except BaseException as error:
             error.add_note(f"TRIM evidence retained at runtime {runtime}; record {record}")
+            stopped = getattr(error, "trim_job_stopped", True)
+            report["failure"] = {"code": "monitor" if not stopped else "cancelled" if not isinstance(error, Exception) else "preservation" if report["stage"] == "preserve" else "integrity", "message": str(error) or type(error).__name__}
+            if stopped:
+                try:
+                    if not preserved:
+                        preserve_trim_runtime(paths, simulation_id, runtime)
+                except BaseException as preservation_error:
+                    error.add_note(f"TRIM runtime preservation failed: {preservation_error}")
+            else:
+                error.add_note(f"TRIM process ownership unresolved; running record {record} requires recovery before finalization")
             try:
-                if not preserved and getattr(error, "trim_job_stopped", True):
-                    preserve_trim_runtime(paths, simulation_id, runtime)
-                report["failure"] = {"code": "monitor" if not getattr(error, "trim_job_stopped", True) else "cancelled" if not isinstance(error, Exception) else "preservation" if report["stage"] == "preserve" else "integrity", "message": str(error) or type(error).__name__}
                 if "availability" in report and not (record / "output/parsed/availability.json").exists():
                     _write_json(record / "output/parsed/availability.json", report["availability"])
+            except BaseException as availability_error:
+                error.add_note(f"TRIM availability publication failed: {availability_error}")
+            try:
                 if not (record / "output/raw/execution.json").exists():
                     _write_json(record / "output/raw/execution.json", report)
-                current = read_simulation(paths, simulation_id)
-                if current["status"] in ("created", "running"):
-                    finish_simulation(paths, config, simulation_id, {"message": str(error) or type(error).__name__, "exit_code": report["process"]["exit_code"] if report["process"] else None})
-            except BaseException as final_error:
-                error.add_note(f"TRIM finalization failed: {final_error}")
+            except BaseException as diagnostic_error:
+                error.add_note(f"TRIM execution diagnostics failed: {diagnostic_error}")
+            if stopped:
+                try:
+                    current = read_simulation(paths, simulation_id)
+                    if current["status"] in ("created", "running"):
+                        finish_simulation(paths, config, simulation_id, {"message": str(error) or type(error).__name__, "exit_code": report["process"]["exit_code"] if report["process"] else None})
+                except BaseException as final_error:
+                    error.add_note(f"TRIM finalization failed: {final_error}")
             raise
 
 

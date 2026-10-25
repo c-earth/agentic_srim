@@ -84,6 +84,34 @@ independent review. Save supported proposals without waiting for a separate
 request; drafting does not authorize implementation. Honor explicit user
 limits, preserve approval gates and stop trials at their approved boundaries.
 
+## Run lifecycle closeout
+
+Track the IDs of every simulation started for the task, including native
+dependency runs and simulations reported by orchestration jobs. Before
+closeout, read their current simulation metadata and the corresponding job
+states. A terminal job does not establish a terminal simulation.
+
+Confirm each started simulation is succeeded or failed. For an interrupted
+job, inspect its linked simulations and retained evidence; retain worker
+quarantine until process ownership is resolved. Never infer process death
+from record age, an interrupted job, or a released worker lock alone.
+
+Flag a running record as stale only when evidence establishes that its
+orchestration ended without finalizing it. When process ownership is
+unknown, report it as unresolved instead. List each stale or unresolved
+simulation ID, metadata status, job state when available, evidence location,
+and the next recovery action in the closeout. Do not report clean completion
+while omitting nonterminal started records. Report relevant created but
+unstarted preparations separately.
+
+Finalize a stranded run through the existing lifecycle API only after
+confirming its native processes have stopped, obtaining the existing worker
+lease, and re-reading its metadata. Preserve available evidence, record an
+explicit failure reason, and leave already-terminal records unchanged.
+Respect existing authorization requirements for the recovery action. If safe
+recovery or metadata publication cannot be completed, retain the evidence
+and report the remaining nonterminal record and blocker.
+
 ## Reporting
 
 Lead with the result. Explain supporting evidence, material limitations and
