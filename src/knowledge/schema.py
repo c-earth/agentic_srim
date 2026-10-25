@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from copy import deepcopy
+
 from decimal import Decimal, InvalidOperation
 from fractions import Fraction
 from datetime import datetime
@@ -292,109 +295,145 @@ def convert_quantity(value: str, source_unit: str, target_unit: str) -> str:
 
 
 def matches_filters(record: JSONObject, filters: JSONObject) -> bool:
-    """Return whether record satisfies all exact filters without I/O or mutation.
+    """Return exact eligibility of record for filters, without I/O or mutation.
 
     Args:
-        record: Validated native SearchRecord, including event/layer inputs.
-        filters: Filter envelope with explicit units/operators/selectors.
-
+        record: Complete validated native search record.
+        filters: Closed native input filter envelope.
     Returns:
-        True only when every clause matches, with one shared event witness.
-
+        True when every predicate and shared-event constraint matches.
     Raises:
-        ValueError: Either envelope or a nested clause is malformed.
+        ValueError: Invalid record, filter or numeric representation.
     """
-    validate_search_document(record, "record")
+    return _compile_filters(filters)(record)
+
+
+def _compile_filters(filters: JSONObject) -> Callable[[JSONObject], bool]:
+    """Validate/copy filters and prepare exact query quantities once.
+
+    Args:
+        filters: Closed native input filter envelope.
+    Returns:
+        Pure evaluator retaining record validation and existing layer/event semantics.
+    Raises:
+        ValueError: Invalid filters or numeric bounds.
+    """
     validate_search_document(filters, "filters")
-    inputs = record["inputs"]
-    witnesses = set(range(len(inputs["events"]))) if inputs["events"] is not None else None
+    filters = deepcopy(filters)
+    text_choices = {}
+    element_choices = {}
+    compositions = {}
     for clause in filters["clauses"]:
-        field, operator, expected, unit, selector = (clause[key] for key in ("field", "operator", "value", "unit", "layer"))
-        values: list[JSONValue] = []
-        value_units: list[str | None] = []
-        event_indices: list[int] = []
-        if field in ("engine", "mode", "target_label", "total_ions", "random_seed"):
-            values = [inputs[field]]
-        elif field == "execution_status":
-            values = [record[field]]
-        elif field == "projectile.atomic_number" and inputs["events"] is not None:
-            values = [event["atomic_number"] for event in inputs["events"]]
-            event_indices = list(range(len(values)))
-        elif field.startswith("projectile."):
-            values = [None if inputs["projectile"] is None else inputs["projectile"][field.split(".")[1]]]
-            value_units = ["amu"]
-        elif field == "energy":
-            energy = inputs["energy"]
-            if energy is not None and energy["kind"] == "range":
-                if operator == "unknown":
-                    return False
-                lower = Fraction(convert_quantity(energy["minimum_keV"], "keV", unit))
-                upper = Fraction(convert_quantity(energy["maximum_keV"], "keV", unit))
-                if operator == "eq":
-                    if not lower <= Fraction(expected) <= upper:
-                        return False
-                elif (expected[0] is not None and upper < Fraction(expected[0])) or (expected[1] is not None and lower > Fraction(expected[1])):
-                    return False
-                continue
-            values = energy["values_keV"] if energy is not None else [None]
-            value_units = ["keV"] * len(values)
-            if inputs["events"] is not None:
-                event_indices = list(range(len(values)))
-        elif field == "incidence_angle":
-            values, value_units = [inputs["incidence_angle_degrees"]], ["deg"]
-        elif field == "layer_count":
-            values = [len(inputs["layers"]) if inputs["engine"] == "trim" else None]
+        field = clause["field"]
+        if clause["operator"] == "unknown":
+            continue
+        if FIELDS[field][0] in ("number", "integer"):
+            value = clause["value"]
+            clause["value"] = [None if item is None else Fraction(item) for item in value] if isinstance(value, list) else Fraction(value)
+        elif FIELDS[field][0] == "text":
+            choices = clause["value"] if clause["operator"] == "in" else [clause["value"]]
+            text_choices[id(clause)] = frozenset(choice.casefold() for choice in choices)
         elif field == "target.elements":
-            values = [sorted({component["atomic_number"] for layer in inputs["layers"] for component in layer["components"]})]
-        else:
-            layers = inputs["layers"] if selector in ("any", "all") else [layer for layer in inputs["layers"] if layer["index"] == selector]
-            if not layers:
-                values = [None]
-            elif field == "target.composition":
-                values = [layer["components"] for layer in layers]
-            elif field == "layer.thickness":
-                values, value_units = [layer["thickness_angstrom"] for layer in layers], ["A"] * len(layers)
-            elif field == "layer.density":
-                values, value_units = [layer["density_g_cm3"] for layer in layers], ["g/cm3"] * len(layers)
-        outcomes: list[bool] = []
-        for position, actual in enumerate(values):
-            if operator == "unknown":
-                outcomes.append(actual is None)
-                continue
-            if actual is None:
-                outcomes.append(False)
-                continue
-            if field == "target.composition":
-                elemental = all(component["mass_amu"] is None for component in expected)
-                if not elemental and any(component["mass_amu"] is None for component in actual):
+            element_choices[id(clause)] = frozenset(clause["value"])
+        elif field == "target.composition":
+            elemental = all(component["mass_amu"] is None for component in clause["value"])
+            composition = {}
+            for component in clause["value"]:
+                identity = (component["atomic_number"], None if elemental else Fraction(component["mass_amu"]))
+                composition[identity] = composition.get(identity, Fraction(0)) + Fraction(component["atomic_proportion"])
+            total = sum(composition.values(), Fraction(0))
+            compositions[id(clause)] = (elemental, {key: value / total for key, value in composition.items()})
+
+    def evaluate(record: JSONObject) -> bool:
+        """Match record against privately prepared exact filters without I/O."""
+        validate_search_document(record, "record")
+        inputs = record["inputs"]
+        witnesses = set(range(len(inputs["events"]))) if inputs["events"] is not None else None
+        for clause in filters["clauses"]:
+            field, operator, expected, unit, selector = (clause[key] for key in ("field", "operator", "value", "unit", "layer"))
+            values: list[JSONValue] = []
+            value_units: list[str | None] = []
+            event_indices: list[int] = []
+            if field in ("engine", "mode", "target_label", "total_ions", "random_seed"):
+                values = [inputs[field]]
+            elif field == "execution_status":
+                values = [record[field]]
+            elif field == "projectile.atomic_number" and inputs["events"] is not None:
+                values = [event["atomic_number"] for event in inputs["events"]]
+                event_indices = list(range(len(values)))
+            elif field.startswith("projectile."):
+                values = [None if inputs["projectile"] is None else inputs["projectile"][field.split(".")[1]]]
+                value_units = ["amu"]
+            elif field == "energy":
+                energy = inputs["energy"]
+                if energy is not None and energy["kind"] == "range":
+                    if operator == "unknown":
+                        return False
+                    lower = Fraction(convert_quantity(energy["minimum_keV"], "keV", unit))
+                    upper = Fraction(convert_quantity(energy["maximum_keV"], "keV", unit))
+                    if operator == "eq":
+                        if not lower <= Fraction(expected) <= upper:
+                            return False
+                    elif (expected[0] is not None and upper < Fraction(expected[0])) or (expected[1] is not None and lower > Fraction(expected[1])):
+                        return False
+                    continue
+                values = energy["values_keV"] if energy is not None else [None]
+                value_units = ["keV"] * len(values)
+                if inputs["events"] is not None:
+                    event_indices = list(range(len(values)))
+            elif field == "incidence_angle":
+                values, value_units = [inputs["incidence_angle_degrees"]], ["deg"]
+            elif field == "layer_count":
+                values = [len(inputs["layers"]) if inputs["engine"] == "trim" else None]
+            elif field == "target.elements":
+                values = [sorted({component["atomic_number"] for layer in inputs["layers"] for component in layer["components"]})]
+            else:
+                layers = inputs["layers"] if selector in ("any", "all") else [layer for layer in inputs["layers"] if layer["index"] == selector]
+                if not layers:
+                    values = [None]
+                elif field == "target.composition":
+                    values = [layer["components"] for layer in layers]
+                elif field == "layer.thickness":
+                    values, value_units = [layer["thickness_angstrom"] for layer in layers], ["A"] * len(layers)
+                elif field == "layer.density":
+                    values, value_units = [layer["density_g_cm3"] for layer in layers], ["g/cm3"] * len(layers)
+            outcomes: list[bool] = []
+            for position, actual in enumerate(values):
+                if operator == "unknown":
+                    outcomes.append(actual is None)
+                    continue
+                if actual is None:
                     outcomes.append(False)
                     continue
-                compositions: list[dict[tuple[int, Fraction | None], Fraction]] = []
-                for components in (actual, expected):
+                if field == "target.composition":
+                    elemental, expected_composition = compositions[id(clause)]
+                    if not elemental and any(component["mass_amu"] is None for component in actual):
+                        outcomes.append(False)
+                        continue
                     composition: dict[tuple[int, Fraction | None], Fraction] = {}
-                    for component in components:
+                    for component in actual:
                         identity = (component["atomic_number"], None if elemental else Fraction(component["mass_amu"]))
                         composition[identity] = composition.get(identity, Fraction(0)) + Fraction(component["atomic_proportion"])
                     total = sum(composition.values(), Fraction(0))
-                    compositions.append({key: amount / total for key, amount in composition.items()})
-                outcomes.append(compositions[0] == compositions[1])
-            elif operator in ("contains_all", "contains_any"):
-                outcomes.append(set(expected) <= set(actual) if operator == "contains_all" else bool(set(expected) & set(actual)))
-            elif FIELDS[field][0] == "text":
-                choices = expected if operator == "in" else [expected]
-                outcomes.append(actual.casefold() in [choice.casefold() for choice in choices])
-            else:
-                amount = Fraction(convert_quantity(actual, value_units[position], unit)) if FIELDS[field][0] == "number" else Fraction(actual)
-                if operator == "eq":
-                    outcomes.append(amount == Fraction(expected))
-                elif operator == "in":
-                    outcomes.append(amount in [Fraction(choice) for choice in expected])
+                    outcomes.append({key: amount / total for key, amount in composition.items()} == expected_composition)
+                elif operator in ("contains_all", "contains_any"):
+                    outcomes.append(element_choices[id(clause)] <= set(actual) if operator == "contains_all" else bool(element_choices[id(clause)] & set(actual)))
+                elif FIELDS[field][0] == "text":
+                    outcomes.append(actual.casefold() in text_choices[id(clause)])
                 else:
-                    outcomes.append((expected[0] is None or amount >= Fraction(expected[0])) and (expected[1] is None or amount <= Fraction(expected[1])))
-        if event_indices and operator != "unknown":
-            witnesses &= {event_indices[index] for index, match in enumerate(outcomes) if match}
-            if not witnesses:
+                    amount = Fraction(convert_quantity(actual, value_units[position], unit)) if FIELDS[field][0] == "number" else Fraction(actual)
+                    if operator == "eq":
+                        outcomes.append(amount == Fraction(expected))
+                    elif operator == "in":
+                        outcomes.append(amount in [Fraction(choice) for choice in expected])
+                    else:
+                        outcomes.append((expected[0] is None or amount >= Fraction(expected[0])) and (expected[1] is None or amount <= Fraction(expected[1])))
+            if event_indices and operator != "unknown":
+                witnesses &= {event_indices[index] for index, match in enumerate(outcomes) if match}
+                if not witnesses:
+                    return False
+            elif not (all(outcomes) if selector == "all" else any(outcomes)):
                 return False
-        elif not (all(outcomes) if selector == "all" else any(outcomes)):
-            return False
-    return True
+        return True
+
+    return evaluate

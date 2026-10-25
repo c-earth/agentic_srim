@@ -22,6 +22,13 @@ Recorded test counts describe their tested snapshots. Run the families relevant
 to a change and report their actual results; passing tests does not establish
 universal correctness.
 
+The unified/external retrieval release check passed 177 tests across backend
+(45), knowledge (69), case (2), analysis (4), plan (8) and MCP (49), with warnings
+treated as errors. These were synthetic software/stdio checks; no new native
+simulation, full-source preview, import or performance benchmark was run for
+release finalization. The source/index verification measurements below retain
+their stated dataset and machine scope.
+
 Numeric search regressions cover decimal-string length and exponent boundaries,
 unit shifts, query composition, SearchRecord quantities, rejection before exact
 arithmetic, and real MCP endpoint responses. The exact limits and historical
@@ -128,3 +135,109 @@ tests were added in total. No native simulation or exhaustion benchmark was run.
 The current contracts and retained recovery/compatibility boundaries are in the
 [MCP reference](mcp-format.md), [project guide](../guides/project-management.md)
 and [input-search reference](input-search-format.md#numeric-processing-limits).
+
+
+## Unified retrieval checks
+
+The knowledge tests cover closed queries, exact numeric conversions, same-row
+output witnesses, signed profile values, explicit not-calculated availability,
+SR list/range projections, native and recovered TRIM fixture profiles, source
+tampering, output byte caps, current/history revisions, missed notifications,
+reconciliation digest conflicts, idempotent updates and publication after source
+unlock. Interleaved publication tests exercise short catalog locks and captured
+generation membership. Analysis lifecycle tests keep intact findings discoverable
+when an attached artifact is missing.
+
+MCP adapter/catalog checks cover the five retrieval tools, schema discovery,
+response caps and cancellation. These are synthetic software and preserved-fixture
+checks; they do not establish independent scientific validity or large-collection
+performance. No backfill or new native calculation is part of this verification.
+
+## External database discovery verification
+
+The synthetic foundation suite is `test/knowledge/test_database_sources.py` and
+`test/knowledge/test_database_adapters.py`, with registration cases in
+`test/backend/test_config.py` and tool/schema/stdio cases in `test/mcp/`.
+It checks dynamic registration/revocation, missing paths, prefix integrity,
+packaging, unsafe members, read budgets, recognition states and no pool/source
+mutation. Fixtures are neutral and cache-owned. SQLite checks recognize its
+magic header only. MCP tests verify read/result caps and unknown-source discovery
+following live settings edits without restarting that test server.
+
+Use the commands above for the focused backend/knowledge/MCP suites. Validate
+the repository skill with:
+
+```powershell
+& 'D:\projects\agentic_srim\.venv\Scripts\python.exe' 'C:\Users\Tokisaki963\.codex\skills\.system\skill-creator\scripts\quick_validate.py' '.agents/skills/external-database-onboarding'
+```
+
+These are software checks of registration and bounded inspection. They do not
+by themselves validate an external scientific mapping, import, whole archive
+integrity or search over external records. Live onboarding must separately inspect
+fresh source evidence, obtain adapter/import design approval and verify actual
+indexing and representative source-backed searches. No native calculation is
+needed to test this foundation.
+
+### SNUMAT external input and summary checks
+
+The external adapter adds focused suites in
+`test/knowledge/test_external_schema.py`, `test_snumat_adapter.py`,
+`test_external_sources.py` and `test_external_index.py`. They exercise exact
+decimal/unit predicates, source/member identities, precision and publisher
+claims, safe archive reading, preview without publication, atomic import,
+refresh/history, stale plans, cancellation and evidence-backed searches.
+The MCP catalog, adapter and protocol suites cover external schema discovery,
+job/read classification, exact-plan dispatch, result caps and cancellation.
+
+Use unittest discovery with the required interpreter; no pytest installation is
+required. Run the knowledge suite and the focused MCP files:
+
+```powershell
+& 'D:\projects\agentic_srim\.venv\Scripts\python.exe' -W error -m unittest discover -s test/knowledge -p 'test_*.py'
+& 'D:\projects\agentic_srim\.venv\Scripts\python.exe' -W error -m unittest discover -s test/mcp -p 'test_catalog.py'
+& 'D:\projects\agentic_srim\.venv\Scripts\python.exe' -W error -m unittest discover -s test/mcp -p 'test_project_adapter.py'
+& 'D:\projects\agentic_srim\.venv\Scripts\python.exe' -W error -m unittest discover -s test/mcp -p 'test_protocol.py'
+```
+
+Synthetic tests do not establish all-source compatibility or scientific validity.
+Selected real TDATA parser checks are bounded compatibility checks only.
+Full-dataset counts, rejection rates, disk costs and representative imported
+searches require the separately requested preview and approved real import.
+No full-source import or new native calculation is implied by this test coverage.
+
+
+### Exact external search projection checks
+
+Synthetic verification on 2026-10-25 passed 15 external database tests, five MCP
+catalog tests and five project-adapter tests. The external tests cover every
+structured field/operator, exact unit/range comparisons, unknown values, literal
+Unicode matching, managed reindex dispatch, generation mismatch and revocation
+before publication, publication failure preserving the old index, cooperative
+deadlines, schema-v2 compact pages and exclusion-aware next offsets. Page tests
+use the actual canonical MCP serializer and envelope. Grouped-reader tests count
+one compressed archive hash and one TAR scan for multiple requested members and
+exercise member conflicts, unsafe TAR entries, deadlines and size limits.
+
+The six broader MCP protocol cases passed across the suite run and a focused
+rerun after updating the approved project-tool inventory to 47. These synthetic
+results do not establish full-dataset search latency or current original-archive
+verification.
+
+Working-checkout activation and one managed reindex of the existing 19,998
+records subsequently passed. The build took 717.120 seconds and produced a
+783,548,416-byte derived index. Five public MCP stdio searches completed in
+7.400–8.609 seconds: the known ion-count query still returned 34 matches, the
+default page returned 20 of 19,998 records in 25,721 response bytes, and the saved
+range, material-element and literal-case queries passed. One verified full-record
+get completed in 5.031 seconds. Instrumentation observed one compressed archive
+open and one TAR scan for six owned members. These measurements describe these
+checks on this dataset and machine, without a universal latency guarantee.
+
+All 19,998 record/head digests equal the imported approved plan; the catalog
+generation is unchanged and the two deferred NaN cases remain absent. No source
+preview, import or native simulation was performed for this activation. The
+fresh verification client/server closed after the checks. After the user
+reconnected the app, its database_status call confirmed 19,998 current records,
+a ready search index with the matching generation and no issues; the new
+database_reindex tool was exposed. The app reconnect is complete. No additional
+rebuild or import was required.

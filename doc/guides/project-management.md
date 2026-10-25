@@ -107,3 +107,17 @@ collections_list reports workflow, analysis and skill collections separately. Ca
 Use improvement_observe for meaningful evidence, improvement_assess for a saved evidence-based disposition, and improvement_proposal_create for exact complete proposal Markdown linked to observations. The [self-improvement skill](../../.agents/skills/self-improvement/SKILL.md) and [protocol](../../.agents/skills/self-improvement/references/protocol.md) define review triggers, selective independent review, follow-through, explicit trial approval, snapshots, restoration and separate adoption approval. improvement_status reports valid assessment chains, unassessed/deferred/conflicting findings and proposals still owed alongside existing event graphs and trial counts. Version-1 events remain readable; only assessment events use version 2. A structurally valid draft closes a drafting obligation, not an implementation or quality requirement. No background service enforces reconsideration, expiry or rollback.
 
 No MCP tool creates approval events, starts a trial, promotes a candidate, edits skills, or adopts behavior. After real user approval, the coordinating agent performs the specifically approved repository workflow. The Python-only publication API checks exact candidate/proposal/adoption hashes before making a new immutable reusable version; record checks cannot cryptographically authenticate human consent. Files under `.local/workflow-improvement/` remain persistent local ignored evidence rather than durable cloud memory or a backup. Preserved dependencies live under protected `.local/preserved-dependencies/`. Routine repository-root cache cleanup must not remove these stores. Consult `.local/migrations/` inventories for historical paths; mappings do not automatically redirect old reads.
+
+
+## Retrieve prior cases and findings
+
+Use project MCP knowledge_search for text, status, tag and direct-relationship
+retrieval across cases, analyses and native inputs/results. New revisions index
+automatically after publication; current search rechecks revision pointers, and
+history search retains exact pinned references. Analyses keep post IDs.
+knowledge_get reads the source and optionally verifies declared dependencies;
+a verified narrative does not establish every linked artifact or scientific claim.
+
+See [evidence search](input-search.md#search-runs-cases-analyses-and-calculated-outputs)
+for queries, calculated-output row matching, relationship filters and explicit
+reconciliation of missed notifications. No existing-data backfill is required.

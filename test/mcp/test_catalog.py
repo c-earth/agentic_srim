@@ -23,7 +23,7 @@ class TestCatalog(Fixture):
         self.assertFalse(science["tools"]["run_closeout"]["mutating"])
         self.assertTrue(science["tools"]["run_reconcile"]["mutating"])
         self.assertIn("srim.run-closeout.v1", science["schemas"])
-        self.assertEqual(len(project["tools"]), 33)
+        self.assertEqual(len(project["tools"]), 47)
         self.assertNotIn("run_submit", project["tools"])
         self.assertNotIn("case_create", science["tools"])
         for catalog in (science, project):
@@ -57,3 +57,62 @@ class TestCatalog(Fixture):
         for invalid in ({**arguments, "extra": True}, {**arguments, "details": {**details, "extra": True}}, {**arguments, "details": {**details, "disposition": "adopt"}}, {**arguments, "details": {**details, "observation_ids": []}}, {**arguments, "details": {**details, "rationale": " "}}, {**arguments, "details": {**details, "follow_up": ""}}, {**arguments, "details": {**details, "disposition": "already_addressed"}}):
             self.assertFalse(validator.is_valid(invalid))
         self.assertIn("project.assessment.v2", catalog["schemas"])
+
+    def test_database_discovery_schemas(self: TestCatalog) -> None:
+        """Expose three read-only database tools and four closed database envelope schemas."""
+        catalog = project_catalog(self.project)
+        for name in ("database_sources_list", "database_inspect", "database_sample_read"):
+            tool = catalog["tools"][name]
+            self.assertEqual(tool["family"], "databases")
+            self.assertFalse(tool["mutating"])
+        for identity in ("database.source-list.v1", "database.inspection.v1", "database.sample-reference.v1", "database.sample-read.v1"):
+            self.assertFalse(catalog["schemas"][identity]["additionalProperties"])
+
+    def test_external_database_tool_contracts(self: TestCatalog) -> None:
+        """Validate new job/read contracts, closed schemas and native-reference isolation."""
+        from src.knowledge.external_schema import EMPTY_EXTERNAL_QUERY, EXTERNAL_QUERY_SCHEMA
+        catalog = project_catalog(self.project)
+        source_id = "db_" + "a" * 64
+        for name in ("database_preview", "database_import", "database_reindex", "database_search", "database_get", "database_status"):
+            tool = catalog["tools"][name]
+            self.assertEqual(tool["family"], "databases")
+            self.assertEqual(tool["mutating"], name in ("database_preview", "database_import", "database_reindex"))
+            self.assertFalse(tool["inputSchema"]["additionalProperties"])
+        self.assertEqual(catalog["tools"]["database_search"]["inputSchema"]["properties"]["limit"]["default"], 20)
+        for name, default in (("database_search", 60), ("database_get", 240)):
+            timeout = catalog["tools"][name]["inputSchema"]["properties"]["timeout_seconds"]
+            self.assertEqual(timeout, {"type": "integer", "minimum": 1, "maximum": 240, "default": default})
+        query_schema = catalog["tools"]["database_search"]["inputSchema"]
+        validator = Draft202012Validator(query_schema)
+        validator.validate({"source_id": source_id, "query": deepcopy(EMPTY_EXTERNAL_QUERY), "offset": 0, "limit": 100})
+        self.assertFalse(validator.is_valid({"source_id": source_id, "query": deepcopy(EMPTY_EXTERNAL_QUERY), "limit": 101}))
+        self.assertFalse(validator.is_valid({"source_id": source_id, "query": {**EMPTY_EXTERNAL_QUERY, "unexpected": True}}))
+        self.assertEqual(catalog["schemas"]["database.external-query.v1"], EXTERNAL_QUERY_SCHEMA)
+        for name in ("database_preview", "database_import", "database_reindex"):
+            tool = catalog["tools"][name]
+            self.assertIn("request_id", tool["inputSchema"]["required"])
+            self.assertEqual(tool["inputSchema"]["properties"]["timeout_seconds"], {"type": "integer", "minimum": 1, "maximum": 3600, "default": 600})
+            args = {"source_id": source_id, "request_id": "d7f9d14e-1ddd-40cd-bfe6-c22678591294"}
+            if name == "database_import":
+                args["expected_plan_sha256"] = "b" * 64
+            if name == "database_reindex":
+                args["expected_generation"] = "00000000-0000-0000-0000-000000000001"
+            validator = Draft202012Validator(tool["inputSchema"])
+            self.assertTrue(validator.is_valid({**args, "timeout_seconds": 3600}))
+            for invalid in (True, 0, 3601):
+                self.assertFalse(validator.is_valid({**args, "timeout_seconds": invalid}))
+        preview_schema = catalog["tools"]["database_preview"]["inputSchema"]
+        self.assertIsNone(preview_schema["properties"]["resume_operation_id"]["default"])
+        self.assertNotIn("resume_operation_id", preview_schema["required"])
+        validator = Draft202012Validator(preview_schema)
+        args = {"source_id": source_id, "request_id": "d7f9d14e-1ddd-40cd-bfe6-c22678591294"}
+        for valid in (None, "ad9476d0-a457-4f43-8ba4-0be100027beb"):
+            self.assertTrue(validator.is_valid({**args, "resume_operation_id": valid}))
+        for invalid in ("../outside", "not-a-uuid", True, 12):
+            self.assertFalse(validator.is_valid({**args, "resume_operation_id": invalid}))
+        self.assertIn("expected_plan_sha256", catalog["tools"]["database_import"]["inputSchema"]["required"])
+        reference = {"schema_version": 1, "kind": "external-run", "source_id": source_id, "adapter_id": "snumat-trim-v1", "adapter_version": 1, "case_id": "SM-1005_Rb_p_d0700nm", "record_sha256": "b" * 64}
+        Draft202012Validator(catalog["tools"]["database_get"]["inputSchema"]).validate({"reference": reference})
+        native_get = catalog["tools"]["knowledge_get"]["inputSchema"]
+        self.assertFalse(Draft202012Validator(native_get).is_valid({"kind": "run", "reference": reference}))
+        self.assertEqual(catalog["tools"]["database_search"]["inputSchema"]["properties"]["offset"], catalog["tools"]["knowledge_search"]["inputSchema"]["properties"]["offset"])

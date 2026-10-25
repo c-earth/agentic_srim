@@ -87,7 +87,7 @@ class TestProtocol(Fixture, unittest.IsolatedAsyncioTestCase):
         project_parameters = StdioServerParameters(command="D:\\projects\\agentic_srim\\.venv\\Scripts\\python.exe", args=["-W", "error", "-m", "src.mcp.project_mcp", "--root", str(self.root)], cwd=str(self.repository))
         async with Client(science_parameters, read_timeout_seconds=15) as science, Client(project_parameters, read_timeout_seconds=15) as project:
             self.assertEqual(len((await science.list_tools()).tools), 40)
-            self.assertEqual(len((await project.list_tools()).tools), 33)
+            self.assertEqual(len((await project.list_tools()).tools), 47)
             duplicate_process = await asyncio.to_thread(subprocess.run, ["D:\\projects\\agentic_srim\\.venv\\Scripts\\python.exe", "-W", "error", "-m", "src.mcp.project_mcp", "--root", str(self.root)], cwd=str(self.repository), input=b"", stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
             self.assertEqual(duplicate_process.returncode, 1)
             self.assertEqual(duplicate_process.stdout, b"")
@@ -122,6 +122,15 @@ class TestProtocol(Fixture, unittest.IsolatedAsyncioTestCase):
             self.assertNotEqual(*identities)
             listing = await project.call_tool("cases_list", {})
             self.assertEqual(listing.structured_content["data"]["total"], 2)
+            retrieved = (await project.call_tool("knowledge_search", {})).structured_content
+            self.assertTrue(retrieved["ok"], retrieved)
+            self.assertEqual(retrieved["data"]["total"], 2)
+            hit = retrieved["data"]["matches"][0]
+            exact = (await project.call_tool("knowledge_get", {"kind": hit["kind"], "reference": hit["reference"], "dependencies": True})).structured_content
+            self.assertTrue(exact["ok"], exact)
+            self.assertEqual(exact["data"]["verification"]["record"], "verified")
+            status = (await project.call_tool("knowledge_status", {})).structured_content
+            self.assertEqual(status["data"]["counts"]["case"]["entities"], 2)
             observation = await project.call_tool("improvement_observe", {"request_id": str(uuid4()), "details": {"problem": "Synthetic protocol test", "evidence": "Local immutable event read", "sources": [], "criteria": ["quality"], "measurements": [], "uncertainty": "Fixture only"}})
             self.assertTrue(observation.structured_content["ok"], observation)
             observation_job_id = observation.structured_content["data"]["job_id"]
@@ -179,3 +188,55 @@ class TestProtocol(Fixture, unittest.IsolatedAsyncioTestCase):
             self.assertIsNotNone(state["result"])
         finally:
             adapter.jobs.shutdown()
+
+    async def test_unknown_database_live_settings_reload(self: TestProtocol) -> None:
+        """Discover and inspect an unknown synthetic source over stdio after settings edits."""
+        parameters = StdioServerParameters(command="D:\\projects\\agentic_srim\\.venv\\Scripts\\python.exe", args=["-W", "error", "-m", "src.mcp.project_mcp", "--root", str(self.root)], cwd=str(self.repository))
+        async with Client(parameters, read_timeout_seconds=15) as project:
+            first = (await project.call_tool("database_sources_list", {})).structured_content
+            self.assertTrue(first["ok"], first)
+            self.assertEqual(first["data"]["sources"], [])
+            source = self.root / "neutral.json"
+            source.write_bytes(b'{"neutral":"1.20"}')
+            settings = self.root / "settings.toml"
+            original = settings.read_text(encoding="utf-8")
+            settings.write_text(original + "\n[knowledge]\ndatabase_paths = " + json.dumps([str(source)]) + "\n", encoding="utf-8")
+            listing = (await project.call_tool("database_sources_list", {})).structured_content
+            identity = listing["data"]["sources"][0]["source_id"]
+            report = (await project.call_tool("database_inspect", {"source_id": identity})).structured_content
+            self.assertTrue(report["ok"], report)
+            self.assertEqual(report["data"]["format_detection"]["state"], "insufficient_evidence")
+            reference = report["data"]["samples"][0]["reference"]
+            sample = (await project.call_tool("database_sample_read", {"reference": reference})).structured_content
+            self.assertEqual(sample["data"]["verification"], "sample_only")
+            settings.write_text(original, encoding="utf-8")
+            revoked = (await project.call_tool("database_sample_read", {"reference": reference})).structured_content
+            self.assertFalse(revoked["ok"], revoked)
+        self.assertFalse(self.root.joinpath("memory/knowledge").exists())
+        self.assertFalse(self.root.joinpath("no-native-installation").exists())
+
+    async def test_external_job_cancellation_and_result_caps(self: TestProtocol) -> None:
+        """Exercise managed external cancellation and read caps through real protocol dispatch."""
+        from unittest.mock import patch
+        adapter = ProtocolAdapter(self.project, project_catalog(self.project), project_read, project_write)
+        adapter.jobs.start()
+        try:
+            with patch("src.mcp.project_mcp.operations.preview_external_import", side_effect=InterruptedError):
+                accepted = await adapter.call_tool(None, CallToolRequestParams(name="database_preview", arguments={"source_id": "db_" + "a" * 64, "request_id": str(uuid4())}))
+                self.assertTrue(accepted.structured_content["ok"], accepted.structured_content)
+                identity = accepted.structured_content["data"]["job_id"]
+                deadline = time.monotonic() + 5
+                while adapter.jobs.get(identity)["state"] not in ("cancelled", "failed", "succeeded") and time.monotonic() < deadline:
+                    await asyncio.sleep(0.01)
+                self.assertEqual(adapter.jobs.get(identity)["state"], "cancelled")
+            with patch("src.mcp.project_mcp.operations.read_external_status", return_value={"padding": "x" * (self.project.limits["max_result_bytes"] + 1)}):
+                rejected = await adapter.call_tool(None, CallToolRequestParams(name="database_status", arguments={"source_id": "db_" + "a" * 64}))
+                self.assertFalse(rejected.structured_content["ok"])
+                self.assertEqual(rejected.structured_content["error"]["code"], "too-large")
+            malformed = await adapter.call_tool(None, CallToolRequestParams(name="database_search", arguments={"source_id": "db_" + "a" * 64, "query": {"schema_version": 1, "text": None, "revision_scope": "current", "clauses": [], "extra": True}}))
+            self.assertFalse(malformed.structured_content["ok"])
+            self.assertEqual(malformed.structured_content["error"]["code"], "invalid-argument")
+        finally:
+            adapter.jobs.shutdown()
+        self.assertFalse(self.root.joinpath("memory/knowledge/external").exists())
+        self.assertFalse(self.root.joinpath("no-native-installation").exists())

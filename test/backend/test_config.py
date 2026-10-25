@@ -194,3 +194,28 @@ class TestConfig(unittest.TestCase):
             )
             self.assertEqual(load_config(path), Config("system", Path(r"D:\other")))
             self.assertEqual(first, Config("UTC", Path(r"D:\srim")))
+
+    def test_external_database_path_registration(self: TestConfig) -> None:
+        """Accept inert unavailable local paths and reject malformed or duplicate registrations."""
+        import json
+        cache = Path(__file__).resolve().parents[2] / ".cache/config-tests"
+        cache.mkdir(parents=True, exist_ok=True)
+        with TemporaryDirectory(dir=cache) as directory:
+            path = Path(directory) / "settings.toml"
+            prefix = "[srim]\nroot = 'D:\\srim'\n[knowledge]\n"
+            for value in ([], [r"D:\absent\one", r"E:\absent\two.zip"]):
+                path.write_text(prefix + "database_paths = " + json.dumps(value), encoding="utf-8")
+                config = load_config(path)
+                self.assertEqual(config.database_paths, tuple(Path(item) for item in value))
+                with self.assertRaises(FrozenInstanceError):
+                    config.database_paths = ()
+            invalid = ["'path'", "true", "[1]", "['']", "['relative']", "['D:relative']", "['\\\\host\\share\\data']", "['\\\\?\\D:\\data']", "['D:\\a\\..\\b']", "['D:\\a*']", "['D:\\CON']", "['D:\\a:stream']", "['D:\\data', 'd:/DATA']"]
+            for value in invalid:
+                with self.subTest(value=value):
+                    path.write_text(prefix + "database_paths = " + value, encoding="utf-8")
+                    with self.assertRaises(ValueError):
+                        load_config(path)
+            path.write_text(prefix + "unexpected = []", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                load_config(path)
+            self.assertEqual(Config("UTC", Path(r"D:\srim")).database_paths, ())

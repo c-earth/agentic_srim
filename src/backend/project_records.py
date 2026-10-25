@@ -8,6 +8,7 @@ from copy import deepcopy
 import errno
 import hashlib
 import json
+import logging
 import msvcrt
 import os
 from pathlib import Path
@@ -57,7 +58,13 @@ def initialize_record(paths: ProjectPaths, config: Config, kind: Literal["case",
         (target / "revisions").mkdir()
         written = write_record_json(target / "revisions" / "r000001.json", result)
         write_record_json(target / "current.json", {"schema_version": 1, "kind": kind, "id": allocated_id, "revision": 1, "sha256": written["sha256"]})
-    return {"record": result, "reference": {"kind": kind, "id": allocated_id, "revision": 1, "sha256": written["sha256"]}}
+    response = {"record": result, "reference": {"kind": kind, "id": allocated_id, "revision": 1, "sha256": written["sha256"]}}
+    try:
+        from src.knowledge.retrieval_index import notify_project_record_published
+        notify_project_record_published(paths, response["reference"])
+    except Exception:
+        logging.getLogger(__name__).exception("Project publication succeeded; retrieval notification failed")
+    return response
 
 
 def read_record(paths: ProjectPaths, kind: Literal["case", "analysis"], record_id: str, *, revision: int | None = None) -> JSONObject:
@@ -97,10 +104,21 @@ def read_record(paths: ProjectPaths, kind: Literal["case", "analysis"], record_i
 
 
 def revise_record(paths: ProjectPaths, config: Config, kind: Literal["case", "analysis"], record_id: str, expected_revision: int, document: JSONObject, request_id: str) -> JSONObject:
-    """Append document to record_id with CAS and request_id, returning revision evidence.
+    """Publish a full immutable revision, then notify derived retrieval after unlocking.
 
-    Reject stale writes, repeated conflicting UUIDs or terminal analysis mutation.
-    Publish immutable revision before pointer; retain partial writes on OSError.
+    Args:
+        paths: Project storage layout.
+        config: Timestamp/allocation configuration.
+        kind: case or analysis record kind.
+        record_id: Existing exact record identity.
+        expected_revision: Compare-and-swap revision.
+        document: Complete replacement domain fields.
+        request_id: Canonical idempotency UUID.
+    Returns:
+        Published record/reference; identical retries re-notify the same revision.
+    Raises:
+        ValueError: Invalid request, CAS conflict or terminal analysis mutation.
+        OSError: Source publication failure; index notification failures are logged.
     """
     if str(UUID(request_id)) != request_id or type(expected_revision) is not int or expected_revision < 1:
         raise ValueError("Invalid request UUID or expected revision")
@@ -108,20 +126,27 @@ def revise_record(paths: ProjectPaths, config: Config, kind: Literal["case", "an
         previous = read_record(paths, kind, record_id)
         old = previous["record"]
         if old["request_id"] == request_id:
-            if all(old.get(key) == value for key, value in document.items()):
-                return previous
-            raise ValueError("conflict: request ID already used")
-        if old["revision"] != expected_revision:
-            raise ValueError("conflict: stale expected revision")
-        if kind == "analysis" and old["status"] != "draft":
-            raise ValueError("conflict: terminal analysis is immutable")
-        result = deepcopy(document)
-        result.update(schema_version=1, kind=kind, id=record_id, revision=expected_revision + 1, previous_sha256=previous["reference"]["sha256"], request_id=request_id, created_at=old["created_at"], updated_at=_record_time(config, None).isoformat())
-        validate_record(result, kind)
-        target = (paths.cases if kind == "case" else paths.postprocessing_memory) / record_id
-        written = write_record_json(target / "revisions" / f"r{result['revision']:06d}.json", result)
-        write_record_json(target / "current.json", {"schema_version": 1, "kind": kind, "id": record_id, "revision": result["revision"], "sha256": written["sha256"]}, replace=True)
-        return {"record": result, "reference": {"kind": kind, "id": record_id, "revision": result["revision"], "sha256": written["sha256"]}}
+            if not all(old.get(key) == value for key, value in document.items()):
+                raise ValueError("conflict: request ID already used")
+            response = previous
+        else:
+            if old["revision"] != expected_revision:
+                raise ValueError("conflict: stale expected revision")
+            if kind == "analysis" and old["status"] != "draft":
+                raise ValueError("conflict: terminal analysis is immutable")
+            result = deepcopy(document)
+            result.update(schema_version=1, kind=kind, id=record_id, revision=expected_revision + 1, previous_sha256=previous["reference"]["sha256"], request_id=request_id, created_at=old["created_at"], updated_at=_record_time(config, None).isoformat())
+            validate_record(result, kind)
+            target = (paths.cases if kind == "case" else paths.postprocessing_memory) / record_id
+            written = write_record_json(target / "revisions" / f"r{result['revision']:06d}.json", result)
+            write_record_json(target / "current.json", {"schema_version": 1, "kind": kind, "id": record_id, "revision": result["revision"], "sha256": written["sha256"]}, replace=True)
+            response = {"record": result, "reference": {"kind": kind, "id": record_id, "revision": result["revision"], "sha256": written["sha256"]}}
+    try:
+        from src.knowledge.retrieval_index import notify_project_record_published
+        notify_project_record_published(paths, response["reference"])
+    except Exception:
+        logging.getLogger(__name__).exception("Project publication succeeded; retrieval notification failed")
+    return response
 
 
 def list_records(paths: ProjectPaths, kind: Literal["case", "analysis"], *, status: str | None = None, offset: int = 0, limit: int = 100) -> JSONObject:

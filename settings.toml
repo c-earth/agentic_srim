@@ -12,3 +12,10 @@ hide_sr_window = true
 # true: request hidden TRIM windows; false: use normal window display.
 # Defaults to true. Report-only execution leaves native popups unanswered.
 hide_trim_window = true
+
+[knowledge]
+# Absolute Database Paths.
+# Escape Windows backslashes by doubling them.
+database_paths = [
+    "D:\\files\\documents\\NERSC_TRIM_20k"
+]

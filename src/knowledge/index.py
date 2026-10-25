@@ -306,7 +306,7 @@ def notify_simulation_finished(paths: ProjectPaths, metadata: JSONObject) -> Non
             with collector["lock"]:
                 collector["ids"].add(metadata["id"])
         else:
-            update_index(paths, [metadata["id"]])
+            _notify_indexes(paths, [metadata["id"]])
     except Exception as error:
         _log_index_failure({"state": "failed", "operation_id": "notification", "issues": [{"message": str(error)}]})
 
@@ -348,7 +348,7 @@ def collect_index_updates(paths: ProjectPaths) -> Iterator[None]:
             with collector["lock"]:
                 ids = sorted(collector["ids"])
             if ids:
-                update_index(paths, ids)
+                _notify_indexes(paths, ids)
         except Exception as error:
             _log_index_failure({"state": "failed", "operation_id": "batch", "issues": [{"message": str(error)}]})
         except BaseException as error:
@@ -398,3 +398,20 @@ def _log_index_failure(report: JSONObject) -> None:
         LOGGER.warning("Input indexing %s: %s; %s", report["operation_id"], report["state"], report["issues"])
     except Exception:
         pass
+
+
+def _notify_indexes(paths: ProjectPaths, simulation_ids: Sequence[str]) -> None:
+    """Attempt legacy and unified indexing independently after publication.
+
+    Args:
+        paths: Published simulation project.
+        simulation_ids: Explicit finalized run identities.
+    Returns:
+        None; ordinary failures are logged, interruption propagates.
+    """
+    from src.knowledge.retrieval_index import notify_native_records_published
+    for operation in (update_index, notify_native_records_published):
+        try:
+            operation(paths, simulation_ids)
+        except Exception:
+            LOGGER.exception("Native publication succeeded; independent catalog notification failed")

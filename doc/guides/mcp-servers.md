@@ -1,6 +1,6 @@
 # Local MCP servers
 
-The two independent local servers expose the [current MCP interfaces](../reference/mcp-format.md). srim_mcp exposes 40 scientific/discovery tools; project_mcp exposes 33 management/discovery tools.
+The two independent local servers expose the [current MCP interfaces](../reference/mcp-format.md). srim_mcp exposes 40 scientific/discovery tools; project_mcp exposes 46 management/retrieval/discovery tools.
 
 Both servers use local stdio. Their adapters live under `src/mcp/srim_mcp/` and `src/mcp/project_mcp/`, with shared infrastructure under `src/mcp/common/`. Existing calculation APIs remain separate.
 
@@ -15,6 +15,10 @@ One agent session can create and work with multiple cases. Each operation select
 | srim_mcp | Execution | trim_continue_prepare, run_submit, batch_submit, run_closeout, run_reconcile |
 | srim_mcp | Records and results | simulations_list, simulation_get, source_get, source_read, result_read, table_read, trim_availability_get |
 | srim_mcp | Recovery, search and cleanup | trim_parse, trim_recover, inputs_search, index_update, workers_cleanup |
+| project_mcp | Unified evidence search | knowledge_search, knowledge_get, knowledge_links, knowledge_status, knowledge_update |
+| project_mcp | External source inspection | database_sources_list, database_inspect, database_sample_read |
+| project_mcp | External source preview/import and refresh (managed jobs) | database_preview, database_import |
+| project_mcp | External source search and access (reads) | database_search, database_get, database_status |
 | project_mcp | Cases | cases_list, case_get, case_create, case_revise |
 | project_mcp | Run references | runs_list, run_get, run_source, physics_job_get |
 | project_mcp | Analysis records | analyses_list, analysis_get, analysis_create, analysis_revise, analysis_attach, analysis_finish |
@@ -77,3 +81,31 @@ Quarantined workers stay quarantined, even after metadata recovery. A missing or
 changed stop proof, uncertain native ownership or failed metadata write remains
 unresolved. No native process is started, stopped or retried by reconciliation.
 See the [report and evidence contracts](../reference/mcp-format.md#run-closeout-and-reconciliation).
+
+
+## External source tools and settings reload
+
+The `databases` family includes three registration/inspection reads,
+`database_preview`, `database_import` and `database_reindex` managed jobs, and
+`database_search`, `database_get` and `database_status` reads. The installed
+`snumat-trim-v1` adapter supports external TRIM inputs and six calculated
+summary quantities. External searches use a separate catalog; native/project
+records remain available through the existing `knowledge_*` tools.
+
+After installing or changing adapter/tool code, restart the existing
+`project_mcp` server and reconnect the client if needed to refresh tool discovery.
+No separate server registration is needed for another database using a supported
+schema. Source operations reload `knowledge.database_paths` from
+`settings.toml`, so adding or removing registered paths needs no server restart.
+Removing a registration revokes source reads while retaining derived history.
+
+Adding data in a supported schema needs an explicit `database_preview`, followed
+by `database_import` with the reviewed plan hash. The same workflow refreshes
+an existing catalog: add new identities, version changes, skip unchanged records,
+and report missing records while preserving history. After import, explicitly run
+`database_reindex` with the imported generation. It builds searchable fields from
+the retained records without another preview; search refuses stale or missing
+indexes until the build finishes. A changed scientific format
+may require an adapter update and server restart. Startup, searches and file
+changes never import or refresh sources automatically. See
+[external onboarding](input-search.md#external-database-registration-and-onboarding).

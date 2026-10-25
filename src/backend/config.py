@@ -1,6 +1,7 @@
 """Load and validate immutable project configuration from a TOML file."""
 
 from dataclasses import dataclass
+import os
 from pathlib import Path
 import tomllib
 from typing import Any
@@ -15,12 +16,15 @@ class Config:
     both defaulting to True. TRIM's preference controls initial display; native
     dialogs remain reportable and are never automatically answered. Direct construction
     stores inputs without validation or I/O; load_config validates file inputs.
+    database_paths is an immutable tuple of explicitly registered local source paths,
+    defaulting to empty. Registration does not read or index source contents.
     """
 
     timezone: str
     srim_root: Path
     hide_sr_window: bool = True
     hide_trim_window: bool = True
+    database_paths: tuple[Path, ...] = ()
 
 
 def load_config(path: Path) -> Config:
@@ -39,6 +43,8 @@ def load_config(path: Path) -> Config:
 
     Side effects:
         Opens and reads path afresh without caching, locking, or writing files.
+        Optional knowledge.database_paths contains unique absolute local Windows
+        paths; entries need not exist. No registered source is opened or indexed.
 
     Raises:
         OSError: File access failed; the original exception propagates unchanged.
@@ -50,10 +56,10 @@ def load_config(path: Path) -> Config:
         data: dict[str, Any] = tomllib.load(stream)
 
     for section in data:
-        if section not in {"time", "srim"}:
+        if section not in {"time", "srim", "knowledge"}:
             raise ValueError(f"Unknown configuration section: {section!r}")
 
-    for section, allowed_keys in (("time", {"timezone"}), ("srim", {"root", "hide_sr_window", "hide_trim_window"})):
+    for section, allowed_keys in (("time", {"timezone"}), ("srim", {"root", "hide_sr_window", "hide_trim_window"}), ("knowledge", {"database_paths"})):
         if section in data:
             if not isinstance(data[section], dict):
                 raise ValueError(f"Configuration section {section!r} must be a table")
@@ -93,4 +99,20 @@ def load_config(path: Path) -> Config:
         if type(value) is not bool:
             raise ValueError(f"srim.{key} must be a boolean")
 
-    return Config(timezone=timezone, srim_root=srim_root, hide_sr_window=hide_sr_window, hide_trim_window=hide_trim_window)
+    values = data.get("knowledge", {}).get("database_paths", [])
+    if not isinstance(values, list):
+        raise ValueError("knowledge.database_paths must be a list of absolute local paths")
+    database_paths: list[Path] = []
+    identities: set[str] = set()
+    for value in values:
+        if not isinstance(value, str) or not value or "\0" in value:
+            raise ValueError("knowledge.database_paths entries must be path strings")
+        candidate = Path(value)
+        if not candidate.is_absolute() or len(candidate.drive) != 2 or candidate.drive[1] != ":" or ".." in candidate.parts or any(os.path.isreserved(part) or any(character in '<>:"|?*' or ord(character) < 32 for character in part) for part in candidate.parts[1:]):
+            raise ValueError("knowledge.database_paths requires safe absolute local drive paths")
+        identity = os.path.normcase(os.path.normpath(str(candidate)))
+        if identity in identities:
+            raise ValueError("Duplicate knowledge.database_paths entry")
+        identities.add(identity)
+        database_paths.append(candidate)
+    return Config(timezone=timezone, srim_root=srim_root, hide_sr_window=hide_sr_window, hide_trim_window=hide_trim_window, database_paths=tuple(database_paths))

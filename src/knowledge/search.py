@@ -9,7 +9,7 @@ import uuid
 from src.backend.paths import ProjectPaths
 from src.backend.records import _lock_parent, _validate_paths
 from src.knowledge.index import PROJECTOR_VERSION
-from src.knowledge.schema import matches_filters, validate_search_document
+from src.knowledge.schema import _compile_filters, validate_search_document
 from src.knowledge.source import read_source_record
 from src.srim.common.types import JSONObject
 
@@ -56,6 +56,41 @@ def search_inputs(paths: ProjectPaths, filters: JSONObject | None = None, *, off
         if expected_generation is not None:
             raise ValueError("Catalog generation changed or is unavailable")
         return result
+    result["generation"], rows, issues = _read_catalog_snapshot(paths, filters, expected_generation)
+    evaluate = _compile_filters(filters)
+    for simulation_id, serialized in rows:
+        try:
+            indexed = json.loads(serialized)
+            validate_search_document(indexed, "record")
+            if indexed["reference"]["id"] != simulation_id:
+                raise ValueError("Catalog identity differs from projection")
+            current = read_source_record(paths, indexed["reference"])
+            if evaluate(current):
+                if offset <= result["total"] < offset + limit:
+                    result["matches"].append(current)
+                result["total"] += 1
+        except (ValueError, OSError, KeyError, TypeError) as error:
+            result["excluded"].append({"simulation_id": simulation_id, "code": "stale", "field": None, "message": str(error)})
+    result["excluded"].extend(issues)
+    validate_search_document(result, "result")
+    return result
+
+
+def _read_catalog_snapshot(paths: ProjectPaths, filters: JSONObject, expected_generation: str | None) -> tuple[str | None, list[tuple[str, str]], list[JSONObject]]:
+    """Capture generation, candidates and issues under the catalog lock.
+
+    Args:
+        paths: Validated absolute project layout.
+        filters: Validated native filters.
+        expected_generation: Optional UUID identifying the required catalog.
+    Returns:
+        Generation, ordered serialized candidates and validated recorded issues.
+    Raises:
+        ValueError: Corrupt/incompatible schema or generation mismatch.
+        OSError: Unsafe path, inaccessible storage or lock contention.
+    """
+    directory = paths.root / "memory/knowledge"
+    database = directory / "index.sqlite"
     with _lock_parent(directory, timeout_seconds=30.0):
         if database.is_symlink() or database.is_junction():
             raise OSError("Unsafe catalog path")
@@ -70,8 +105,8 @@ def search_inputs(paths: ProjectPaths, filters: JSONObject | None = None, *, off
             if connection.execute("PRAGMA user_version").fetchone()[0] != 1 or set(meta) != {"schema_version", "generation", "projector_version"} or meta["schema_version"] != "1" or meta["projector_version"] != PROJECTOR_VERSION or columns != {"records": ["id", "metadata_sha256", "input_inventory_sha256", "engine", "mode", "execution_status", "projection_json"], "issues": ["id", "issue_json"], "meta": ["key", "value"]}:
                 raise ValueError("Incompatible native input-search schema")
             uuid.UUID(meta["generation"])
-            result["generation"] = meta["generation"]
-            if expected_generation is not None and expected_generation != result["generation"]:
+            generation = meta["generation"]
+            if expected_generation is not None and expected_generation != generation:
                 raise ValueError("Catalog generation changed; restart pagination")
             sql = "SELECT id,projection_json FROM records"
             predicates: list[str] = []
@@ -84,31 +119,17 @@ def search_inputs(paths: ProjectPaths, filters: JSONObject | None = None, *, off
             if predicates:
                 sql += " WHERE " + " AND ".join(predicates)
             sql += " ORDER BY id"
-            cursor = connection.execute(sql, parameters)
-            while rows := cursor.fetchmany(100):
-                for simulation_id, serialized in rows:
-                    try:
-                        indexed = json.loads(serialized)
-                        validate_search_document(indexed, "record")
-                        if indexed["reference"]["id"] != simulation_id:
-                            raise ValueError("Catalog identity differs from projection")
-                        current = read_source_record(paths, indexed["reference"])
-                        if matches_filters(current, filters):
-                            if offset <= result["total"] < offset + limit:
-                                result["matches"].append(current)
-                            result["total"] += 1
-                    except (ValueError, OSError, KeyError, TypeError) as error:
-                        result["excluded"].append({"simulation_id": simulation_id, "code": "stale", "field": None, "message": str(error)})
+            rows = connection.execute(sql, parameters).fetchall()
+            issues = []
             for serialized, in connection.execute("SELECT issue_json FROM issues ORDER BY id"):
-                issues = json.loads(serialized)
-                if not isinstance(issues, list):
+                entries = json.loads(serialized)
+                if not isinstance(entries, list):
                     raise ValueError("Corrupt catalog issue list")
-                for issue in issues:
+                for issue in entries:
                     validate_search_document(issue, "issue")
-                    result["excluded"].append(issue)
+                    issues.append(issue)
+            return generation, rows, issues
         except sqlite3.DatabaseError as error:
             raise ValueError("Corrupt native input-search catalog") from error
         finally:
             connection.close()
-    validate_search_document(result, "result")
-    return result

@@ -135,7 +135,7 @@ independently and share pinned evidence through explicit references. The agent
 applies these boundaries; MCP does not infer them from query text or add required
 target, recipe or validation fields. Cleanup is not a prerequisite.
 
-project_mcp exposes 33 tools. It records multiple independent cases, terminal native evidence, analysis provenance, unapproved capability candidates and improvement evidence. Active reusable workflow/analysis/skill collections start empty. It has no native execution, generic code executor, trial-approval or candidate-promotion tool.
+project_mcp exposes 47 tools. It records multiple independent cases, terminal native evidence, analysis provenance, unapproved capability candidates and improvement evidence. Active reusable workflow/analysis/skill collections start empty. It has no native execution, generic code executor, trial-approval or candidate-promotion tool.
 
 improvement_assess accepts closed project.assessment.v2 details plus the standard request_id and publishes one immutable version-2 assessment event through the normal mutation-job envelope. It grants no approval. Existing event kinds remain version 1. improvement_status retains its existing fields and adds assessments and pending_assessments; malformed records and chain conflicts remain issues. See the [protocol](../../.agents/skills/self-improvement/references/protocol.md#assessment-event-extension) for the exact record contract.
 
@@ -238,3 +238,111 @@ TRIM continuation keeps the approved checkpoint-first lifecycle, saved-value che
 ## Resources
 
 The srim:// and project:// schemes expose capability/schema/example indexes and identity templates, job snapshots and artifact manifests. project:// additionally exposes case and analysis revisions, collection entries/candidates and improvement state. Tools provide equivalent discovery when a host does not expose resources conveniently. URI parameters are identities, never arbitrary filesystem paths. Initial subscriptions, sampling, elicitation, prompts and remote HTTP transports are not advertised.
+
+
+## Unified retrieval tools
+
+Project MCP exposes knowledge_search, knowledge_get, knowledge_links,
+knowledge_status and the mutating knowledge_update. Discovery publishes
+knowledge.query.v1 and knowledge.output-filter.v1. The complete Python/JSON
+contract is in [unified retrieval](input-search-format.md#unified-retrieval-apis).
+
+knowledge_update accepts operation initialize/update/reconcile. update takes
+explicit {kind,reference} identities; reconcile defaults to registered scope,
+previews when expected_plan_sha256 is null, and applies only an unchanged digest.
+Project scope is an explicit published-record inventory. Existing request UUID,
+job, cancellation and artifact-result behavior applies. Cancellation is checked
+before atomic index publication; already published records remain unaffected.
+Read responses honor max_result_bytes and fail too-large rather than returning
+truncated JSON. Reduce page size or read a specific table to inspect large results.
+Incoming links/coverage describe indexed records, not a complete project audit.
+
+Scientific inputs_search/index_update remain unchanged public interfaces.
+
+
+## External database inspection tools
+
+Family `databases` provides three read-only tools through project_mcp:
+
+| Tool | Required arguments | Data schema |
+| --- | --- | --- |
+| database_sources_list | none | database.source-list.v1 |
+| database_inspect | source_id | database.inspection.v1 |
+| database_sample_read | reference | database.sample-read.v1 |
+
+`database.sample-reference.v1` describes the closed input reference. These are
+separate from native source/file references. Schema discovery exposes all four
+envelopes and `tool.<name>`. Tool results retain the ordinary MCP response wrapper.
+`max_result_bytes` caps serialized result data; `file_chunk_bytes` additionally
+caps each prefix (oversized reads/reports fail `too-large`).
+
+Each call reloads registered paths. IDs cannot authorize arbitrary paths or
+revoked registrations. Ancestors, descendants and archive members are checked;
+reparse points and unsafe/ambiguous members are rejected. No extraction, SQL
+connection, dataset code execution or index mutation occurs. Unknown schema
+recognition recommends an agent skill, which the server does not execute.
+See [external source inspection](input-search-format.md#external-source-inspection)
+for exact shapes, intrinsic limits and sample-only verification qualifications.
+
+## External database import and retrieval tools
+
+The existing project server adds six tools alongside bounded source discovery:
+
+| Tool | Arguments beyond the normal envelope | Operation |
+| --- | --- | --- |
+| database_preview | source_id, timeout_seconds=600, resume_operation_id=null | Managed staging/verification job; no search publication |
+| database_import | source_id, expected_plan_sha256, timeout_seconds=600 | Managed atomic import/refresh job |
+| database_reindex | source_id, expected_generation, timeout_seconds=600 | Managed exact search-index build from imported records |
+| database_search | source_id, query, offset=0, limit=20, expected_generation=null, timeout_seconds=60 | Read compact imported input/summary hits; original evidence not_checked |
+| database_get | reference, verify_evidence=true, timeout_seconds=240 | Read exact external record and evidence verification |
+| database_status | source_id | Read catalog/staged-plan status without source scanning |
+
+Preview, import and reindex require fresh UUID request_id values with normal idempotent
+job admission, job_get progress and verified artifact_read result chunks.
+Ready previews yield succeeded jobs without publishing searchable records.
+Committed imports yield succeeded jobs; failed/cancelled reports retain those
+job outcomes. Cancellation callbacks are checked during verification; an
+InterruptedError before commit becomes a cancelled job. No scientific worker
+or native simulation is allocated.
+
+Read results obey max_result_bytes and the normal response cap. Search uses
+schema-version-2 compact hits and a 131,072-byte data budget; follow next_offset
+when byte limits or exclusions shorten a page. Local page records are verified,
+while original evidence is explicitly not_checked. database_get reads one exact
+full record and verifies original archives/members by default. Search/get use
+cooperative deadlines in 1..240 seconds. Preview/import/reindex allow 1..3600
+seconds; all three default to600 seconds. No deadline changes the client cutoff.
+Tool schemas are closed and registered as tool.<name>. External schema IDs are
+database.external-reference.v1, database.external-query.v1,
+database.external-preview.v1, database.external-report.v1 and
+database.external-record.v1. Native reference and knowledge query schemas are
+not widened to accept external records.
+
+Installing adapter/tool code requires restarting project_mcp through its owning
+session and refreshing the client's connection/tool inventory. Adding supported
+records or editing registered paths needs no code restart: paths reload on calls,
+and data changes require an explicit preview, approved import and reindex. A
+reindex changes only the derived search projection; it reuses imported records
+and requires no source preview. No watcher or
+automatic startup/search refresh is installed. See the
+[external contract](input-search-format.md#external-import-and-search) and
+[usage workflow](../guides/input-search.md#preview-import-and-search-snumat-v1).
+
+External preview and import accept optional timeout_seconds (integer 1..3600,
+default 600). The chosen deadline spans all source passes, normalization and
+publication; the source reader honors that shared deadline. Expiration before
+commit prevents publication. Native tool contracts are unchanged.
+
+
+External `database_preview` accepts optional `resume_operation_id` (canonical
+lowercase UUID or null, default null), also accepted by
+`preview_external_import(..., timeout_seconds=600, resume_operation_id=None)`.
+Resume selects a terminal failed preview with complete normalization in this
+project. Fresh full fingerprints, exact source inventory/member hashes, cached
+record schemas/digests and unchanged catalog generation are required. Partial,
+corrupt, unsafe or stale caches fail explicitly; no fresh-normalization fallback
+occurs. Immutable derived records are hardlinked into a new staging operation;
+unsupported hardlinks fail explicitly. Original failed evidence and rejection
+diagnostics remain preserved. The default path still creates a fresh preview.
+Resume does not apply new mappings to prior rejections or publish searchable
+records; the new ready plan still requires explicit import approval.
