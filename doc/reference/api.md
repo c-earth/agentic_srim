@@ -346,8 +346,50 @@ read_simulation(paths: ProjectPaths, simulation_id: str) -> JSONObject
 start_simulation(paths: ProjectPaths, config: Config, simulation_id: str) -> JSONObject
 finish_simulation(paths: ProjectPaths, config: Config, simulation_id: str,
                    failure: JSONObject | None = None) -> JSONObject
+begin_execution_evidence(paths: ProjectPaths, config: Config, simulation_id: str,
+                         worker_id: str) -> JSONObject
+record_execution_stopped(paths: ProjectPaths, config: Config, simulation_id: str,
+                         execution_id: str, *, reason: str,
+                         exit_code: int | None) -> JSONObject
+read_execution_evidence(paths: ProjectPaths, simulation_id: str) -> JSONObject
+check_run_closeout(paths: ProjectPaths, simulation_ids: Sequence[str], *,
+                   job_states: Sequence[JSONObject] = ()) -> JSONObject
 ```
 
 `initialize_simulation` validates the empty allocation/documents/resources, writes safe input evidence, inventories it and publishes metadata last under the record-parent lock. It returns stored metadata and preserves partial writes on failure. Optional engine inputs are safe flat filenames; additional evidence uses allowed nested paths. SR continuation must be `None`; continuation transport is outside this reference's scope.
 
 `read_simulation` returns structurally validated metadata without requiring a live installation; it does not rehash the complete record or linked evidence. `start_simulation` requires created state, verifies resources and input inventory, and returns running metadata with a timestamp. `finish_simulation` inventories outputs and returns succeeded metadata only from running state with unchanged inputs; failure completion accepts created/running and retains evidence even after input damage. Both terminal states are immutable through these APIs. Lifecycle functions do not run engines or interpret output; normal callers should use preparation/execution.
+
+### Durable execution evidence and closeout
+
+The shared record APIs store immutable `lifecycle/launch.json` and `stopped.json`
+under the simulation record, outside input/output inventories. The caller holds
+the existing worker lease when beginning an execution or recording shutdown.
+`begin_execution_evidence` validates created SR/TRIM metadata, canonical runtime
+ownership and current inputs, then writes a unique execution UUID before
+`start_simulation`. Failure prevents native launch. `record_execution_stopped`
+requires the matching running execution and caller-established shutdown; it
+never establishes process death itself. Matching repeated semantic evidence
+returns the original timestamp/bytes; conflicting evidence raises `ValueError`.
+Unsafe or failed filesystem operations raise `OSError`.
+
+The SR runner records stop proof after ordinary subprocess return or handled
+timeout cleanup. The TRIM runner records it after owned-job cleanup; explicit
+`trim_job_stopped=False` prevents proof and failure finalization. Primary errors
+remain visible if evidence publication also fails. These changes do not alter
+checkpoint recovery, native output parsing or existing metadata versions.
+
+`read_execution_evidence` returns `{schema_version, simulation_id, launch,
+stopped, issues}` with nullable documents. It rechecks metadata/evidence bytes,
+launch identity and sealed current inputs; missing legacy proof, corruption or
+changing evidence becomes an issue, never recovery permission. Invalid base
+paths or simulation IDs raise `ValueError`/`OSError`.
+
+`check_run_closeout` accepts 1–1000 distinct explicit IDs and optional copied job
+snapshots. It returns sorted rows and counts for terminal, unstarted,
+stale-stopped, stale-unresolved, running-unresolved and invalid records. Every
+supplied ID appears, including missing/malformed records. `complete` requires all
+started records to be terminal and no invalid row; created preparations are
+listed separately. There is no age threshold or process execution. Argument or
+unsafe-root failures raise; individual record failures become issue rows.
+See the [exact report and evidence schemas](mcp-format.md#run-closeout-and-reconciliation).

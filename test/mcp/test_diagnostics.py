@@ -4,11 +4,17 @@ from __future__ import annotations
 
 from dataclasses import replace
 import hashlib
+import json
+from threading import Event
+from uuid import uuid4
 from unittest.mock import patch
 
 from src.mcp.common.contracts import RUN_DIAGNOSTICS_SCHEMA, canonical_bytes, validate_document
 from src.mcp.common.diagnostics import read_run_diagnostics
-from src.mcp.srim_mcp.operations import read_operation as scientific_read
+from src.mcp.srim_mcp.operations import read_operation as scientific_read, write_operation as scientific_write, reconcile_runs, reconcile_job_runs
+from src.mcp.srim_mcp.catalog import build_catalog
+from src.backend.records import CreateRequest, _lock_worker, create_directories
+from src.srim.common.records import initialize_simulation, begin_execution_evidence, start_simulation, record_execution_stopped, read_simulation
 from src.mcp.project_mcp.operations import read_operation as project_read
 from test_contracts import Fixture
 
@@ -181,3 +187,115 @@ class TestDiagnostics(Fixture):
         with patch("src.mcp.srim_mcp.operations.project_simulation_inputs", return_value={"files": []}), patch("src.mcp.srim_mcp.operations.read_simulation", return_value=self.metadata):
             with self.assertRaisesRegex(ValueError, "section diagnostics"):
                 scientific_read("result_read", {"simulation_id": self.identity, "section": "summary"}, self.science)
+
+    def test_closeout_and_reconcile(self: TestDiagnostics) -> None:
+        """Read self's stranded stop proof, recover via the adapter and preserve terminal bytes; return None."""
+        created, worker = create_directories(self.paths, self.config, [CreateRequest("srim"), CreateRequest("worker")]).completed
+        engine = {"name": "sr", "version": "2013", "executable": {"name": "SRModule.exe", "sha256": "a" * 64}}
+        request = {"schema_version": 1, "parameters": {"energy_keV": "125"}}
+        resolved = {"schema_version": 1, "parameters": request["parameters"], "sources": [], "resources": [], "cab": None}
+        initialize_simulation(self.paths, created, engine, request, resolved, engine_inputs={"SR.IN": b"input"})
+        runtime = worker.path / "sr" / created.path.name
+        runtime.mkdir()
+        (runtime / "SR.IN").write_bytes(b"input")
+        with _lock_worker(self.paths, worker.path):
+            launch = begin_execution_evidence(self.paths, self.config, created.path.name, worker.path.name)
+            start_simulation(self.paths, self.config, created.path.name)
+            record_execution_stopped(self.paths, self.config, created.path.name, launch["execution_id"], reason="exit", exit_code=0)
+        before = scientific_read("run_closeout", {"simulation_ids": [created.path.name]}, self.science)
+        validate_document(before, build_catalog(self.science)["schemas"]["srim.run-closeout.v1"])
+        self.assertFalse(before["complete"])
+        self.assertEqual(before["counts"]["stale_stopped"], 1)
+        events = []
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=AssertionError("Recovery must never launch native work")):
+            result = scientific_write("run_reconcile", {"simulation_ids": [created.path.name], "request_id": str(uuid4())}, self.science, Event().is_set, events.append)
+        self.assertEqual(result["outcome"], "succeeded")
+        self.assertEqual(result["data"]["recovered_ids"], [created.path.name])
+        self.assertTrue(result["data"]["closeout"]["complete"])
+        self.assertEqual(read_simulation(self.paths, created.path.name)["status"], "failed")
+        self.assertEqual((created.path / "output/raw/runtime/SR.IN").read_bytes(), b"input")
+        original = (created.path / "metadata.json").read_bytes()
+        job = {"id": "job_" + str(uuid4()), "state": "interrupted", "simulation_ids": [created.path.name]}
+        again = reconcile_job_runs(self.science, [job])
+        self.assertFalse(again["recovered_ids"])
+        self.assertTrue(again["closeout"]["complete"])
+        self.assertEqual((created.path / "metadata.json").read_bytes(), original)
+        empty = reconcile_job_runs(self.science, [])
+        self.assertTrue(empty["closeout"]["complete"])
+
+    def test_reconcile_blocks_unsafe_evidence(self: TestDiagnostics) -> None:
+        """Leave self's missing, corrupt, foreign and input-damaged stop proofs unresolved; return None."""
+        for damage in ("missing", "malformed", "foreign", "hash", "input", "path"):
+            with self.subTest(damage=damage):
+                created, worker = create_directories(self.paths, self.config, [CreateRequest("srim"), CreateRequest("worker")]).completed
+                engine = {"name": "sr", "version": "2013", "executable": {"name": "SRModule.exe", "sha256": "a" * 64}}
+                request = {"schema_version": 1, "parameters": {"energy_keV": "125"}}
+                resolved = {"schema_version": 1, "parameters": request["parameters"], "sources": [], "resources": [], "cab": None}
+                initialize_simulation(self.paths, created, engine, request, resolved, engine_inputs={"SR.IN": b"input"})
+                runtime = worker.path / "sr" / created.path.name
+                runtime.mkdir()
+                (runtime / "SR.IN").write_bytes(b"input")
+                with _lock_worker(self.paths, worker.path):
+                    launch = begin_execution_evidence(self.paths, self.config, created.path.name, worker.path.name)
+                    start_simulation(self.paths, self.config, created.path.name)
+                    record_execution_stopped(self.paths, self.config, created.path.name, launch["execution_id"], reason="exit", exit_code=0)
+                target = created.path / "lifecycle/stopped.json"
+                if damage == "missing":
+                    target.unlink()
+                elif damage == "malformed":
+                    target.write_bytes(b"not-json")
+                elif damage in ("foreign", "hash"):
+                    stopped = json.loads(target.read_bytes())
+                    stopped["execution_id" if damage == "foreign" else "launch_sha256"] = str(uuid4()) if damage == "foreign" else "0" * 64
+                    target.write_bytes(canonical_bytes(stopped))
+                elif damage == "input":
+                    (created.path / "input/engine/SR.IN").write_bytes(b"changed")
+                else:
+                    target = created.path / "lifecycle/launch.json"
+                    launch["runtime_path"] = "../elsewhere"
+                    target.write_bytes(canonical_bytes(launch))
+                with patch("src.mcp.srim_mcp.operations.finish_simulation") as finish:
+                    result = reconcile_runs(self.science, [created.path.name])
+                finish.assert_not_called()
+                self.assertEqual(result["unresolved_ids"], [created.path.name])
+                self.assertFalse(result["closeout"]["complete"])
+                self.assertEqual(read_simulation(self.paths, created.path.name)["status"], "running")
+
+    def test_reconcile_contention_and_metadata_failure(self: TestDiagnostics) -> None:
+        """Keep self's busy/failed writes unresolved and finalize despite missing runtime copies; return None."""
+        for failure in ("busy", "metadata", "metadata-unexpected", "missing-runtime", "copy-error", "copy-unexpected"):
+            with self.subTest(failure=failure):
+                created, worker = create_directories(self.paths, self.config, [CreateRequest("srim"), CreateRequest("worker")]).completed
+                engine = {"name": "sr", "version": "2013", "executable": {"name": "SRModule.exe", "sha256": "a" * 64}}
+                request = {"schema_version": 1, "parameters": {"energy_keV": "125"}}
+                resolved = {"schema_version": 1, "parameters": request["parameters"], "sources": [], "resources": [], "cab": None}
+                initialize_simulation(self.paths, created, engine, request, resolved, engine_inputs={"SR.IN": b"input"})
+                runtime = worker.path / "sr" / created.path.name
+                runtime.mkdir()
+                (runtime / "SR.IN").write_bytes(b"input")
+                with _lock_worker(self.paths, worker.path):
+                    launch = begin_execution_evidence(self.paths, self.config, created.path.name, worker.path.name)
+                    start_simulation(self.paths, self.config, created.path.name)
+                    record_execution_stopped(self.paths, self.config, created.path.name, launch["execution_id"], reason="exit", exit_code=0)
+                if failure == "busy":
+                    with _lock_worker(self.paths, worker.path):
+                        result = reconcile_runs(self.science, [created.path.name])
+                elif failure in ("metadata", "metadata-unexpected"):
+                    with patch("src.mcp.srim_mcp.operations.finish_simulation", side_effect=RuntimeError("unexpected publication error") if failure == "metadata-unexpected" else OSError("metadata unavailable")):
+                        result = reconcile_runs(self.science, [created.path.name])
+                elif failure == "missing-runtime":
+                    self.assertTrue(runtime.is_relative_to(self.root))
+                    (runtime / "SR.IN").unlink()
+                    runtime.rmdir()
+                    result = reconcile_runs(self.science, [created.path.name])
+                else:
+                    with patch("src.mcp.srim_mcp.operations.preserve_sr_runtime", side_effect=RuntimeError("unexpected copy error") if failure == "copy-unexpected" else OSError("copy unavailable")):
+                        result = reconcile_runs(self.science, [created.path.name])
+                self.assertTrue(result["issues"])
+                if failure in ("busy", "metadata", "metadata-unexpected"):
+                    self.assertEqual(result["unresolved_ids"], [created.path.name])
+                    self.assertEqual(read_simulation(self.paths, created.path.name)["status"], "running")
+                else:
+                    self.assertTrue(result["closeout"]["complete"])
+                    self.assertEqual(result["recovered_ids"], [created.path.name])
+                    self.assertEqual(read_simulation(self.paths, created.path.name)["status"], "failed")

@@ -44,11 +44,87 @@ Raw native outputs remain available through existing verified file reads, subjec
 to their eligibility checks. The report does not decide scientific exclusion,
 change execution state or launch recovery, retry or cleanup.
 
+## Run closeout and reconciliation
+
+Scientific tools `run_closeout` (read-only) and `run_reconcile` (mutating) accept
+`simulation_ids`: 1–1000 unique canonical `srim_YYYYMMDD_HHMMSS_N` IDs. They do not
+silently broaden scope to the workspace. `run_reconcile` additionally uses the
+standard fresh UUID `request_id` and durable job admission. No force, cleanup,
+process-kill or retry parameter exists. Dependency IDs must be included explicitly.
+
+`srim.run-closeout.v1` has exactly `schema_version` (1), `complete`, `rows`,
+`counts` and `issues`. Each sorted row contains `simulation_id`, nullable
+`metadata_status`, `classification`, nullable `worker_id`/`runtime_path`, sorted
+unique `job_ids`/`job_states`, boolean `stop_evidence`, `recovery_action` and
+`issues`. Terminal metadata classifies as `terminal`; created metadata is
+`unstarted`; running metadata with valid proof is `stale-stopped`; running
+without proof and with an ended job snapshot is `stale-unresolved`; other
+running records are `running-unresolved`; unreadable/invalid metadata is
+`invalid`. Explicit tool reads do not supply job snapshots; startup/shutdown
+callbacks correlate their validated journal snapshots. No job state establishes
+native process death. `recovery_action` is `none`, `reconcile`,
+`investigate-native-ownership` or `repair-record`.
+
+`counts` contains exactly `terminal`, `unstarted`, `stale_stopped`,
+`stale_unresolved`, `running_unresolved` and `invalid` nonnegative integers.
+`complete` means every started scoped run is terminal and no row is invalid;
+unstarted preparations are reported separately. Row issues are `{code,message}`;
+report issues add `simulation_id`. Invalid/missing records are never omitted.
+The report is finite JSON and remains subject to normal reply-size limits.
+
+Recovery returns exactly `{schema_version:1, recovered_ids, unresolved_ids,
+issues, closeout}`. IDs are sorted; issues are `{simulation_id,code,message}`.
+The final closeout is re-read. Under the worker lease, recovery revalidates stop
+proof and inputs, preserves available runtime evidence and independently calls
+failure finalization. Preservation errors remain reported even if failure
+metadata publishes. The failure message is `Orchestration interrupted after
+native execution stopped; recovered during lifecycle reconciliation`, with the
+proven stop exit code. Recovery never infers parser success or publishes
+succeeded status. Terminal records remain unchanged. Unresolved/invalid IDs
+produce outcome `partial` and failed adapter-job state; inspect the full report.
+
+Immutable evidence lives at `memory/srim/<id>/lifecycle/`:
+
+| File | Exact schema-1 fields in addition to schema_version |
+| --- | --- |
+| launch.json | simulation_id, engine (sr or trim), execution_id (UUID), worker_id, runtime_path, input_inventory_sha256, recorded_at |
+| stopped.json | simulation_id, execution_id, launch_sha256, recorded_at, reason (exit, timeout or controller-stopped), exit_code (integer or null) |
+
+`runtime_path` is `worker/<worker_id>/<engine>/<simulation_id>`.
+`input_inventory_sha256` hashes sorted-key compact UTF-8 JSON of sealed
+`metadata.inputs` with `ensure_ascii=False` and finite values. `launch_sha256`
+hashes exact launch-file bytes. Timestamps use configured aware record time.
+New executions publish launch intent before starting and stop proof only after
+native shutdown is established. Identical semantic stopped evidence is
+idempotent; conflicts are rejected. Recovery checks execution UUID, engine,
+worker/runtime identity, launch hash, unchanged inputs and stable evidence bytes.
+These documents are outside sealed input/output inventories and must be retained
+with the permanent record. They establish lifecycle evidence, not physics validity.
+
+Scientific startup marks unfinished jobs interrupted and retains worker
+quarantine before recovery. After owned execution threads join, graceful
+shutdown performs the same recovery sweep. Snapshots of terminal job states
+supply scope. The immutable report filenames are
+`memory/mcp/srim_mcp/recovery/startup_<uuid>.json` and `shutdown_<uuid>.json`.
+Ordinary callback failure produces `{schema_version:1,recovery_error:{code,
+message}}`, logs the issue and keeps diagnostic access available. Report-write
+failure is logged and does not claim durable report publication; successful
+metadata writes are not rolled back. Interruptions release the server lease.
+Project-server callbacks default to none and do not recover native metadata.
+
+A force-kill during native execution without durable stop proof, legacy runs
+without lifecycle evidence, and records with corrupt evidence stay explicitly
+unresolved. Released Python locks, old timestamps or interrupted jobs never
+substitute for native-stop evidence. Reconciliation does not stop or restart
+processes, release quarantine, clean workers or automatically retry scientific
+work. An explicit closeout of all task IDs is still required even after startup
+recovery; startup scope is the known job journal, not every historical record.
+
 ## Discovery and contracts
 
 Call capabilities_list for compact cards, capability_get for exact side effects/compatibility/units/examples, schema_get for expanded Draft 2020-12 schemas, and example_get for editable requests. A capability detail can describe an advanced Python-only API and intentionally have no executable tool_names. Implementation, MCP exposure, engine compatibility, reviewed automation, output availability and evidence strength are distinct fields.
 
-The scientific catalog exposes 38 tools, 61 capability cards and 28 examples. It includes SR list stopping and engine-grid ranges; all version-dependent TRIM modes; layers/isotopes/damage controls; events; resources/CAB; native and recovered results; conditional histories; prepared execution/batches; input search; and cleanup. Eight descriptive TRIM mode cards retain the seven-mode 2008 mapping and eight-mode 2013 mapping. Examples are input templates, not scientific recommendations.
+The scientific catalog exposes 40 tools, 63 capability cards and 28 examples. It includes SR list stopping and engine-grid ranges; all version-dependent TRIM modes; layers/isotopes/damage controls; events; resources/CAB; native and recovered results; conditional histories; prepared execution/batches; input search; and cleanup. Eight descriptive TRIM mode cards retain the seven-mode 2008 mapping and eight-mode 2013 mapping. Examples are input templates, not scientific recommendations.
 
 environment_get reports installation.sr and installation.trim readiness and file identities independently. Default-resource readiness is separate from executable presence and from reviewed TRIM dialog-policy compatibility.
 
@@ -142,7 +218,7 @@ allowed_input_roots adds explicit read-only external directories; an empty list 
 
 Queued jobs can be cancelled before dispatch. Active individual TRIM execution uses the existing cooperative cancellation callback and records completion only after owned native shutdown/preservation. Active SR is timeout-only; preparation/CAB, publication and active batches have queued-only cancellation. A racing successful completion remains success. TRIM timeout can be null; an unlimited active TRIM batch can delay graceful shutdown indefinitely. Disconnect/shutdown cannot invent cancellation support the backend lacks.
 
-Graceful shutdown stops admissions, cancels queued jobs, requests supported cancellation and waits for active finalization. Forced termination can leave SR children or partial publication. On restart, unfinished jobs become interrupted, their workers are quarantined, and requests are never automatically re-executed. There is no MCP auto-release tool: reconcile native activity/evidence explicitly before an approved recovery change, or use newly allocated workers. Released Python locks alone do not prove native processes stopped. Exactly-once native execution after a crash is not guaranteed.
+Graceful shutdown stops admissions, cancels queued jobs, requests supported cancellation and waits for active finalization. Forced termination can leave SR children or partial publication. On restart, unfinished jobs become interrupted, their workers are quarantined, and requests are never automatically re-executed. There is no MCP auto-release tool. Scientific startup and graceful shutdown reconcile only durable proven-stopped records linked to ended jobs, preserving a separate recovery report; explicit run_reconcile uses the same rules. Missing stop proof remains unresolved. Recovered metadata does not release quarantine; reconcile native activity/evidence before any separately authorized worker recovery. Released Python locks alone do not prove native processes stopped. Exactly-once native execution after a crash is not guaranteed.
 
 Recognized incomplete admissions are retained as listing issues while unrelated
 valid jobs remain accessible. A visible request-only legacy admission reserves

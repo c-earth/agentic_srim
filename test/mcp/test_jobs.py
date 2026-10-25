@@ -6,14 +6,19 @@ from collections.abc import Callable
 from copy import deepcopy
 from datetime import datetime, timezone
 import hashlib
+from functools import partial
+import io
 import json
 from pathlib import Path
 from threading import Event
 import time
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 from src.mcp.common.contracts import ServerContext
+from src.backend.records import CreateRequest, _lock_worker, create_directories
+from src.srim.common.records import begin_execution_evidence, initialize_simulation, start_simulation, record_execution_stopped, read_simulation
+from src.mcp.srim_mcp.operations import reconcile_job_runs
 from src.mcp.common.files import publish_json
 from src.mcp.common.jobs import JobManager, _requested_worker_ids
 from src.srim.common.types import JSONObject
@@ -308,3 +313,83 @@ class TestJobs(Fixture):
         finally:
             self.release.set()
             manager.shutdown()
+
+    def test_reconcile_restart_and_shutdown(self: TestJobs) -> None:
+        """Recover self's crashed stopped run before dispatch, preserve quarantine and repeat safely; return None."""
+        self.order, self.entered, self.release = [], Event(), Event()
+        created, worker = create_directories(self.paths, self.config, [CreateRequest("srim"), CreateRequest("worker")]).completed
+        engine = {"name": "sr", "version": "2013", "executable": {"name": "SRModule.exe", "sha256": "a" * 64}}
+        request_data = {"schema_version": 1, "parameters": {"energy_keV": "125"}}
+        resolved = {"schema_version": 1, "parameters": request_data["parameters"], "sources": [], "resources": [], "cab": None}
+        initialize_simulation(self.paths, created, engine, request_data, resolved, engine_inputs={"SR.IN": b"input"})
+        runtime = worker.path / "sr" / created.path.name
+        runtime.mkdir()
+        (runtime / "SR.IN").write_bytes(b"input")
+        with _lock_worker(self.paths, worker.path):
+            launch = begin_execution_evidence(self.paths, self.config, created.path.name, worker.path.name)
+            start_simulation(self.paths, self.config, created.path.name)
+            record_execution_stopped(self.paths, self.config, created.path.name, launch["execution_id"], reason="exit", exit_code=0)
+        request = _request_fixture(self.science, arguments={"worker_id": worker.path.name})
+        state = {"schema_version": 1, "id": request["id"], "state": "running", "phase": "executing", "updated_at": request["created_at"], "sequence": 0, "worker_ids": [worker.path.name], "simulation_ids": [created.path.name], "native_status": "running", "parser_complete": None, "cancellation": "queued-only", "progress": None, "result": None, "error": None}
+        manager = JobManager(self.science, self.execute, reconcile=partial(reconcile_job_runs, self.science))
+        publish_json(manager.root / "jobs" / request["id"] / "request.json", request)
+        publish_json(manager.root / "jobs" / request["id"] / "state.json", state)
+        manager.start()
+        try:
+            self.assertEqual(manager.get(request["id"])["state"], "interrupted")
+            self.assertEqual(manager.recovery_report["recovered_ids"], [created.path.name])
+            self.assertEqual(read_simulation(self.paths, created.path.name)["status"], "failed")
+            self.assertIn(worker.path.name, manager.quarantined)
+            self.assertEqual(self.order, [])
+            with self.assertRaisesRegex(ValueError, "quarantined"):
+                manager.submit("fake", {"worker_id": worker.path.name}, str(uuid4()))
+        finally:
+            manager.shutdown()
+        self.assertIsNone(manager.lease)
+        self.assertTrue(list((manager.root / "recovery").glob("startup_*.json")))
+        self.assertTrue(list((manager.root / "recovery").glob("shutdown_*.json")))
+        terminal_bytes = (created.path / "metadata.json").read_bytes()
+        for report in (manager.root / "recovery").glob("*.json"):
+            self.assertTrue(report.is_relative_to(self.root))
+            report.unlink()
+        recovered = JobManager(self.science, self.execute, reconcile=partial(reconcile_job_runs, self.science))
+        recovered.start()
+        try:
+            self.assertFalse(recovered.recovery_report["recovered_ids"])
+            self.assertTrue(recovered.recovery_report["closeout"]["complete"])
+            self.assertEqual((created.path / "metadata.json").read_bytes(), terminal_bytes)
+            self.assertIn(worker.path.name, recovered.quarantined)
+        finally:
+            recovered.shutdown()
+
+    def test_reconcile_callback_failure(self: TestJobs) -> None:
+        """Retain self's recovery errors while serving diagnostics and releasing the singleton; return None."""
+        callback = Mock(side_effect=OSError("recovery unavailable"))
+        manager = JobManager(self.science, self.execute, reconcile=callback)
+        with patch("sys.stderr", new=io.StringIO()):
+            manager.start()
+            self.assertEqual(manager.recovery_report["recovery_error"]["code"], "reconciliation")
+            self.assertIsNotNone(manager.dispatcher)
+            manager.shutdown()
+        self.assertEqual(callback.call_count, 2)
+        self.assertIsNone(manager.lease)
+        self.assertEqual(len(list((manager.root / "recovery").glob("*.json"))), 2)
+        ordinary = JobManager(self.science, self.execute)
+        ordinary.start()
+        try:
+            self.assertIsNone(ordinary.recovery_report)
+        finally:
+            ordinary.shutdown()
+        empty = reconcile_job_runs(self.science, [])
+        publication = JobManager(self.science, self.execute, reconcile=Mock(return_value=empty))
+        with patch("src.mcp.common.jobs.publish_json", side_effect=OSError("report unavailable")), patch("sys.stderr", new=io.StringIO()) as diagnostics:
+            publication.start()
+            self.assertTrue(publication.recovery_report["closeout"]["complete"])
+            publication.shutdown()
+            self.assertIn("publication failed", diagnostics.getvalue())
+        self.assertIsNone(publication.lease)
+        interrupted = JobManager(self.science, self.execute, reconcile=Mock(side_effect=[empty, KeyboardInterrupt("shutdown interrupted")]))
+        interrupted.start()
+        with self.assertRaises(KeyboardInterrupt):
+            interrupted.shutdown()
+        self.assertIsNone(interrupted.lease)

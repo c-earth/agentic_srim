@@ -18,7 +18,7 @@ from mcp.types import CallToolRequestParams, CallToolResult, ListResourcesResult
 
 from src.mcp.common.contracts import ServerContext, canonical_bytes, error_response, load_json, make_response, validate_document
 from src.mcp.common.files import read_verified_chunk, safe_path
-from src.mcp.common.jobs import Cancel, JobManager, Progress, WriteOperation
+from src.mcp.common.jobs import Cancel, JobManager, Progress, Reconcile, WriteOperation
 from src.srim.common.types import JSONObject, JSONValue
 from src.srim.common.files import _read_regular_bytes
 
@@ -33,14 +33,14 @@ class ProtocolAdapter:
     run owns server lifecycle. SDK context never replaces the trusted workspace.
     """
 
-    def __init__(self: ProtocolAdapter, context: ServerContext, catalog: JSONObject, read: ReadOperation, write: WriteOperation) -> None:
-        """Store validated context/catalog/callbacks and create an unstarted job manager."""
+    def __init__(self: ProtocolAdapter, context: ServerContext, catalog: JSONObject, read: ReadOperation, write: WriteOperation, *, reconcile: Reconcile | None = None) -> None:
+        """Store validated context/catalog/read/write and optional reconcile callback; create an unstarted job manager, returning None without execution."""
         if catalog.get("server") != context.name or not isinstance(catalog.get("tools"), dict):
             raise ValueError("Invalid server catalog identity")
         self.context = context
         self.catalog = deepcopy(catalog)
         self.read = read
-        self.jobs = JobManager(context, write)
+        self.jobs = JobManager(context, write, reconcile=reconcile)
         self.scheme = "srim" if context.name == "srim_mcp" else "project"
 
     def input_schema(self: ProtocolAdapter, name: str) -> Mapping[str, JSONValue] | None:

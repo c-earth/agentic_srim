@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+from functools import partial
 import asyncio
 import json
 import subprocess
@@ -14,6 +15,12 @@ from mcp import Client
 from mcp.client.stdio import StdioServerParameters
 
 from src.mcp.common.files import publish_json
+from src.mcp.common.protocol import ProtocolAdapter
+from src.mcp.srim_mcp.catalog import build_catalog
+from src.mcp.srim_mcp.operations import read_operation, write_operation, reconcile_job_runs
+from src.mcp.project_mcp.catalog import build_catalog as project_catalog
+from src.mcp.project_mcp.operations import read_operation as project_read, write_operation as project_write
+from mcp.types import CallToolRequestParams
 from test_contracts import Fixture
 from test_jobs import _request_fixture
 
@@ -79,7 +86,7 @@ class TestProtocol(Fixture, unittest.IsolatedAsyncioTestCase):
         science_parameters = StdioServerParameters(command="D:\\projects\\agentic_srim\\.venv\\Scripts\\python.exe", args=["-W", "error", "-m", "src.mcp.srim_mcp", "--root", str(self.root)], cwd=str(self.repository))
         project_parameters = StdioServerParameters(command="D:\\projects\\agentic_srim\\.venv\\Scripts\\python.exe", args=["-W", "error", "-m", "src.mcp.project_mcp", "--root", str(self.root)], cwd=str(self.repository))
         async with Client(science_parameters, read_timeout_seconds=15) as science, Client(project_parameters, read_timeout_seconds=15) as project:
-            self.assertEqual(len((await science.list_tools()).tools), 38)
+            self.assertEqual(len((await science.list_tools()).tools), 40)
             self.assertEqual(len((await project.list_tools()).tools), 33)
             duplicate_process = await asyncio.to_thread(subprocess.run, ["D:\\projects\\agentic_srim\\.venv\\Scripts\\python.exe", "-W", "error", "-m", "src.mcp.project_mcp", "--root", str(self.root)], cwd=str(self.repository), input=b"", stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
             self.assertEqual(duplicate_process.returncode, 1)
@@ -145,3 +152,30 @@ class TestProtocol(Fixture, unittest.IsolatedAsyncioTestCase):
             invalid = await project.call_tool("case_create", {"request_id": str(uuid4()), "spec": {"title": "incomplete"}})
             self.assertTrue(invalid.is_error)
             self.assertFalse((self.root / "no-native-installation").exists())
+
+    async def test_reconcile_callback_wiring(self: TestProtocol) -> None:
+        """Expose self's explicit closeout/reconcile tools through normal SDK dispatch; return None."""
+        catalog = build_catalog(self.science)
+        adapter = ProtocolAdapter(self.science, catalog, read_operation, write_operation, reconcile=partial(reconcile_job_runs, self.science))
+        project = ProtocolAdapter(self.project, project_catalog(self.project), project_read, project_write)
+        self.assertIsNone(project.jobs.reconcile)
+        self.assertNotIn("run_closeout", project.catalog["tools"])
+        adapter.jobs.start()
+        try:
+            self.assertTrue(adapter.jobs.recovery_report["closeout"]["complete"])
+            identity = "srim_20261025_000000_999"
+            response = await adapter.call_tool(None, CallToolRequestParams(name="run_closeout", arguments={"simulation_ids": [identity]}))
+            self.assertTrue(response.structured_content["ok"])
+            self.assertFalse(response.structured_content["data"]["complete"])
+            self.assertEqual(response.structured_content["data"]["rows"][0]["classification"], "invalid")
+            accepted = await adapter.call_tool(None, CallToolRequestParams(name="run_reconcile", arguments={"simulation_ids": [identity], "request_id": str(uuid4())}))
+            self.assertTrue(accepted.structured_content["ok"], accepted.structured_content)
+            job_id = accepted.structured_content["data"]["job_id"]
+            deadline = time.monotonic() + 5
+            while adapter.jobs.get(job_id)["state"] not in ("succeeded", "failed") and time.monotonic() < deadline:
+                await asyncio.sleep(0.01)
+            state = adapter.jobs.get(job_id)
+            self.assertEqual(state["state"], "failed")
+            self.assertIsNotNone(state["result"])
+        finally:
+            adapter.jobs.shutdown()

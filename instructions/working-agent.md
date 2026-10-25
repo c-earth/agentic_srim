@@ -126,8 +126,10 @@ requires a separate inventory and authorized cleanup in that workspace.
 
 Track the IDs of every simulation started for the task, including native
 dependency runs and simulations reported by orchestration jobs. Before
-closeout, read their current simulation metadata and the corresponding job
-states. A terminal job does not establish a terminal simulation.
+closeout, call run_closeout with all tracked IDs and inspect the corresponding
+job states and available startup/shutdown recovery reports. A terminal job does
+not establish a terminal simulation. The executable report must include every
+scoped ID, including invalid records, and cannot be replaced by a job summary.
 
 Confirm each started simulation is succeeded or failed. For an interrupted
 job, inspect its linked simulations and retained evidence; retain worker
@@ -142,7 +144,12 @@ and the next recovery action in the closeout. Do not report clean completion
 while omitting nonterminal started records. Report relevant created but
 unstarted preparations separately.
 
-Finalize a stranded run through the existing lifecycle API only after
+Use run_reconcile for stranded runs with verified durable stop evidence when
+recovery is within scope. Review its per-run issues and fresh closeout, even if
+the adapter job ended successfully. Missing stop proof, native ownership doubts
+and metadata-write failures remain explicit unresolved records; do not force
+recovery or release quarantined workers. For manual recovery through the
+existing lifecycle API, proceed only after
 confirming its native processes have stopped, obtaining the existing worker
 lease, and re-reading its metadata. Preserve available evidence, record an
 explicit failure reason, and leave already-terminal records unchanged.

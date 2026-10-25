@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from copy import deepcopy
 from datetime import datetime
 from functools import partial
@@ -26,6 +26,7 @@ from src.srim.common.files import _read_regular_bytes
 
 Progress = Callable[[JSONObject], None]
 Cancel = Callable[[], bool]
+Reconcile = Callable[[Sequence[JSONObject]], JSONObject]
 WriteOperation = Callable[[str, JSONObject, ServerContext, Cancel, Progress], JSONObject]
 _TERMINAL = frozenset({"succeeded", "failed", "cancelled", "interrupted"})
 
@@ -84,15 +85,18 @@ class JobManager:
     """Own context's durable jobs, executor callback and bounded thread scheduler.
 
     Construct with context and execute; start acquires ownership and reconciles
-    journals. Public snapshots are copied, and native metadata is never rewritten.
+    journals. Public snapshots are copied. Native metadata changes only through
+    an explicitly supplied scientific reconcile callback; scheduling never rewrites it.
     Admission issues describe retained partial directories; incomplete request
     maps reserve legacy identities independently of accepted requests/states.
     """
 
-    def __init__(self: JobManager, context: ServerContext, execute: WriteOperation) -> None:
-        """Store context/execute and initialize queue coordination; return None without I/O."""
+    def __init__(self: JobManager, context: ServerContext, execute: WriteOperation, *, reconcile: Reconcile | None = None) -> None:
+        """Store context/execute and optional reconcile callback; initialize queue/recovery state without I/O, returning None."""
         self.context = context
         self.execute = execute
+        self.reconcile = reconcile
+        self.recovery_report: JSONObject | None = None
         self.root = context.paths.root / "memory" / "mcp" / context.name
         self.condition = Condition(RLock())
         self.states: dict[str, JSONObject] = {}
@@ -169,6 +173,9 @@ class JobManager:
         ValueError/OSError with evidence retained and no automatic re-execution.
         Report recognized incomplete admissions separately, reserving visible
         request-only UUIDs/workers while keeping complete retries authoritative.
+        An optional scientific callback reconciles copied ended-job snapshots
+        before dispatch and retains an immutable startup report. Ordinary recovery
+        failures remain visible without disabling diagnostic reads.
         """
         if self.lease is not None:
             raise ValueError("Job manager already started")
@@ -236,6 +243,16 @@ class JobManager:
                         read_verified_chunk(safe_path(self.context.paths.root, reference["path"]), reference["sha256"], reference["size_bytes"], offset=0, length=1)
             for directory, request, staged in incomplete:
                 self._register_incomplete_admission(directory, request, staged=staged)
+            if self.reconcile is not None:
+                try:
+                    self.recovery_report = self.reconcile(deepcopy([state for state in self.states.values() if state["state"] in _TERMINAL]))
+                except Exception as error:
+                    self.recovery_report = {"schema_version": 1, "recovery_error": {"code": "reconciliation", "message": str(error) or type(error).__name__}}
+                    print(f"Startup recovery remains unresolved: {error!r}", file=sys.stderr)
+                try:
+                    publish_json(self.root / "recovery" / ("startup_" + str(uuid4()) + ".json"), self.recovery_report)
+                except Exception as error:
+                    print(f"Startup recovery report publication failed: {error!r}", file=sys.stderr)
             self.dispatcher = Thread(target=self.dispatch, name=self.context.name + "-scheduler", daemon=False)
             self.dispatcher.start()
         except BaseException:
@@ -374,7 +391,9 @@ class JobManager:
         """Stop admissions, cancel eligible work and wait for safe finalization.
 
         Return None after releasing singleton ownership; noncancellable/unlimited
-        operations may delay shutdown according to their advertised bounds.
+        operations may delay shutdown according to their advertised bounds. After
+        threads join, the optional callback retains a shutdown recovery report;
+        report/callback errors never skip releasing singleton ownership.
         """
         if self.lease is None:
             return
@@ -388,8 +407,20 @@ class JobManager:
             self.dispatcher.join()
         for thread in self.threads:
             thread.join()
-        self.lease.__exit__(None, None, None)
-        self.lease = None
+        try:
+            if self.reconcile is not None:
+                try:
+                    self.recovery_report = self.reconcile(deepcopy([state for state in self.states.values() if state["state"] in _TERMINAL]))
+                except Exception as error:
+                    self.recovery_report = {"schema_version": 1, "recovery_error": {"code": "reconciliation", "message": str(error) or type(error).__name__}}
+                    print(f"Shutdown recovery remains unresolved: {error!r}", file=sys.stderr)
+                try:
+                    publish_json(self.root / "recovery" / ("shutdown_" + str(uuid4()) + ".json"), self.recovery_report)
+                except Exception as error:
+                    print(f"Shutdown recovery report publication failed: {error!r}", file=sys.stderr)
+        finally:
+            self.lease.__exit__(None, None, None)
+            self.lease = None
 
     def dispatch(self: JobManager) -> None:
         """Run the scheduler thread until shutdown, returning None.

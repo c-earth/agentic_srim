@@ -2,21 +2,23 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 import errno
+import hashlib
 import json
 import os
 from operator import itemgetter
 from pathlib import Path, PurePosixPath
 import re
+from uuid import UUID, uuid4
 from src.backend.config import Config
 from src.backend.paths import ProjectPaths
 from src.backend.records import CreatedDirectory, DeleteRequest, _lock_parent, _record_time, _validate_delete_request, _validate_paths
 from src.backend.resources import ResourceReference, _validate_reference, verify_resource
 from src.srim.common.types import JSONObject, JSONValue
-from src.srim.common.files import _inventory, _read_json, _write_json, _write_input_file
+from src.srim.common.files import _inventory, _read_json, _write_json, _write_input_file, _read_regular_bytes
 
 
 def _validate_document(document: JSONObject, document_type: str) -> None:
@@ -379,6 +381,57 @@ def _validate_document(document: JSONObject, document_type: str) -> None:
             _validate_document(document["failure"], "failure")
         elif document["failure"] is not None:
             raise ValueError("Only failed records have failure details")
+    elif document_type in ("execution-launch", "execution-stopped"):
+        launch = document_type == "execution-launch"
+        fields = {"schema_version", "simulation_id", "execution_id", "recorded_at"} | ({"engine", "worker_id", "runtime_path", "input_inventory_sha256"} if launch else {"launch_sha256", "reason", "exit_code"})
+        if set(document) != fields or type(document["schema_version"]) is not int or document["schema_version"] != 1:
+            raise ValueError("Invalid execution evidence schema")
+        _validate_delete_request(DeleteRequest("srim", document["simulation_id"]))
+        if not isinstance(document["execution_id"], str) or str(UUID(document["execution_id"])) != document["execution_id"]:
+            raise ValueError("Invalid execution evidence UUID")
+        if not isinstance(document["recorded_at"], str) or datetime.fromisoformat(document["recorded_at"]).utcoffset() is None:
+            raise ValueError("Execution evidence requires an aware timestamp")
+        digest = document["input_inventory_sha256" if launch else "launch_sha256"]
+        if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+            raise ValueError("Invalid execution evidence hash")
+        if launch:
+            if document["engine"] not in ("sr", "trim") or not isinstance(document["worker_id"], str) or re.fullmatch(r"worker_[1-9][0-9]*", document["worker_id"]) is None:
+                raise ValueError("Invalid execution worker or engine")
+            if document["runtime_path"] != f'worker/{document["worker_id"]}/{document["engine"]}/{document["simulation_id"]}':
+                raise ValueError("Invalid execution runtime ownership")
+        elif document["reason"] not in ("exit", "timeout", "controller-stopped") or document["exit_code"] is not None and type(document["exit_code"]) is not int:
+            raise ValueError("Invalid stopped execution details")
+    elif document_type == "run-closeout":
+        if set(document) != {"schema_version", "complete", "rows", "counts", "issues"} or type(document["schema_version"]) is not int or document["schema_version"] != 1 or type(document["complete"]) is not bool or not isinstance(document["rows"], list) or not isinstance(document["issues"], list):
+            raise ValueError("Invalid closeout report")
+        categories = ("terminal", "unstarted", "stale-stopped", "stale-unresolved", "running-unresolved", "invalid")
+        if not isinstance(document["counts"], dict) or set(document["counts"]) != {value.replace("-", "_") for value in categories}:
+            raise ValueError("Invalid closeout counts")
+        counts = {key: 0 for key in document["counts"]}
+        ids = []
+        for row in document["rows"]:
+            if not isinstance(row, dict) or set(row) != {"simulation_id", "metadata_status", "classification", "worker_id", "runtime_path", "job_ids", "job_states", "stop_evidence", "recovery_action", "issues"} or row["classification"] not in categories or row["metadata_status"] not in (None, "created", "running", "succeeded", "failed") or type(row["stop_evidence"]) is not bool:
+                raise ValueError("Invalid closeout row")
+            _validate_delete_request(DeleteRequest("srim", row["simulation_id"]))
+            if row["worker_id"] is not None and (not isinstance(row["worker_id"], str) or re.fullmatch(r"worker_[1-9][0-9]*", row["worker_id"]) is None):
+                raise ValueError("Invalid closeout worker")
+            if row["runtime_path"] is not None and (row["worker_id"] is None or row["runtime_path"] not in (f'worker/{row["worker_id"]}/sr/{row["simulation_id"]}', f'worker/{row["worker_id"]}/trim/{row["simulation_id"]}')):
+                raise ValueError("Invalid closeout runtime")
+            if row["recovery_action"] not in ("none", "reconcile", "investigate-native-ownership", "repair-record") or not isinstance(row["issues"], list):
+                raise ValueError("Invalid closeout action")
+            for key in ("job_ids", "job_states"):
+                if not isinstance(row[key], list) or any(not isinstance(value, str) for value in row[key]) or row[key] != sorted(set(row[key])):
+                    raise ValueError("Invalid closeout job references")
+            for issue in row["issues"]:
+                if not isinstance(issue, dict) or set(issue) != {"code", "message"} or any(not isinstance(value, str) or not value for value in issue.values()):
+                    raise ValueError("Invalid closeout row issue")
+            counts[row["classification"].replace("-", "_")] += 1
+            ids.append(row["simulation_id"])
+        if ids != sorted(set(ids)) or any(type(value) is not int or value < 0 for value in document["counts"].values()) or counts != document["counts"] or document["complete"] != (counts["terminal"] + counts["unstarted"] == len(ids)):
+            raise ValueError("Inconsistent closeout completion or counts")
+        for issue in document["issues"]:
+            if not isinstance(issue, dict) or set(issue) != {"simulation_id", "code", "message"} or any(not isinstance(value, str) or not value for value in issue.values()) or issue["simulation_id"] not in ids:
+                raise ValueError("Invalid closeout issue")
     elif document_type == "failure":
         if set(document) != {"message", "exit_code"} or not isinstance(document["message"], str) or not document["message"].strip() or (document["exit_code"] is not None and type(document["exit_code"]) is not int):
             raise ValueError("Invalid failure details")
@@ -644,3 +697,163 @@ def finish_simulation(paths: ProjectPaths, config: Config, simulation_id: str, f
         except Exception:
             pass
     return completed
+
+
+
+def begin_execution_evidence(paths: ProjectPaths, config: Config, simulation_id: str, worker_id: str) -> JSONObject:
+    """Publish paths' created simulation launch intent for worker_id using config time.
+
+    The caller holds the worker lease. Validate identity, runtime and current
+    inputs; return a fresh execution UUID and exclusively synchronized evidence.
+    Do not launch or start anything. Invalid state raises ValueError; unsafe,
+    conflicting or failed filesystem operations raise OSError without overwrite.
+    """
+    record = _simulation_path(paths, simulation_id)
+    metadata = read_simulation(paths, simulation_id)
+    if metadata["status"] != "created" or metadata["engine"]["name"] not in ("sr", "trim"):
+        raise ValueError("Execution evidence requires a created SR/TRIM simulation")
+    if not isinstance(worker_id, str) or re.fullmatch(r"worker_[1-9][0-9]*", worker_id) is None:
+        raise ValueError("Invalid execution worker")
+    runtime = paths.workers / worker_id / metadata["engine"]["name"] / simulation_id
+    _inventory(runtime, runtime)
+    if _inventory(record / "input", record) != metadata["inputs"]:
+        raise ValueError("Execution inputs differ from their initialized inventory")
+    digest = hashlib.sha256(json.dumps(metadata["inputs"], sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")).hexdigest()
+    document = {"schema_version": 1, "simulation_id": simulation_id, "engine": metadata["engine"]["name"], "execution_id": str(uuid4()), "worker_id": worker_id, "runtime_path": runtime.relative_to(paths.root).as_posix(), "input_inventory_sha256": digest, "recorded_at": _record_time(config, None).isoformat()}
+    _validate_document(document, "execution-launch")
+    directory = record / "lifecycle"
+    if directory.is_symlink() or directory.is_junction():
+        raise OSError(errno.ELOOP, "Lifecycle path contains a link", str(directory))
+    directory.mkdir(exist_ok=True)
+    _write_input_file(directory / "launch.json", (json.dumps(document, sort_keys=True, ensure_ascii=False, allow_nan=False) + "\n").encode("utf-8"))
+    return document
+
+
+def record_execution_stopped(paths: ProjectPaths, config: Config, simulation_id: str, execution_id: str, *, reason: str, exit_code: int | None) -> JSONObject:
+    """Publish proven native shutdown for paths' running execution_id/simulation_id.
+
+    The caller holds its worker lease and proves stopping before calling. Use
+    config time, reason and exit_code; return durable proof or identical existing
+    semantic evidence. Reject conflicting state, identity or contents with
+    ValueError; unsafe or failed I/O raises OSError. Never infer native shutdown.
+    """
+    record = _simulation_path(paths, simulation_id)
+    metadata = read_simulation(paths, simulation_id)
+    launch_bytes = _read_regular_bytes(record / "lifecycle/launch.json")
+    launch = _read_json(record / "lifecycle/launch.json")
+    _validate_document(launch, "execution-launch")
+    if metadata["status"] != "running" or launch["simulation_id"] != simulation_id or launch["execution_id"] != execution_id or launch["engine"] != metadata["engine"]["name"]:
+        raise ValueError("Stopped evidence does not match the running execution")
+    if _read_regular_bytes(record / "lifecycle/launch.json") != launch_bytes:
+        raise ValueError("Execution launch changed during stop publication")
+    document = {"schema_version": 1, "simulation_id": simulation_id, "execution_id": execution_id, "launch_sha256": hashlib.sha256(launch_bytes).hexdigest(), "recorded_at": _record_time(config, None).isoformat(), "reason": reason, "exit_code": exit_code}
+    _validate_document(document, "execution-stopped")
+    target = record / "lifecycle/stopped.json"
+    if os.path.lexists(target):
+        existing = _read_json(target)
+        _validate_document(existing, "execution-stopped")
+        if {key: value for key, value in existing.items() if key != "recorded_at"} != {key: value for key, value in document.items() if key != "recorded_at"}:
+            raise ValueError("Conflicting stopped execution evidence")
+        return existing
+    _write_input_file(target, (json.dumps(document, sort_keys=True, ensure_ascii=False, allow_nan=False) + "\n").encode("utf-8"))
+    return document
+
+
+def read_execution_evidence(paths: ProjectPaths, simulation_id: str) -> JSONObject:
+    """Read stable lifecycle evidence for paths/simulation_id without mutation.
+
+    Return launch/stopped documents and explicit missing, malformed or integrity
+    issues. Unsafe base paths/IDs raise ValueError/OSError; individual evidence
+    errors become issues and cannot authorize recovery. Rehash current inputs
+    and recheck metadata and evidence bytes to reject inconsistent snapshots.
+    """
+    record = _simulation_path(paths, simulation_id)
+    result: JSONObject = {"schema_version": 1, "simulation_id": simulation_id, "launch": None, "stopped": None, "issues": []}
+    snapshots: dict[Path, bytes] = {}
+    try:
+        snapshots[record / "metadata.json"] = _read_regular_bytes(record / "metadata.json")
+        metadata = read_simulation(paths, simulation_id)
+        for name, kind in (("launch", "execution-launch"), ("stopped", "execution-stopped")):
+            target = record / "lifecycle" / (name + ".json")
+            snapshots[target] = _read_regular_bytes(target)
+            document = _read_json(target)
+            _validate_document(document, kind)
+            if document["simulation_id"] != simulation_id:
+                raise ValueError("Execution evidence names another simulation")
+            result[name] = document
+        launch, stopped = result["launch"], result["stopped"]
+        if launch["engine"] != metadata["engine"]["name"] or stopped["execution_id"] != launch["execution_id"] or stopped["launch_sha256"] != hashlib.sha256(snapshots[record / "lifecycle/launch.json"]).hexdigest():
+            raise ValueError("Execution stop proof does not match launch ownership")
+        digest = hashlib.sha256(json.dumps(metadata["inputs"], sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")).hexdigest()
+        if launch["input_inventory_sha256"] != digest or _inventory(record / "input", record) != metadata["inputs"]:
+            raise ValueError("Execution stop proof has changed inputs")
+    except (ValueError, OSError, TypeError, KeyError) as error:
+        result["issues"].append({"code": "missing" if isinstance(error, FileNotFoundError) else "integrity", "message": str(error) or type(error).__name__})
+    for target, original in snapshots.items():
+        try:
+            if _read_regular_bytes(target) != original:
+                raise ValueError("Execution evidence changed during read")
+        except (ValueError, OSError) as error:
+            result["issues"].append({"code": "stale", "message": str(error) or type(error).__name__})
+    return result
+
+
+def check_run_closeout(paths: ProjectPaths, simulation_ids: Sequence[str], *, job_states: Sequence[JSONObject] = ()) -> JSONObject:
+    """Check every explicit simulation_id under paths against copied job_states.
+
+    Return sorted schema-one rows/counts and complete only when all started runs
+    are terminal and no record is invalid. Created preparations remain separate.
+    Validate 1..1000 distinct IDs and job snapshots; invalid arguments/base paths
+    raise ValueError/OSError. Per-record failures become visible issue rows.
+    Never infer death from age, execute engines or modify simulation records.
+    """
+    _validate_paths(paths)
+    if isinstance(simulation_ids, (str, bytes)) or not isinstance(simulation_ids, Sequence) or not 1 <= len(simulation_ids) <= 1000:
+        raise ValueError("Closeout requires 1..1000 distinct simulation IDs")
+    ids = list(simulation_ids)
+    for identity in ids:
+        _validate_delete_request(DeleteRequest("srim", identity))
+    if len(set(ids)) != len(ids):
+        raise ValueError("Duplicate closeout simulation ID")
+    if isinstance(job_states, (str, bytes)) or not isinstance(job_states, Sequence):
+        raise ValueError("Invalid closeout job snapshots")
+    jobs = []
+    for job in job_states:
+        if not isinstance(job, dict) or not isinstance(job.get("id"), str) or re.fullmatch(r"job_[0-9a-f-]{36}", job["id"]) is None or str(UUID(job["id"][4:])) != job["id"][4:] or job.get("state") not in ("queued", "running", "cancelling", "succeeded", "failed", "cancelled", "interrupted") or not isinstance(job.get("simulation_ids"), list):
+            raise ValueError("Invalid closeout job snapshot")
+        for identity in job["simulation_ids"]:
+            _validate_delete_request(DeleteRequest("srim", identity))
+        jobs.append({"id": job["id"], "state": job["state"], "simulation_ids": list(job["simulation_ids"])})
+    report: JSONObject = {"schema_version": 1, "complete": True, "rows": [], "counts": {key: 0 for key in ("terminal", "unstarted", "stale_stopped", "stale_unresolved", "running_unresolved", "invalid")}, "issues": []}
+    for identity in sorted(ids):
+        related = [job for job in jobs if identity in job["simulation_ids"]]
+        row: JSONObject = {"simulation_id": identity, "metadata_status": None, "classification": "invalid", "worker_id": None, "runtime_path": None, "job_ids": sorted({job["id"] for job in related}), "job_states": sorted({job["state"] for job in related}), "stop_evidence": False, "recovery_action": "repair-record", "issues": []}
+        try:
+            record = _simulation_path(paths, identity)
+            before = _read_regular_bytes(record / "metadata.json")
+            metadata = read_simulation(paths, identity)
+            row["metadata_status"] = metadata["status"]
+            if metadata["status"] in ("succeeded", "failed"):
+                row.update(classification="terminal", recovery_action="none")
+            elif metadata["status"] == "created":
+                row.update(classification="unstarted", recovery_action="none")
+            else:
+                evidence = read_execution_evidence(paths, identity)
+                row["issues"].extend(evidence["issues"])
+                if evidence["launch"] is not None:
+                    row["worker_id"] = evidence["launch"]["worker_id"]
+                    row["runtime_path"] = evidence["launch"]["runtime_path"]
+                row["stop_evidence"] = evidence["stopped"] is not None and not evidence["issues"]
+                row["classification"] = "stale-stopped" if row["stop_evidence"] else "stale-unresolved" if any(job["state"] in ("succeeded", "failed", "cancelled", "interrupted") for job in related) else "running-unresolved"
+                row["recovery_action"] = "reconcile" if row["stop_evidence"] else "investigate-native-ownership"
+            if _read_regular_bytes(record / "metadata.json") != before:
+                raise ValueError("Simulation metadata changed during closeout")
+        except (ValueError, OSError, TypeError, KeyError) as error:
+            row.update(classification="invalid", stop_evidence=False, recovery_action="repair-record")
+            row["issues"].append({"code": "record", "message": str(error) or type(error).__name__})
+        report["rows"].append(row)
+        report["counts"][row["classification"].replace("-", "_")] += 1
+        report["issues"].extend({"simulation_id": identity, **issue} for issue in row["issues"])
+    report["complete"] = report["counts"]["terminal"] + report["counts"]["unstarted"] == len(ids)
+    _validate_document(report, "run-closeout")
+    return report

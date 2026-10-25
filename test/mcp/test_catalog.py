@@ -19,7 +19,10 @@ class TestCatalog(Fixture):
     def test_inventory_and_examples(self: TestCatalog) -> None:
         """Assert stable separated tool counts and all template schema/native checks."""
         science, project = scientific_catalog(self.science), project_catalog(self.project)
-        self.assertEqual(len(science["tools"]), 38)
+        self.assertEqual(len(science["tools"]), 40)
+        self.assertFalse(science["tools"]["run_closeout"]["mutating"])
+        self.assertTrue(science["tools"]["run_reconcile"]["mutating"])
+        self.assertIn("srim.run-closeout.v1", science["schemas"])
         self.assertEqual(len(project["tools"]), 33)
         self.assertNotIn("run_submit", project["tools"])
         self.assertNotIn("case_create", science["tools"])

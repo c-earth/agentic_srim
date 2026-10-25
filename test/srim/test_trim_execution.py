@@ -16,7 +16,7 @@ from _fixtures import make_test_project
 from test_trim_inputs import TRIM_INSTALLATION_FILES, TRIM_REQUEST, TRIM_SELECTIONS
 from test_trim_runtime import CACHE
 from src.backend.records import CreateRequest, create_directories
-from src.srim.common.records import read_simulation
+from src.srim.common.records import read_execution_evidence, read_simulation
 from src.srim.trim.defaults import switch_trim_defaults
 from src.srim.trim.execution import _trim_completion, run_trim_simulation
 from src.srim.trim.models import ResolvedTRIMInputs
@@ -494,3 +494,62 @@ class TestTRIMExecution(unittest.TestCase):
             self.assertEqual(result["status"], "failed")
             self.assertEqual((created.path / "output/raw/runtime/RANGE.txt").read_bytes(), b"broken native profile")
             self.assertTrue(any(i["path"] == "RANGE.txt" and i["code"] == "format" for i in json.loads((created.path / "output/parsed/results.json").read_bytes())["issues"]))
+
+    def test_stopped_evidence(self: TestTRIMExecution) -> None:
+        """Persist self's timeout stop proof after owned cleanup without changing failure results; return None."""
+        with TemporaryDirectory(dir=CACHE) as directory:
+            paths, config, worker = make_test_project(Path(directory))
+            for name, data in TRIM_INSTALLATION_FILES.items():
+                (config.srim_root / name).write_bytes(data)
+            switch_trim_defaults(paths, config)
+            inputs = resolve_trim_inputs(paths, config, worker, TRIM_REQUEST, TRIM_SELECTIONS)
+            created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
+            runtime = prepare_trim_simulation(paths, config, created, worker, inputs)
+            process = {"pid": 42, "exit_code": 1, "elapsed_seconds": 0.1, "termination": "timeout", "popups": [], "monitor_errors": []}
+            with patch("src.srim.trim.execution.execute_trim_process", return_value=process):
+                metadata = run_trim_simulation(paths, config, created.path.name, runtime)
+            self.assertEqual(metadata["status"], "failed")
+            evidence = read_execution_evidence(paths, created.path.name)
+            self.assertFalse(evidence["issues"])
+            self.assertEqual(evidence["stopped"]["reason"], "timeout")
+            self.assertEqual(evidence["stopped"]["exit_code"], 1)
+            self.assertLessEqual(evidence["launch"]["recorded_at"], metadata["started_at"])
+
+        with TemporaryDirectory(dir=CACHE) as directory:
+            paths, config, worker = make_test_project(Path(directory))
+            for name, data in TRIM_INSTALLATION_FILES.items():
+                (config.srim_root / name).write_bytes(data)
+            switch_trim_defaults(paths, config)
+            inputs = resolve_trim_inputs(paths, config, worker, TRIM_REQUEST, TRIM_SELECTIONS)
+            created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
+            runtime = prepare_trim_simulation(paths, config, created, worker, inputs)
+            process = {"pid": 42, "exit_code": 1, "elapsed_seconds": 0.1, "termination": "timeout", "popups": [], "monitor_errors": []}
+            original = OSError("stop evidence unavailable")
+            with patch("src.srim.trim.execution.execute_trim_process", return_value=process), patch("src.srim.trim.execution.record_execution_stopped", side_effect=original):
+                with self.assertRaises(OSError) as caught:
+                    run_trim_simulation(paths, config, created.path.name, runtime)
+            self.assertIs(caught.exception, original)
+            self.assertEqual(read_simulation(paths, created.path.name)["status"], "failed")
+            self.assertFalse((created.path / "lifecycle/stopped.json").exists())
+
+    def test_unstopped_evidence_absent(self: TestTRIMExecution) -> None:
+        """Leave self's explicit live ownership without stop proof or terminal metadata; return None."""
+        with TemporaryDirectory(dir=CACHE) as directory:
+            paths, config, worker = make_test_project(Path(directory))
+            for name, data in TRIM_INSTALLATION_FILES.items():
+                (config.srim_root / name).write_bytes(data)
+            switch_trim_defaults(paths, config)
+            inputs = resolve_trim_inputs(paths, config, worker, TRIM_REQUEST, TRIM_SELECTIONS)
+            created = create_directories(paths, config, [CreateRequest("srim")]).completed[0]
+            runtime = prepare_trim_simulation(paths, config, created, worker, inputs)
+            original = OSError("owned job did not stop")
+            original.trim_job_stopped = False
+            with patch("src.srim.trim.execution.execute_trim_process", side_effect=original):
+                with self.assertRaises(OSError) as caught:
+                    run_trim_simulation(paths, config, created.path.name, runtime)
+            self.assertIs(caught.exception, original)
+            self.assertEqual(read_simulation(paths, created.path.name)["status"], "running")
+            evidence = read_execution_evidence(paths, created.path.name)
+            self.assertIsNotNone(evidence["launch"])
+            self.assertIsNone(evidence["stopped"])
+            self.assertTrue(evidence["issues"])

@@ -77,7 +77,7 @@ Batch concurrency limits simultaneous execution, not the number of worker direct
 
 SR batches clean verified working runtimes after the whole batch finishes and retain empty workers. TRIM batches retain working runtimes by default; request `cleanup=True` explicitly. Separate `cleanup_sr_batch` and `cleanup_trim_batch` APIs provide verified cleanup. Unknown, active, changed, unsafe, or unpreserved contents are retained and reported. Direct runs do not automatically delete working runtimes. Cleanup outcomes are separate from calculation success.
 
-Execution failures attempt [failure finalization](../reference/api.md) independently of evidence-preservation failures. Forced orchestration termination can still leave a simulation marked `running`: an [interrupted MCP job](../reference/mcp-format.md) does not establish that its simulation failed or its native processes stopped. Closeout checks every started simulation, including dependencies, and reports stale or unresolved records with their evidence and recovery action until native ownership and terminal publication are resolved. Active long runs and unstarted preparations are distinguished from stale records.
+Execution failures attempt [failure finalization](../reference/api.md#low-level-simulation-lifecycle) independently of evidence-preservation failures. New SR/TRIM executions preserve launch intent and proven native shutdown in `lifecycle/launch.json` and `lifecycle/stopped.json` beside permanent metadata. Scientific MCP startup and graceful shutdown reconcile proven-stopped runs linked to terminal or interrupted jobs and preserve recovery reports while retaining worker quarantine. Call [run_closeout and run_reconcile](../reference/mcp-format.md#run-closeout-and-reconciliation) with all task/dependency simulation IDs for an executable check or explicit recovery. Every running or invalid scoped record remains visible. A force-killed native attempt without durable stop proof stays unresolved; an interrupted job, old timestamp or released lock does not prove process death. Unstarted preparations remain separate from started runs.
 
 ## Files, evidence, and retention
 
@@ -110,6 +110,8 @@ them through separately verified copies or archives; Git exclusion provides no
 backup and does not authorize deletion. Source, packaged defaults, test fixtures,
 published reference assets and shared project configuration remain versioned in
 their documented locations.
+
+New execution lifecycle evidence belongs in `memory/srim/<simulation_id>/lifecycle/`; preserve that directory with its record even though it is outside sealed input/output inventories. Legacy records may have no stop proof and are not automatically recovered.
 
 Each permanent simulation record contains `metadata.json`, `input/` for requests/selections/effective inputs and provenance, and `output/` for raw evidence and parsed results. The stopped runtime is preserved under `output/raw/runtime/`. SR's parsed result is `output/parsed/result.json`; TRIM uses `output/parsed/results.json` plus `saved-values.json`. Available files depend on how far execution reached; preflight failures may have no parsed output.
 

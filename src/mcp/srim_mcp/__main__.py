@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from functools import partial
 from collections.abc import Sequence
 import os
 from pathlib import Path
@@ -11,7 +12,7 @@ import sys
 from src.mcp.common.contracts import load_context
 from src.mcp.common.protocol import ProtocolAdapter
 from src.mcp.srim_mcp.catalog import build_catalog
-from src.mcp.srim_mcp.operations import read_operation, write_operation
+from src.mcp.srim_mcp.operations import read_operation, reconcile_job_runs, write_operation
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -26,7 +27,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         context = load_context(arguments.root, "srim_mcp")
         os.chdir(context.paths.root)
-        ProtocolAdapter(context, build_catalog(context), read_operation, write_operation).run()
+        ProtocolAdapter(context, build_catalog(context), read_operation, write_operation, reconcile=partial(reconcile_job_runs, context)).run()
         return 0
     except (Exception, KeyboardInterrupt) as error:
         print(f"srim_mcp: {error}", file=sys.stderr)

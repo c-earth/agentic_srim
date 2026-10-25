@@ -13,7 +13,7 @@ from src.backend.records import _lock_worker, _record_time
 from src.backend.resources import ResourceReference, verify_resource
 from src.srim.sr.inputs import render_sr_input
 from src.srim.common.types import JSONObject
-from src.srim.common.records import _collect_resource_references, _simulation_path, _validate_document, finish_simulation, read_simulation, start_simulation
+from src.srim.common.records import _collect_resource_references, _simulation_path, _validate_document, begin_execution_evidence, finish_simulation, read_simulation, record_execution_stopped, start_simulation
 from src.srim.common.files import _inventory, _read_json, _write_input_file, _write_json
 from src.srim.sr.outputs import parse_sr_output
 from src.srim.sr.storage import preserve_sr_runtime
@@ -208,7 +208,9 @@ def run_sr_simulation(
                 diagnostic["message"] = str(error)
             if diagnostic["message"] is None:
                 saved = _read_json(record / "input" / "engine" / "runtime.json")
+                execution = begin_execution_evidence(paths, config, simulation_id, runtime.parent.parent.name)
                 started = start_simulation(paths, config, simulation_id)
+                native_stopped = False
                 diagnostic["stage"] = "launch"
                 with (record / "output" / "raw" / "stdout.bin").open("xb") as stdout, (record / "output" / "raw" / "stderr.bin").open("xb") as stderr:
                     try:
@@ -218,11 +220,13 @@ def run_sr_simulation(
                             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                             startupinfo.wShowWindow = subprocess.SW_HIDE
                         completed = subprocess.run([str(runtime / "SRModule.exe")], cwd=runtime, stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr, timeout=timeout, check=False, creationflags=subprocess.CREATE_NO_WINDOW, startupinfo=startupinfo)
+                        native_stopped = True
                         diagnostic["exit_code"] = completed.returncode
                         diagnostic["stage"] = "exit"
                         if completed.returncode != 0:
                             diagnostic["message"] = f"SRModule exited with code {completed.returncode}"
                     except subprocess.TimeoutExpired:
+                        native_stopped = True
                         diagnostic["stage"] = "timeout"
                         diagnostic["timed_out"] = True
                         diagnostic["message"] = f"SRModule exceeded {timeout} seconds"
@@ -233,6 +237,8 @@ def run_sr_simulation(
                         os.fsync(stdout.fileno())
                         stderr.flush()
                         os.fsync(stderr.fileno())
+                if native_stopped:
+                    record_execution_stopped(paths, config, simulation_id, execution["execution_id"], reason="timeout" if diagnostic["timed_out"] else "exit", exit_code=diagnostic["exit_code"])
                 previous_stage = diagnostic["stage"]
                 diagnostic["stage"] = "output"
                 preservation_attempted = True

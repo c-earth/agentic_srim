@@ -10,13 +10,14 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from uuid import uuid4
 from unittest.mock import patch
 
 from src.backend.config import Config
 from src.backend.paths import create_base_directories, get_project_paths
-from src.backend.records import CreateRequest, DeleteRequest, _lock_parent, create_directories, delete_directories
+from src.backend.records import CreateRequest, DeleteRequest, _lock_parent, _lock_worker, create_directories, delete_directories
 from src.backend.resources import register_resource, verify_resource
-from src.srim.common.records import _validate_document, finish_simulation, initialize_simulation, read_simulation, start_simulation
+from src.srim.common.records import _validate_document, begin_execution_evidence, check_run_closeout, read_execution_evidence, record_execution_stopped, finish_simulation, initialize_simulation, read_simulation, start_simulation
 
 
 class TestMetadata(unittest.TestCase):
@@ -325,3 +326,122 @@ class TestMetadata(unittest.TestCase):
                 with self.assertRaises(OSError):
                     start_simulation(self.paths, self.config, self.created.path.name)
         self.assertEqual(read_simulation(self.paths, self.created.path.name)["status"], "created")
+
+    def test_execution_launch_validation(self: TestMetadata) -> None:
+        """Reject self's invalid launch identities/state/input drift without launching; return None."""
+        initialize_simulation(self.paths, self.created, self.engine, self.request, self.resolved, engine_inputs={"SR.IN": b"input"})
+        worker = create_directories(self.paths, self.config, [CreateRequest("worker")]).completed[0]
+        runtime = worker.path / "sr" / self.created.path.name
+        runtime.mkdir()
+        (runtime / "SR.IN").write_bytes(b"input")
+        for invalid in ("../worker_1", "worker_0", True):
+            with self.subTest(worker=invalid), self.assertRaises(ValueError):
+                begin_execution_evidence(self.paths, self.config, self.created.path.name, invalid)
+        with _lock_worker(self.paths, worker.path):
+            launch = begin_execution_evidence(self.paths, self.config, self.created.path.name, worker.path.name)
+            self.assertEqual(read_simulation(self.paths, self.created.path.name)["status"], "created")
+            self.assertEqual(launch["runtime_path"], runtime.relative_to(self.paths.root).as_posix())
+            with self.assertRaises(FileExistsError):
+                begin_execution_evidence(self.paths, self.config, self.created.path.name, worker.path.name)
+            start_simulation(self.paths, self.config, self.created.path.name)
+            with self.assertRaises(ValueError):
+                begin_execution_evidence(self.paths, self.config, self.created.path.name, worker.path.name)
+        self.assertFalse((self.created.path / "lifecycle/stopped.json").exists())
+
+    def test_execution_stopped_idempotency(self: TestMetadata) -> None:
+        """Retain self's exact stopped bytes when repeated semantic evidence matches; return None."""
+        initialize_simulation(self.paths, self.created, self.engine, self.request, self.resolved, engine_inputs={"SR.IN": b"input"})
+        worker = create_directories(self.paths, self.config, [CreateRequest("worker")]).completed[0]
+        runtime = worker.path / "sr" / self.created.path.name
+        runtime.mkdir()
+        (runtime / "SR.IN").write_bytes(b"input")
+        with _lock_worker(self.paths, worker.path):
+            launch = begin_execution_evidence(self.paths, self.config, self.created.path.name, worker.path.name)
+            start_simulation(self.paths, self.config, self.created.path.name)
+            stopped = record_execution_stopped(self.paths, self.config, self.created.path.name, launch["execution_id"], reason="exit", exit_code=0)
+            original = (self.created.path / "lifecycle/stopped.json").read_bytes()
+            again = record_execution_stopped(self.paths, replace(self.config, timezone="UTC+02:30"), self.created.path.name, launch["execution_id"], reason="exit", exit_code=0)
+        self.assertEqual(stopped, again)
+        self.assertEqual((self.created.path / "lifecycle/stopped.json").read_bytes(), original)
+        self.assertFalse(read_execution_evidence(self.paths, self.created.path.name)["issues"])
+
+    def test_execution_stopped_conflict(self: TestMetadata) -> None:
+        """Reject self's foreign UUID, invalid stop reason and conflicting stop result; return None."""
+        initialize_simulation(self.paths, self.created, self.engine, self.request, self.resolved, engine_inputs={"SR.IN": b"input"})
+        worker = create_directories(self.paths, self.config, [CreateRequest("worker")]).completed[0]
+        runtime = worker.path / "sr" / self.created.path.name
+        runtime.mkdir()
+        (runtime / "SR.IN").write_bytes(b"input")
+        with _lock_worker(self.paths, worker.path):
+            launch = begin_execution_evidence(self.paths, self.config, self.created.path.name, worker.path.name)
+            start_simulation(self.paths, self.config, self.created.path.name)
+            for execution_id, reason, code in ((str(uuid4()), "exit", 0), (launch["execution_id"], "guess", 0), (launch["execution_id"], "exit", True)):
+                with self.subTest(reason=reason, code=code), self.assertRaises(ValueError):
+                    record_execution_stopped(self.paths, self.config, self.created.path.name, execution_id, reason=reason, exit_code=code)
+            record_execution_stopped(self.paths, self.config, self.created.path.name, launch["execution_id"], reason="exit", exit_code=0)
+            with self.assertRaisesRegex(ValueError, "Conflicting"):
+                record_execution_stopped(self.paths, self.config, self.created.path.name, launch["execution_id"], reason="exit", exit_code=7)
+
+    def test_execution_evidence_missing_and_changed(self: TestMetadata) -> None:
+        """Expose self's legacy missing proof, mid-read change and input damage as issues; return None."""
+        initialize_simulation(self.paths, self.created, self.engine, self.request, self.resolved, engine_inputs={"SR.IN": b"input"})
+        worker = create_directories(self.paths, self.config, [CreateRequest("worker")]).completed[0]
+        runtime = worker.path / "sr" / self.created.path.name
+        runtime.mkdir()
+        (runtime / "SR.IN").write_bytes(b"input")
+        self.assertEqual(read_execution_evidence(self.paths, self.created.path.name)["issues"][0]["code"], "missing")
+        with _lock_worker(self.paths, worker.path):
+            launch = begin_execution_evidence(self.paths, self.config, self.created.path.name, worker.path.name)
+            start_simulation(self.paths, self.config, self.created.path.name)
+            record_execution_stopped(self.paths, self.config, self.created.path.name, launch["execution_id"], reason="timeout", exit_code=None)
+        before = [(self.created.path / name).read_bytes() for name in ("metadata.json", "lifecycle/launch.json", "lifecycle/stopped.json")]
+        with patch("src.srim.common.records._read_regular_bytes", side_effect=[*before, b"changed", *before[1:]]):
+            changed = read_execution_evidence(self.paths, self.created.path.name)
+        self.assertTrue(any(issue["code"] == "stale" for issue in changed["issues"]))
+        (self.created.path / "input/engine/SR.IN").write_bytes(b"changed")
+        self.assertTrue(read_execution_evidence(self.paths, self.created.path.name)["issues"])
+
+    def test_closeout_classifications(self: TestMetadata) -> None:
+        """Distinguish all of self's created, terminal, uncertain and proven-stopped runs; return None."""
+        initialize_simulation(self.paths, self.created, self.engine, self.request, self.resolved, engine_inputs={"SR.IN": b"input"})
+        worker = create_directories(self.paths, self.config, [CreateRequest("worker")]).completed[0]
+        runtime = worker.path / "sr" / self.created.path.name
+        runtime.mkdir()
+        (runtime / "SR.IN").write_bytes(b"input")
+        terminal, unstarted = create_directories(self.paths, self.config, [CreateRequest("srim"), CreateRequest("srim")]).completed
+        for created in (terminal, unstarted):
+            initialize_simulation(self.paths, created, self.engine, self.request, self.resolved)
+        finish_simulation(self.paths, self.config, terminal.path.name, {"message": "preflight", "exit_code": None})
+        identities = [self.created.path.name, terminal.path.name, unstarted.path.name]
+        job = {"id": "job_" + str(uuid4()), "state": "interrupted", "simulation_ids": [self.created.path.name]}
+        with _lock_worker(self.paths, worker.path):
+            launch = begin_execution_evidence(self.paths, self.config, self.created.path.name, worker.path.name)
+            start_simulation(self.paths, self.config, self.created.path.name)
+            unknown = check_run_closeout(self.paths, identities)
+            self.assertEqual(unknown["counts"]["running_unresolved"], 1)
+            interrupted = check_run_closeout(self.paths, identities, job_states=[job])
+            self.assertEqual(interrupted["counts"]["stale_unresolved"], 1)
+            self.assertFalse(interrupted["complete"])
+            record_execution_stopped(self.paths, self.config, self.created.path.name, launch["execution_id"], reason="exit", exit_code=0)
+        proven = check_run_closeout(self.paths, identities, job_states=[job])
+        self.assertEqual(proven["counts"]["stale_stopped"], 1)
+        self.assertEqual(proven["counts"]["terminal"], 1)
+        self.assertEqual(proven["counts"]["unstarted"], 1)
+        self.assertEqual(len(proven["rows"]), 3)
+        self.assertEqual([row["simulation_id"] for row in proven["rows"]], sorted(identities))
+
+    def test_closeout_invalid_records(self: TestMetadata) -> None:
+        """Include self's malformed/missing records and reject invalid closeout scope; return None."""
+        initialize_simulation(self.paths, self.created, self.engine, self.request, self.resolved, engine_inputs={"SR.IN": b"input"})
+        worker = create_directories(self.paths, self.config, [CreateRequest("worker")]).completed[0]
+        runtime = worker.path / "sr" / self.created.path.name
+        runtime.mkdir()
+        (runtime / "SR.IN").write_bytes(b"input")
+        for identities in ([], [self.created.path.name] * 2, "not-an-array", ["../escape"], [self.created.path.name] * 1001):
+            with self.subTest(scope=type(identities).__name__), self.assertRaises(ValueError):
+                check_run_closeout(self.paths, identities)
+        (self.created.path / "metadata.json").write_bytes(b"broken")
+        report = check_run_closeout(self.paths, [self.created.path.name, "srim_20261025_000000_999"])
+        self.assertEqual(report["counts"]["invalid"], 2)
+        self.assertFalse(report["complete"])
+        self.assertEqual(len(report["issues"]), 2)

@@ -12,7 +12,7 @@ from src.backend.paths import ProjectPaths
 from src.backend.records import _lock_worker, _record_time
 from src.srim.common.types import JSONObject
 from src.srim.common.files import _inventory, _read_json, _write_json
-from src.srim.common.records import _simulation_path, finish_simulation, read_simulation, start_simulation
+from src.srim.common.records import _simulation_path, begin_execution_evidence, finish_simulation, read_simulation, record_execution_stopped, start_simulation
 from src.srim.common.files import _read_regular_bytes
 from src.srim.trim.native import execute_trim_process
 from src.srim.trim.outputs import PROFILES, compare_trim_saved_values, parse_trim_outputs
@@ -113,6 +113,9 @@ def run_trim_simulation(paths: ProjectPaths, config: Config, simulation_id: str,
             raise FileExistsError("TRIM output directories must be empty")
         report: JSONObject = {"schema_version": 1, "engine": "trim", "simulation_id": simulation_id, "runtime_path": runtime.relative_to(paths.root).as_posix(), "timeout_seconds": None if timeout_seconds is None else float(timeout_seconds), "stage": "preflight", "process": None, "completion": None, "failure": None}
         preserved = False
+        execution: JSONObject | None = None
+        native_entered = False
+        stop_attempted = False
         try:
             sealed_control = _read_json(record / "input/execution/control.json")
             if sealed_control.get("schema_version") == 2 and _inventory(record / "input", record) == metadata["inputs"]:
@@ -137,10 +140,14 @@ def run_trim_simulation(paths: ProjectPaths, config: Config, simulation_id: str,
                 report["schema_version"] = 4 if control["kind"] == "resume" else 2
                 report["availability"] = assess_trim_histories({}, policy, [])
             initial_manifest = _read_json(record / "input/execution/runtime.json")
+            execution = begin_execution_evidence(paths, config, simulation_id, runtime.parent.parent.name)
             start_simulation(paths, config, simulation_id)
             report["stage"] = "native"
+            native_entered = True
             result = execute_trim_process(runtime / "TRIM.exe", runtime, hide_window=config.hide_trim_window, timeout_seconds=timeout_seconds, stdout_path=record / "output/raw/stdout.bin", stderr_path=record / "output/raw/stderr.bin", cancel=cancel, dialog_policy=policy)
             report["process"] = result
+            stop_attempted = True
+            record_execution_stopped(paths, config, simulation_id, execution["execution_id"], reason="timeout" if result["termination"] == "timeout" else "exit" if result["termination"] == "exit" else "controller-stopped", exit_code=result["exit_code"])
             report["stage"] = "preserve"
             preserve_trim_runtime(paths, simulation_id, runtime)
             preserved = True
@@ -222,6 +229,11 @@ def run_trim_simulation(paths: ProjectPaths, config: Config, simulation_id: str,
         except BaseException as error:
             error.add_note(f"TRIM evidence retained at runtime {runtime}; record {record}")
             stopped = getattr(error, "trim_job_stopped", True)
+            if stopped and native_entered and not stop_attempted and execution is not None:
+                try:
+                    record_execution_stopped(paths, config, simulation_id, execution["execution_id"], reason="controller-stopped", exit_code=None)
+                except BaseException as evidence_error:
+                    error.add_note(f"TRIM stopped evidence publication failed: {evidence_error}")
             report["failure"] = {"code": "monitor" if not stopped else "cancelled" if not isinstance(error, Exception) else "preservation" if report["stage"] == "preserve" else "integrity", "message": str(error) or type(error).__name__}
             if stopped:
                 try:

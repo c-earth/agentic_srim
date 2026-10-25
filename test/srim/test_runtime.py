@@ -24,7 +24,7 @@ from src.srim.sr.execution import run_sr_simulation, verify_sr_runtime
 from src.srim.common.types import JSONObject
 from src.srim.sr.models import ResolvedSRInputs
 from src.srim.common.files import _inventory, _write_json
-from src.srim.common.records import read_simulation, start_simulation
+from src.srim.common.records import read_execution_evidence, read_simulation, start_simulation
 from src.srim.sr.outputs import STOPPING_LABELS, _matches_printed, _parse_number, parse_sr_output
 from src.srim.sr.runtime import _prepare_sr_runtime, _read_selected_resource
 
@@ -187,6 +187,7 @@ class TestSRRuntime(unittest.TestCase):
         with self.assertRaises(OSError):
             with _lock_worker(self.paths, cwd.parent.parent):
                 pass
+        self.assertTrue((self.paths.simulation_memory / cwd.name / "lifecycle/launch.json").is_file())
         stdout.write(b"engine stdout\x00\xff\r\n")
         stderr.write(b"engine stderr\r\n")
         if self.produce_output:
@@ -765,5 +766,41 @@ class TestSRRuntime(unittest.TestCase):
         self.assertTrue(any("SR execution retained runtime" in note for note in original.__notes__))
         result = read_simulation(self.paths, self.created.path.name)
         self.assertEqual(result["status"], "failed")
+        self.assertFalse((self.created.path / "lifecycle/stopped.json").exists())
         self.assertTrue(result["failure"]["message"].startswith("interrupted:"))
         self.assertEqual((self.created.path / "output" / "raw" / "stopping.txt").read_bytes(), self.engine_output)
+
+    def test_run_sr_stop_evidence(self: TestSRRuntime) -> None:
+        """Verify self's exit/timeout proof and launch intent exist in native execution order; return None."""
+        for timed_out in (False, True):
+            with self.subTest(timed_out=timed_out):
+                self.created = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
+                runtime = _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
+                self.process_error = subprocess.TimeoutExpired("SRModule", 1) if timed_out else None
+                with patch("src.srim.sr.execution.subprocess.run", side_effect=self._fake_sr_run):
+                    metadata = run_sr_simulation(self.paths, self.config, self.created.path.name, runtime)
+                evidence = read_execution_evidence(self.paths, self.created.path.name)
+                self.assertFalse(evidence["issues"])
+                self.assertEqual(evidence["stopped"]["reason"], "timeout" if timed_out else "exit")
+                self.assertLessEqual(evidence["launch"]["recorded_at"], metadata["started_at"])
+                self.assertEqual(evidence["launch"]["execution_id"], evidence["stopped"]["execution_id"])
+
+    def test_run_sr_stop_publication_failure(self: TestSRRuntime) -> None:
+        """Fail self's stopped-proof write without skipping failure metadata or losing the error; return None."""
+        runtime = _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
+        original = OSError("stopped proof unavailable")
+        with patch("src.srim.sr.execution.subprocess.run", side_effect=self._fake_sr_run), patch("src.srim.sr.execution.record_execution_stopped", side_effect=original):
+            with self.assertRaises(OSError) as caught:
+                run_sr_simulation(self.paths, self.config, self.created.path.name, runtime)
+        self.assertIs(caught.exception, original)
+        self.assertEqual(read_simulation(self.paths, self.created.path.name)["status"], "failed")
+        self.assertFalse((self.created.path / "lifecycle/stopped.json").exists())
+        self.created = create_directories(self.paths, self.config, [CreateRequest("srim")]).completed[0]
+        runtime = _prepare_sr_runtime(self.paths, self.config, self.created, self.worker, ResolvedSRInputs((self.request), {}, (self.request), {"schema_version": 1, "parameters": (self.request).get("parameters", {}), "sources": self.pinned_sources, "resources": [self.electronic, self.nuclear], "cab": (self.request).get("parameters", {}).get("correction")}, (), tuple({**self.pinned_engine, "SCOEF03.dat": _read_selected_resource(self.paths, self.electronic, "electronic", "SCOEF03.dat"), "SNUC03.dat": _read_selected_resource(self.paths, self.nuclear, "nuclear", "SNUC03.dat")}.items())))
+        original = OSError("launch intent unavailable")
+        with patch("src.srim.sr.execution.begin_execution_evidence", side_effect=original), patch("src.srim.sr.execution.subprocess.run") as native:
+            with self.assertRaises(OSError) as caught:
+                run_sr_simulation(self.paths, self.config, self.created.path.name, runtime)
+        self.assertIs(caught.exception, original)
+        native.assert_not_called()
+        self.assertIsNone(read_simulation(self.paths, self.created.path.name)["started_at"])

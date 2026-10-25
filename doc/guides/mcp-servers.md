@@ -1,6 +1,6 @@
 # Local MCP servers
 
-The two independent local servers expose the [current MCP interfaces](../reference/mcp-format.md). srim_mcp exposes 38 scientific/discovery tools; project_mcp exposes 33 management/discovery tools.
+The two independent local servers expose the [current MCP interfaces](../reference/mcp-format.md). srim_mcp exposes 40 scientific/discovery tools; project_mcp exposes 33 management/discovery tools.
 
 Both servers use local stdio. Their adapters live under `src/mcp/srim_mcp/` and `src/mcp/project_mcp/`, with shared infrastructure under `src/mcp/common/`. Existing calculation APIs remain separate.
 
@@ -12,7 +12,7 @@ One agent session can create and work with multiple cases. Each operation select
 | Both | Jobs and artifacts | job_get, jobs_list, job_cancel, artifact_read |
 | srim_mcp | Environment and resources | environment_get, defaults_get, defaults_switch, resources_list, resource_read, compounds_search, variant_create, cab_populate |
 | srim_mcp | Validation and inputs | request_validate, input_render, sr_resolve, sr_prepare, trim_resolve, trim_bundle_load, trim_prepare |
-| srim_mcp | Execution | trim_continue_prepare, run_submit, batch_submit |
+| srim_mcp | Execution | trim_continue_prepare, run_submit, batch_submit, run_closeout, run_reconcile |
 | srim_mcp | Records and results | simulations_list, simulation_get, source_get, source_read, result_read, table_read, trim_availability_get |
 | srim_mcp | Recovery, search and cleanup | trim_parse, trim_recover, inputs_search, index_update, workers_cleanup |
 | project_mcp | Cases | cases_list, case_get, case_create, case_revise |
@@ -60,3 +60,20 @@ Every mutating call requires a fresh UUID for a new request. Retries of the same
 Synthetic tests use temporary workspaces under .cache/mcp-verification and fake native installations/process substitutes. The installed SDK is exercised through both real module/stdin/stdout entry points, including multiple cases in one client session. These checks verify adapters and management contracts. They do not run a new native physics experiment or certify every native mode. Host registration is configured separately in `.codex/config.toml` as described above.
 
 For current test commands, recorded native coverage and known limitations, see the [verification reference](../reference/validation.md). Historical delivery totals describe their original tested snapshot.
+
+## Close out started runs
+
+Call `run_closeout` with explicit `simulation_ids` for every started task and
+dependency run. A `complete=false` report lists stale, uncertain or invalid
+records; created-only preparations are separate. `run_reconcile` is a durable
+mutating job accepting the same IDs plus a fresh `request_id`. It finalizes a
+running record as failed only when matching durable stop evidence and the worker
+lease establish safety. Review its `issues` and final `closeout` report.
+
+Scientific-server startup and graceful shutdown run the same safe recovery for
+simulations linked to ended jobs. Reports are retained in
+`memory/mcp/srim_mcp/recovery/startup_<uuid>.json` or `shutdown_<uuid>.json`.
+Quarantined workers stay quarantined, even after metadata recovery. A missing or
+changed stop proof, uncertain native ownership or failed metadata write remains
+unresolved. No native process is started, stopped or retried by reconciliation.
+See the [report and evidence contracts](../reference/mcp-format.md#run-closeout-and-reconciliation).

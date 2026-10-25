@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import base64
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from copy import deepcopy
 from dataclasses import asdict
 import hashlib
@@ -15,7 +15,7 @@ import sys
 from uuid import UUID, uuid4
 
 from src.backend.paths import create_base_directories
-from src.backend.records import CreatedDirectory, CreateRequest, create_directories
+from src.backend.records import CreatedDirectory, CreateRequest, _lock_worker, create_directories
 from src.backend.resources import ResourceReference, resolve_resource, verify_resource
 from src.knowledge.index import initialize_index, rebuild_index, update_index
 from src.knowledge.search import search_inputs
@@ -34,14 +34,14 @@ from src.srim.sr.inputs import render_sr_input, validate_sr_engine_request, vali
 from src.srim.resources.materials import create_material_variant, parse_atomdata, parse_compounds, search_compounds
 from src.srim.common.types import JSONObject
 from src.srim.common.files import _inventory, _read_json
-from src.srim.common.records import read_simulation
+from src.srim.common.records import check_run_closeout, finish_simulation, read_execution_evidence, read_simulation
 from src.srim.resources.nuclear import create_nuclear_variant
 from src.srim.sr.queue import PreparedSRTask, run_sr_batch
 from src.srim.resources.resolution import _resolve_selection
 from src.srim.sr.resolution import resolve_sr_inputs
 from src.srim.common.files import _read_regular_bytes
 from src.srim.sr.runtime import prepare_sr_simulation
-from src.srim.sr.storage import cleanup_sr_batch
+from src.srim.sr.storage import cleanup_sr_batch, preserve_sr_runtime
 from src.srim.trim.defaults import create_trim_damage_variant, parse_trim_damage, read_trim_defaults, read_trim_installation, switch_trim_defaults
 from src.srim.trim.dialogs import ENGINES
 from src.srim.trim.execution import read_trim_output_availability, run_trim_simulation
@@ -50,7 +50,7 @@ from src.srim.trim.queue import PreparedTRIMTask, run_trim_batch
 from src.srim.trim.recovery import export_trim_checkpoint_recovery
 from src.srim.trim.resolution import resolve_trim_inputs
 from src.srim.trim.runtime import load_trim_input_bundle, prepare_trim_continuation, prepare_trim_simulation, verify_trim_runtime
-from src.srim.trim.storage import cleanup_trim_batch, parse_trim_directory, write_trim_input_bundle
+from src.srim.trim.storage import cleanup_trim_batch, preserve_trim_runtime, parse_trim_directory, write_trim_input_bundle
 
 
 def read_operation(name: str, arguments: JSONObject, context: ServerContext) -> JSONObject:
@@ -71,6 +71,8 @@ def read_operation(name: str, arguments: JSONObject, context: ServerContext) -> 
             pending.extend(value.values())
         elif isinstance(value, list):
             pending.extend(value)
+    if name == "run_closeout":
+        return check_run_closeout(paths, args["simulation_ids"])
     if name == "environment_get":
         installation, defaults = {}, {}
         try:
@@ -435,6 +437,11 @@ def write_operation(name: str, arguments: JSONObject, context: ServerContext, ca
             data = (update_index if args["operation"] == "update" else rebuild_index)(paths, args["simulation_ids"])
         if data.get("state") in ("failed", "partial"):
             outcome = data["state"]
+    elif name == "run_reconcile":
+        data = reconcile_runs(context, args["simulation_ids"])
+        outcome = "succeeded" if data["closeout"]["complete"] else "partial"
+        if data["unresolved_ids"]:
+            warnings.append({"code": "unresolved-runs", "message": f'{len(data["unresolved_ids"])} simulations remain nonterminal or invalid', "source": "run_reconcile"})
     elif name == "workers_cleanup":
         progress({"source": "adapter", "phase": "cleanup", "worker_ids": [], "simulation_ids": [], "data": {}})
         workers = [safe_path(paths.workers, worker) for worker in args["worker_ids"]]
@@ -445,3 +452,81 @@ def write_operation(name: str, arguments: JSONObject, context: ServerContext, ca
     else:
         raise ValueError("unsupported: unknown scientific mutation")
     return {"outcome": outcome, "data": data, "references": references, "warnings": warnings}
+
+
+
+def reconcile_runs(context: ServerContext, simulation_ids: Sequence[str], *, job_states: Sequence[JSONObject] = ()) -> JSONObject:
+    """Recover context's explicit proven-stopped simulation_ids under worker leases.
+
+    Correlate job_states only as orchestration evidence. Preserve runtimes and
+    independently publish failed metadata, retaining per-run integrity, ownership
+    and I/O issues. Return recovered/unresolved IDs and fresh executable closeout.
+    Invalid arguments raise ValueError; unsafe roots and BaseException propagate.
+    Never launch, stop or retry a native process, clean workers or release quarantine.
+    """
+    paths, config = context.paths, context.config
+    initial = check_run_closeout(paths, simulation_ids, job_states=job_states)
+    recovered: list[str] = []
+    issues = list(initial["issues"])
+    for row in initial["rows"]:
+        if row["classification"] != "stale-stopped":
+            continue
+        identity = row["simulation_id"]
+        try:
+            worker = safe_path(paths.workers, row["worker_id"])
+            with _lock_worker(paths, worker):
+                current = read_simulation(paths, identity)
+                if current["status"] in ("succeeded", "failed"):
+                    continue
+                if current["status"] != "running":
+                    raise ValueError("Recovery requires running metadata")
+                evidence = read_execution_evidence(paths, identity)
+                if evidence["issues"] or evidence["stopped"] is None or evidence["launch"] is None or evidence["launch"]["worker_id"] != worker.name:
+                    raise ValueError("Recovery stop evidence or ownership changed")
+                runtime = safe_path(paths.root, evidence["launch"]["runtime_path"])
+                try:
+                    (preserve_sr_runtime if current["engine"]["name"] == "sr" else preserve_trim_runtime)(paths, identity, runtime)
+                except Exception as error:
+                    issues.append({"simulation_id": identity, "code": "preservation", "message": str(error) or type(error).__name__})
+                verified = read_execution_evidence(paths, identity)
+                if verified["issues"] or verified["launch"] != evidence["launch"] or verified["stopped"] != evidence["stopped"]:
+                    raise ValueError("Recovery evidence changed before finalization")
+                current = read_simulation(paths, identity)
+                if current["status"] in ("succeeded", "failed"):
+                    continue
+                finish_simulation(paths, config, identity, {"message": "Orchestration interrupted after native execution stopped; recovered during lifecycle reconciliation", "exit_code": evidence["stopped"]["exit_code"]})
+                recovered.append(identity)
+        except Exception as error:
+            issues.append({"simulation_id": identity, "code": "reconciliation", "message": str(error) or type(error).__name__})
+    final = check_run_closeout(paths, simulation_ids, job_states=job_states)
+    for issue in final["issues"]:
+        if issue not in issues:
+            issues.append(issue)
+    return {"schema_version": 1, "recovered_ids": sorted(recovered), "unresolved_ids": [row["simulation_id"] for row in final["rows"] if row["classification"] not in ("terminal", "unstarted")], "issues": issues, "closeout": final}
+
+
+def reconcile_job_runs(context: ServerContext, job_states: Sequence[JSONObject]) -> JSONObject:
+    """Recover context's distinct simulation IDs from terminal job_states snapshots.
+
+    Return the same recovery envelope as reconcile_runs, including an empty
+    complete report when no terminal job lists simulations. Reject malformed
+    snapshot identities/states with ValueError; propagate unsafe root I/O and
+    interruptions. Native execution, worker cleanup and quarantine changes never occur.
+    """
+    if isinstance(job_states, (str, bytes)) or not isinstance(job_states, Sequence):
+        raise ValueError("Invalid reconciliation job snapshots")
+    snapshots = deepcopy(list(job_states))
+    for job in snapshots:
+        if not isinstance(job, dict) or not isinstance(job.get("id"), str) or re.fullmatch(r"job_[0-9a-f-]{36}", job["id"]) is None or str(UUID(job["id"][4:])) != job["id"][4:] or job.get("state") not in ("queued", "running", "cancelling", "succeeded", "failed", "cancelled", "interrupted") or not isinstance(job.get("simulation_ids"), list):
+            raise ValueError("Invalid reconciliation job snapshot")
+        for identity in job["simulation_ids"]:
+            if not isinstance(identity, str) or re.fullmatch(r"srim_[0-9]{8}_[0-9]{6}_[1-9][0-9]*", identity) is None:
+                raise ValueError("Invalid reconciliation simulation identity")
+    identities = sorted({identity for job in snapshots if job["state"] in ("succeeded", "failed", "cancelled", "interrupted") for identity in job["simulation_ids"]})
+    if identities:
+        if len(identities) > 1000:
+            reports = [reconcile_runs(context, identities[index:index + 1000], job_states=snapshots) for index in range(0, len(identities), 1000)]
+            closeout: JSONObject = {"schema_version": 1, "complete": all(report["closeout"]["complete"] for report in reports), "rows": [row for report in reports for row in report["closeout"]["rows"]], "counts": {key: sum(report["closeout"]["counts"][key] for report in reports) for key in reports[0]["closeout"]["counts"]}, "issues": [issue for report in reports for issue in report["closeout"]["issues"]]}
+            return {"schema_version": 1, "recovered_ids": [identity for report in reports for identity in report["recovered_ids"]], "unresolved_ids": [identity for report in reports for identity in report["unresolved_ids"]], "issues": [issue for report in reports for issue in report["issues"]], "closeout": closeout}
+        return reconcile_runs(context, identities, job_states=snapshots)
+    return {"schema_version": 1, "recovered_ids": [], "unresolved_ids": [], "issues": [], "closeout": {"schema_version": 1, "complete": True, "rows": [], "counts": {key: 0 for key in ("terminal", "unstarted", "stale_stopped", "stale_unresolved", "running_unresolved", "invalid")}, "issues": []}}
