@@ -76,6 +76,11 @@ agent reports success.
 
 ## Self-improvement
 
+Concrete user-requested project changes, including instruction and skill
+edits, follow the ordinary project workflow. Do not route them through a
+self-improvement trial or adoption gate. Assess additional agent-initiated
+improvements separately under the [skill's classification rule](../.agents/skills/self-improvement/SKILL.md#classify-the-requested-work-first).
+
 Review substantial avoidable failures, recurring ineffective attempts and
 material user corrections when they affect the next action, and review
 meaningful findings at task completion. Follow the self-improvement skill
@@ -83,6 +88,39 @@ for evidence assessment, saved dispositions, supported proposals and selective
 independent review. Save supported proposals without waiting for a separate
 request; drafting does not authorize implementation. Honor explicit user
 limits, preserve approval gates and stop trials at their approved boundaries.
+
+## Worker reuse across batches
+
+For a task using batch concurrency N, maintain a task-owned pool of at most N
+worker slots across its batches. Record the worker IDs and their ownership in
+the coordinating task context. Pass an explicit worker_id to each resolution,
+preparation or CAB operation that accepts one once the pool is established;
+omitting it creates another worker rather than reusing an idle slot. Assign
+prepared tasks to the pool in input order, cycling through its available slots;
+existing batch scheduling serializes tasks assigned to the same worker.
+
+Reuse only workers owned by this task and verified eligible for the intended
+operation: no active job, unresolved native process ownership or quarantine,
+unknown contents, unpreserved terminal evidence, or unrelated prepared work.
+Task-owned prepared work scheduled for serialization within the current batch
+may share its assigned worker. Inspect retained runtimes and relevant metadata;
+a released lock or terminal orchestration job alone does not prove eligibility.
+Existing leases remain the authority against concurrent execution. Do not claim
+or clean another task's workers merely because their directories exist.
+
+Allocate only missing pool slots. If a slot becomes blocked, retain its evidence
+and record why replacement is needed; permit a replacement only within the
+same active-slot concurrency budget. If no safe slot is available and replacement
+is not within scope, stop dependent preparation and report the blocker. Do not
+raise concurrency or allocate a fresh pool merely because another batch starts.
+
+Use existing verified cleanup only within the user's authorized scope. Preserve
+TRIM's default runtime retention, permanent records, legacy dependencies and
+unresolved evidence. Empty worker allocation directories are intentionally
+reusable; their count is not the number of concurrent native processes. At
+closeout report pool IDs, newly allocated and reused workers, blocked/replaced
+slots with reasons, and cleanup outcomes. A historical worker-count reduction
+requires a separate inventory and authorized cleanup in that workspace.
 
 ## Run lifecycle closeout
 

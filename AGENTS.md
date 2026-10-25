@@ -112,4 +112,5 @@ may require explicit mapped paths before separately authorized reuse.
 
 # Self-improvement
 
+- Classify concrete user-requested changes as ordinary project work, including edits to agent instructions, skills and workflows. Do not impose self-improvement trial, rollback or adoption gates on them. Apply the skill lifecycle only to separate agent-initiated improvements or explicitly requested self-improvement reviews/trials; normal project approval requirements still apply.
 - Consult `.agents/skills/self-improvement/SKILL.md` after substantial avoidable failures, recurring ineffective attempts and material user corrections when they affect the next action, and at task completion. Follow its assessment and proposal procedure within the user's scope. Before trial behavior, consult it to reconcile recorded state and boundaries.

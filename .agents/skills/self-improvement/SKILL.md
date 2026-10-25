@@ -1,11 +1,33 @@
 ---
 name: self-improvement
-description: Review this repository's agent skills, workflows, procedures and sub-agent definitions after substantial avoidable failures, repeated ineffective attempts, material user corrections, and at task completion. Assess reusable improvements, save supported proposals without a separate request, and manage explicitly approved trials and adoption.
+description: Review this repository's agent skills, workflows, procedures and sub-agent definitions after substantial avoidable failures, repeated ineffective attempts, material user corrections, and at task completion. Assess reusable improvements, save supported proposals without a separate request, and manage explicitly approved trials and adoption. Do not route concrete user-requested project changes through this lifecycle merely because they edit agent instructions, skills or workflows.
 ---
 
 # Self-improvement
 
 Improve working methods using evidence within the user's task scope. Read [the protocol](references/protocol.md) before recording findings, preparing proposals or managing trials.
+
+## Classify the requested work first
+
+Concrete user-requested project changes follow the ordinary project workflow,
+including corrections the user identifies and asks to fix. This includes edits
+to agent instructions, skills, procedures and this self-improvement mechanism.
+Classify by the requested scope and authorization, not by the file being edited.
+Do not turn that work into a self-improvement proposal, temporary trial,
+rollback obligation or separate adoption gate. Follow the applicable normal
+implementation, verification and approval requirements instead.
+
+This lifecycle applies to additional reusable improvements the agent initiates
+beyond the requested correction, and to self-improvement reviews or trials the
+user explicitly requests. Approval of an explicitly proposed trial remains
+approval of that trial; it does not become permanent adoption. A user report
+alone authorizes investigation, not an unspecified implementation or cleanup.
+
+If a direct task also reveals a separate reusable improvement, handle that
+finding independently without delaying or reclassifying the requested work.
+If the user corrects a mistaken classification, honor it, preserve historical
+records and close the mistaken trial bookkeeping without imposing an adoption
+gate on the direct task. See the protocol's scope rules before record changes.
 
 Review substantial avoidable failures, recurring ineffective attempts and material corrections when they can affect the next action; recover the user's task first when necessary. Briefly review meaningful findings at task completion. A correction triggers assessment, not an automatic proposal. Ordinary successful work needs no persistent record unless it supplies meaningful evidence.
 

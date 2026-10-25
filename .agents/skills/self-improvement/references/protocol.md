@@ -1,5 +1,34 @@
 # Self-improvement protocol
 
+## Scope and task classification
+
+Apply the skill's classification rule before creating observations, proposals
+or lifecycle records. A concrete user-requested change is ordinary project
+work even when it changes agent behavior or the self-improvement mechanism.
+For example, a requested worker-reuse fix or a requested clarification of skill
+routing does not require a bounded trial, automatic restoration or adoption
+review. Existing project implementation approval requirements still apply.
+Do not create self-improvement records solely to authorize that direct work.
+
+A material correction can require assessment of a separate reusable failure;
+that does not convert the user's requested correction into an autonomous
+improvement. Agent-initiated changes beyond the requested scope retain this
+protocol's proposal, trial and adoption boundaries. User consent to an explicitly
+scoped self-improvement trial retains those boundaries as well. Distinguish
+approval to fix a concrete project issue from approval to trial an additional
+agent workflow change; file type and reusable wording do not decide the route.
+
+When the user rejects an erroneous self-improvement classification, preserve
+existing evidence and snapshots. Reconcile and close mistaken active trial
+records with an explicit correction reason, using the existing validated state
+transitions. Separate baseline restoration for closing those records from any
+ordinary authorized reapplication of the requested change. Do not claim trial
+success, fabricate evaluation or adoption approval, or leave a pending trial
+that will later undo the direct change. A terminal declined record in this
+case declines the mistaken mechanism, not the user's project change. Record
+that distinction without rewriting historical events. If concurrent edits make
+restoration unsafe, preserve them and report the actual conflict.
+
 ## Storage and time
 
 Instructions are versioned under `.agents/skills/self-improvement/`. Supporting records belong under repository-root `.local/workflow-improvement/`, which is persistent, Git-ignored state local to this checkout. It is not a durable backup. Create directories only as needed; never automatically clear evidence, proposals, or snapshots.
@@ -126,6 +155,6 @@ A valid proposal event links observations to exact proposal bytes. For proposal_
 
 ## Behavioral verification
 
-Verify these cases separately from JSON/schema checks: substantial supported failure leads to unprompted assessment and proposal; recurring ineffective attempts trigger timely review; unknown causes produce a supported narrow correction or explicit deferral; ordinary success avoids forced records and delegation; an existing proposal avoids duplication; user stop/exclusion is honored; reviewer failure does not drop follow-through; missing approval prevents mutation; trial interruption/expiry uses baseline recovery and preserves changed files.
+Verify these cases separately from JSON/schema checks: a user-requested instruction or skill edit follows ordinary project authorization without trial/adoption gates; a user-reported project defect followed by an approved fix stays ordinary project work; an additional agent-initiated workflow change retains trial/adoption gates; approval of an explicit trial does not imply adoption; a mistaken classification is closed without undoing the authorized direct change; substantial supported failure leads to unprompted assessment and proposal; recurring ineffective attempts trigger timely review; unknown causes produce a supported narrow correction or explicit deferral; ordinary success avoids forced records and delegation; an existing proposal avoids duplication; user stop/exclusion is honored; reviewer failure does not drop follow-through; missing approval prevents mutation; trial interruption/expiry uses baseline recovery and preserves changed files.
 
 Scenario walkthroughs test the design, not actual autonomous behavior. Use authorized real tasks or a separately approved replay to evaluate actions and saved outputs without reminders. Record user prompts, supported dispositions, duplicate/unnecessary proposals, actual review overhead and scope/approval violations. Never infer instruction compliance from valid event hashes alone.
