@@ -17,5 +17,5 @@ hide_trim_window = true
 # Absolute Database Paths.
 # Escape Windows backslashes by doubling them.
 database_paths = [
-    "D:\\files\\documents\\NERSC_TRIM_20k"
+#    "D:\\files\\documents\\NERSC_TRIM_20k"
 ]
