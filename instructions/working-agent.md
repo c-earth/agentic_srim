@@ -159,12 +159,6 @@ and report the remaining nonterminal record and blocker.
 
 ## Reporting
 
-Before delivery, perform the [evidence-based completion review](../.agents/skills/self-improvement/references/protocol.md#evidence-based-completion-review):
-verify deliverables, failed/stale records, owned live processes and outstanding
-obligations using actual state. Reading instructions or obtaining a scientific
-result does not discharge required follow-up. Finish authorized obligations or
-explicitly report their blockers and next actions before claiming completion.
-
 Lead with the result. Explain supporting evidence, material limitations and
 unresolved work. Distinguish completed actions from proposals and pending
 approvals.

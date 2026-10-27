@@ -17,3 +17,6 @@ __pycache__/
 
 /worker/*
 !/worker/.gitkeep
+
+/memory/knowledge/external/*
+!/memory/knowledge/external/.gitkeep
