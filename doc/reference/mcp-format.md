@@ -141,8 +141,8 @@ improvement_assess accepts closed project.assessment.v2 details plus the standar
 
 Improvement events, proposals and trial snapshots use `.local/workflow-improvement/`.
 This is persistent Git-ignored worktree state, not a backup. Preserved historical
-cache dependencies use protected `.local/preserved-dependencies/`; figure records use
-`.local/scientific-figures/`. Migration inventories under `.local/migrations/`
+cache dependencies use protected `.local/preserved-dependencies/`.
+Migration inventories under `.local/migrations/`
 map historical paths without rewriting evidence bytes or automatically redirecting
 filesystem/MCP reads. New references use `.local/`; old saved `.cache/` references
 are not aliases. Obtain current references by reading the current records.

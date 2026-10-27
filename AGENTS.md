@@ -61,8 +61,7 @@ scripts, custom tables, human notes, approval records and workspace-role
 configuration. SRIM/TRIM-regenerable outputs are eligible for reviewed cleanup.
 Do not automatically clear self-improvement evidence, proposals or snapshots.
 
-Scientific-figure artifacts belong under `.local/scientific-figures/` and
-self-improvement records under `.local/workflow-improvement/`. Their preserved
+Self-improvement records belong under `.local/workflow-improvement/`. Their preserved
 dependencies belong under `.local/preserved-dependencies/`, which is protected
 persistent storage. Routine cleanup of repository-root `.cache/` must not
 touch these stores. They remain local ignored state, not a durable backup.
@@ -100,7 +99,7 @@ may require explicit mapped paths before separately authorized reuse.
 
 - Create files and artifacts that are only indirectly related to the project under the repository-root `.cache/` directory. This includes auxiliary document extractions, page renders, temporary scripts, and other supporting work products.
 - Do not create repository-root `tmp/` or `output/` directories for this auxiliary work. Use descriptive subdirectories within `.cache/` instead.
-- The scientific-figure and self-improvement artifact stores and their protected dependencies use the `.local/` locations specified above instead. Figure-version checks remain within their figure records as required by the figure skill.
+- The self-improvement artifact store and its protected dependencies use the `.local/` locations specified above instead.
 
 # File editing
 

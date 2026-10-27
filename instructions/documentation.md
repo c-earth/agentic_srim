@@ -19,7 +19,7 @@ changes to scientific behavior, native execution, settings or unrelated work.
 | `doc/decisions/` | Short, active decisions that constrain current behavior; record the decision, consequence and supporting current references. |
 | `doc/reviews/` | Dated reports with unresolved findings that still need attention. Clearly distinguish observed defects from proposed fixes and verified closeouts. |
 | `doc/examples/` | Input/configuration templates linked from a guide. |
-| `doc/figures/` | Published figure assets used by current documentation. Scientific figure authoring/version records remain in the skill's prescribed `.local/` stores. |
+| `doc/figures/` | Published figure assets used by current documentation. |
 
 Keep executable configuration, dependency manifests, source, tests and runtime
 data in the locations their loaders expect. Do not move them into `doc/` merely
