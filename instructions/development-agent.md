@@ -13,7 +13,8 @@ not create user approval.
 
 # Proposal and approval before implementation
 
-- Before creating or changing implementation code, fully work out and present every detail of every proposed file and code change to the user. Do not start implementation while details remain unresolved.
+- Before creating, editing, moving or deleting existing tracked project files or new files intended to become part of the tracked project, present the complete proposed changes and obtain the user's explicit approval. This includes implementation code, documentation, agent instructions, skills, protocols and sub-agent configuration. Apply code-specific requirements only where relevant.
+- Confirmation of desired behavior or permission to write files does not substitute for approval of the complete proposed changes. A direct user request may provide that approval when it already specifies the exact changes.
 - For each file, specify its path, purpose, responsibilities, contents, dependencies, and relationship to other files.
 - For each class and function, specify its purpose, complete typed signature, inputs, outputs, side effects, validation, error behavior, and interactions with other code.
 - Specify applicable data schemas, file formats, directory layouts, naming rules, defaults, configuration, lifecycle, concurrency behavior, and verification steps before implementation.
