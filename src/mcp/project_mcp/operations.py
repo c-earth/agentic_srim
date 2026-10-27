@@ -18,8 +18,6 @@ from src.knowledge.source import project_simulation_inputs
 from src.mcp.common.diagnostics import read_run_diagnostics
 from src.mcp.common.contracts import ServerContext
 from src.mcp.common.files import safe_path
-from src.plan.catalog import create_candidate, inventory_repository_skills, list_candidates, list_capabilities, list_collections, read_candidate, read_capability
-from src.plan.improvement import create_improvement_proposal, read_improvement_status, record_assessment, record_observation
 from src.srim.common.types import JSONObject
 from src.knowledge.retrieval_search import search_knowledge, get_knowledge, read_knowledge_links
 from src.knowledge.retrieval_index import CANCELLATION, initialize_retrieval_index, update_retrieval_index, reconcile_retrieval_index, read_retrieval_status
@@ -65,20 +63,6 @@ def read_operation(name: str, arguments: JSONObject, context: ServerContext) -> 
         return list_analyses(paths, **args)
     if name == "analysis_get":
         return read_analysis(paths, **args)
-    if name == "collections_list":
-        return list_collections(paths)
-    if name == "collection_entries":
-        return list_capabilities(paths, **args)
-    if name == "collection_entry_get":
-        return read_capability(paths, **args)
-    if name == "candidates_list":
-        return list_candidates(paths, **args)
-    if name == "candidate_get":
-        return read_candidate(paths, **args)
-    if name == "repository_skills_list":
-        return inventory_repository_skills(paths)
-    if name == "improvement_status":
-        return read_improvement_status(paths, **args)
     if name == "run_source":
         return project_simulation_inputs(paths, args["simulation_id"])
     if name == "run_get":
@@ -126,7 +110,7 @@ def write_operation(name: str, arguments: JSONObject, context: ServerContext, ca
     """Execute one accepted project mutation with explicit context/callbacks.
 
     Return outcome/data/references/warnings. Cancel only before publication,
-    perform no physics/approval/promotion, and propagate I/O/validation failures.
+    perform no physics, and propagate I/O/validation failures.
     """
     args = deepcopy(arguments)
     request_id = args.pop("request_id")
@@ -185,14 +169,6 @@ def write_operation(name: str, arguments: JSONObject, context: ServerContext, ca
         data = attach_analysis_artifacts(context.paths, context.config, request_id=request_id, allowed_roots=allowed_roots, **args)
     elif name == "analysis_finish":
         data = finish_analysis(context.paths, context.config, request_id=request_id, **args)
-    elif name == "candidate_create":
-        data = create_candidate(context.paths, context.config, request_id=request_id, allowed_roots=allowed_roots, **args)
-    elif name == "improvement_observe":
-        data = record_observation(context.paths, context.config, request_id=request_id, **args)
-    elif name == "improvement_assess":
-        data = record_assessment(context.paths, context.config, request_id=request_id, **args)
-    elif name == "improvement_proposal_create":
-        data = create_improvement_proposal(context.paths, context.config, request_id=request_id, **args)
     else:
         raise ValueError("unsupported: unknown project mutation")
     return {"outcome": "succeeded", "data": data, "references": [], "warnings": []}

@@ -72,7 +72,6 @@ class ProtocolAdapter:
         """Validate and serve params using trusted context and bounded structured output.
 
         Reads/waits run off-loop; accepted mutations outlive request cancellation.
-        Improvement-event reads require .local/workflow-improvement ownership.
         Return SDK error envelopes for domain failures, never raw exception stacks.
         """
         try:
@@ -147,21 +146,6 @@ class ProtocolAdapter:
                             owned = True
                         elif reference["kind"] == "analysis" and path.is_relative_to(base):
                             owned = any(file["path"] == path.relative_to(base).as_posix() and file["sha256"] == reference["sha256"] and file["size_bytes"] == reference["size_bytes"] for file in selected["record"]["artifacts"])
-                    elif reference["kind"] == "capability" and reference["id"].startswith("candidate_"):
-                        from src.plan.catalog import read_candidate
-                        candidate = read_candidate(self.context.paths, reference["id"])
-                        base = self.context.paths.root / "memory" / "project" / "candidates" / reference["id"]
-                        owned = reference == candidate["reference"] or any(path == base / "files" / file["path"] and reference["sha256"] == file["sha256"] and reference["size_bytes"] == file["size_bytes"] for file in candidate["candidate"]["files"])
-                    elif reference["kind"] == "improvement-event":
-                        from src.plan.improvement import validate_improvement_event
-                        if re.fullmatch(r"[0-9a-f-]{36}", reference["id"]) and path == self.context.paths.root / ".local" / "workflow-improvement" / "events" / (reference["id"] + ".json"):
-                            validate_improvement_event(load_json(_read_regular_bytes(path)))
-                            owned = True
-                    elif reference["kind"] == "proposal":
-                        from src.plan.improvement import read_improvement_status
-                        if re.fullmatch(r"[0-9a-f-]{36}", reference["id"]):
-                            status = read_improvement_status(self.context.paths, proposal_id=reference["id"])
-                            owned = not status["issues"] and any(event["kind"] == "proposal" and event["details"]["path"] == reference["path"] and event["details"]["revision"] == reference["sha256"] for event in status["events"])
                 if not owned:
                     raise ValueError("unsafe-path: file is not a listed immutable server artifact")
                 data = await asyncio.to_thread(partial(read_verified_chunk, path, reference["sha256"], reference["size_bytes"], offset=arguments["offset"], length=arguments["length"]))
@@ -206,7 +190,7 @@ class ProtocolAdapter:
             raise ValueError("Invalid resource-template cursor")
         templates = [("capabilities/{id}", "capability"), ("schemas/{id}", "schema"), ("examples/{id}", "example"), ("jobs/{id}", "job"), ("artifacts/{id}/manifest", "artifact-manifest")]
         if self.context.name == "project_mcp":
-            templates.extend([("cases/{id}/{revision}", "case"), ("analyses/{id}/{revision}", "analysis"), ("collections/{collection}", "collection"), ("capabilities/{collection}/{id}/{version}", "registered-capability"), ("candidates/{id}", "candidate"), ("improvement/{proposal_id}", "improvement")])
+            templates.extend([("cases/{id}/{revision}", "case"), ("analyses/{id}/{revision}", "analysis")])
         return ListResourceTemplatesResult(resourceTemplates=[ResourceTemplate(uriTemplate=self.scheme + "://" + path, name=name, mimeType="application/json") for path, name in templates])
 
     async def read_resource(self: ProtocolAdapter, context: ServerRequestContext[object], params: ReadResourceRequestParams) -> ReadResourceResult:
@@ -243,18 +227,6 @@ class ProtocolAdapter:
             if len(parts) == 3 and parts[0] in ("cases", "analyses") and parts[2].isdigit():
                 tool = "case_get" if parts[0] == "cases" else "analysis_get"
                 arguments = {"case_id" if parts[0] == "cases" else "analysis_id": parts[1], "revision": int(parts[2])}
-            elif len(parts) == 2 and parts[0] in ("collections", "candidates", "improvement"):
-                tool, key = {"collections": ("collection_entries", "collection"), "candidates": ("candidate_get", "candidate_id"), "improvement": ("improvement_status", "proposal_id")}[parts[0]]
-                arguments = {key: parts[1]}
-            elif len(parts) == 4 and parts[0] == "capabilities":
-                collection, identity, selected_version = parts[1:]
-                if collection not in ("workflow", "analysis", "skill") or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", identity) is None or len(identity) > 64 or re.fullmatch(r"v[1-9][0-9]*", selected_version) is None:
-                    raise ValueError("Invalid registered capability resource identity")
-                target = safe_path(self.context.paths.root / "memory" / "project" / "capabilities", collection + "/" + identity + "/" + selected_version + "/manifest.json")
-                if target.stat().st_size > self.context.limits["max_result_bytes"]:
-                    raise ValueError("too-large: registered capability manifest exceeds cap")
-                digest = hashlib.sha256(_read_regular_bytes(target)).hexdigest()
-                tool, arguments = "collection_entry_get", {"reference": {"collection": collection, "id": identity, "version": selected_version, "manifest_sha256": digest}}
             else:
                 raise ValueError("not-found: unknown project resource")
             result = await self.call_tool(context, CallToolRequestParams(name=tool, arguments=arguments))

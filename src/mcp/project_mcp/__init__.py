@@ -1,1 +1,1 @@
-"""Expose research records and improvement evidence through project_mcp."""
+"""Expose research case and analysis records through project_mcp."""

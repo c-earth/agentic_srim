@@ -4,7 +4,7 @@
 
 ## Software checks
 
-Run all seven test directories explicitly; top-level discovery alone does not discover these namespace-directory tests. The MCP suite includes real local stdio transport and needs Windows loopback access for its asyncio event loop:
+Run all six test directories explicitly; top-level discovery alone does not discover these namespace-directory tests. The MCP suite includes real local stdio transport and needs Windows loopback access for its asyncio event loop:
 
 ```powershell
 & 'D:\projects\agentic_srim\.venv\Scripts\python.exe' -W error -m unittest discover -s test/backend -p 'test_*.py'
@@ -12,7 +12,6 @@ Run all seven test directories explicitly; top-level discovery alone does not di
 & 'D:\projects\agentic_srim\.venv\Scripts\python.exe' -W error -m unittest discover -s test/knowledge -p 'test_*.py'
 & 'D:\projects\agentic_srim\.venv\Scripts\python.exe' -W error -m unittest discover -s test/case -p 'test_*.py'
 & 'D:\projects\agentic_srim\.venv\Scripts\python.exe' -W error -m unittest discover -s test/analysis -p 'test_*.py'
-& 'D:\projects\agentic_srim\.venv\Scripts\python.exe' -W error -m unittest discover -s test/plan -p 'test_*.py'
 & 'D:\projects\agentic_srim\.venv\Scripts\python.exe' -W error -m unittest discover -s test/mcp -p 'test_*.py'
 ```
 
@@ -225,7 +224,7 @@ one compressed archive hash and one TAR scan for multiple requested members and
 exercise member conflicts, unsafe TAR entries, deadlines and size limits.
 
 The six broader MCP protocol cases passed across the suite run and a focused
-rerun after updating the approved project-tool inventory to 47. These synthetic
+rerun against the then-current project-tool inventory. These synthetic
 results do not establish full-dataset search latency or current original-archive
 verification.
 

@@ -104,9 +104,8 @@ src/mcp/                      Two separate adapters and shared protocol/job infr
 The contents of `memory/`, `case/` and `worker/` are local runtime state and are
 Git-ignored, except for `.gitkeep` directory placeholders. This includes imported
 and calculated resources, simulation and analysis records, input-search catalogs,
-reusable capability and candidate snapshots, MCP journals and artifacts, and
-worker runtimes. New checkouts do not receive these records from Git. Preserve
-them through separately verified copies or archives; Git exclusion provides no
+MCP journals and artifacts, and worker runtimes. New checkouts do not receive
+these records from Git. Preserve them through separately verified copies or archives; Git exclusion provides no
 backup and does not authorize deletion. Source, packaged defaults, test fixtures,
 published reference assets and shared project configuration remain versioned in
 their documented locations.
@@ -118,4 +117,4 @@ Each permanent simulation record contains `metadata.json`, `input/` for requests
 Keep `memory/resources` and permanent dependency simulation records together when archiving. CAB GUI captures have permanent records with engine identity `sr-capture`. Older entries can still reference worker capture directories; preserve those too. Deleting linked evidence breaks cache verification. Generic deletion is not a reference-aware garbage collector, and there is no complete historical installation archive. Use a persistent destination instead of `.cache` for exports you need to retain.
 
 
-Agent workspace roles and maintenance procedures are defined in [AGENTS.md](../../AGENTS.md) and `instructions/`. Persistent local figure, improvement and migration records live under `.local/`; preserve them during cache cleanup.
+Agent workspace roles and maintenance procedures are defined in [AGENTS.md](../../AGENTS.md) and `instructions/`. Persistent local figure and migration records live under `.local/`; preserve them during cache cleanup.

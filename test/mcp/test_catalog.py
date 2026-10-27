@@ -23,7 +23,7 @@ class TestCatalog(Fixture):
         self.assertFalse(science["tools"]["run_closeout"]["mutating"])
         self.assertTrue(science["tools"]["run_reconcile"]["mutating"])
         self.assertIn("srim.run-closeout.v1", science["schemas"])
-        self.assertEqual(len(project["tools"]), 47)
+        self.assertEqual(len(project["tools"]), 36)
         self.assertNotIn("run_submit", project["tools"])
         self.assertNotIn("case_create", science["tools"])
         for catalog in (science, project):
@@ -44,19 +44,19 @@ class TestCatalog(Fixture):
         request["parameters"]["energy"]["step_keV"] = "1"
         self.assertFalse(Draft202012Validator(catalog["schemas"]["sr.request.v2"]).is_valid(request))
 
-    def test_improvement_assessment_contract(self: TestCatalog) -> None:
-        """Validate assessment discovery and reject unknown fields/invalid decisions."""
-        catalog = project_catalog(self.project)
-        tool = catalog["tools"]["improvement_assess"]
-        self.assertTrue(tool["mutating"])
-        self.assertEqual(tool["family"], "improvement")
-        details = {"observation_ids": ["00000000-0000-0000-0000-000000000001"], "disposition": "proposal_needed", "rationale": "Supported evidence", "uncertainty": "", "follow_up": "Prepare proposal", "related_proposal_ids": [], "predecessor_assessment_id": None}
-        validator = Draft202012Validator(tool["inputSchema"])
-        arguments = {"request_id": "00000000-0000-0000-0000-000000000002", "details": details}
-        validator.validate(arguments)
-        for invalid in ({**arguments, "extra": True}, {**arguments, "details": {**details, "extra": True}}, {**arguments, "details": {**details, "disposition": "adopt"}}, {**arguments, "details": {**details, "observation_ids": []}}, {**arguments, "details": {**details, "rationale": " "}}, {**arguments, "details": {**details, "follow_up": ""}}, {**arguments, "details": {**details, "disposition": "already_addressed"}}):
+    def test_analysis_method_contract(self: TestCatalog) -> None:
+        """Validate explicit method fields using the project catalog fixture.
+
+        Return None without publication; assert valid described methods and reject
+        unsupported kinds, references, missing descriptions and unknown fields.
+        """
+        method = project_catalog(self.project)["schemas"]["project.analysis-spec.v1"]["properties"]["method"]
+        validator = Draft202012Validator(method)
+        valid = {"kind": "ad-hoc", "reference": None, "description": "Inspect saved evidence", "citations": [], "code_artifacts": []}
+        validator.validate(valid)
+        missing = {key: value for key, value in valid.items() if key != "description"}
+        for invalid in ({**valid, "kind": "registered"}, {**valid, "reference": {}}, {**valid, "description": ""}, {**valid, "extra": True}, missing):
             self.assertFalse(validator.is_valid(invalid))
-        self.assertIn("project.assessment.v2", catalog["schemas"])
 
     def test_database_discovery_schemas(self: TestCatalog) -> None:
         """Expose three read-only database tools and four closed database envelope schemas."""

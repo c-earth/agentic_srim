@@ -82,12 +82,12 @@ class TestProtocol(Fixture, unittest.IsolatedAsyncioTestCase):
         self.assertFalse((self.root / "no-native-installation").exists())
 
     async def test_two_servers_and_multiple_cases(self: TestProtocol) -> None:
-        """Verify cases, local observation reads and rejection of old-root ownership."""
+        """Verify cases, case artifact reads and rejection of forged ownership."""
         science_parameters = StdioServerParameters(command="D:\\projects\\agentic_srim\\.venv\\Scripts\\python.exe", args=["-W", "error", "-m", "src.mcp.srim_mcp", "--root", str(self.root)], cwd=str(self.repository))
         project_parameters = StdioServerParameters(command="D:\\projects\\agentic_srim\\.venv\\Scripts\\python.exe", args=["-W", "error", "-m", "src.mcp.project_mcp", "--root", str(self.root)], cwd=str(self.repository))
         async with Client(science_parameters, read_timeout_seconds=15) as science, Client(project_parameters, read_timeout_seconds=15) as project:
             self.assertEqual(len((await science.list_tools()).tools), 40)
-            self.assertEqual(len((await project.list_tools()).tools), 47)
+            self.assertEqual(len((await project.list_tools()).tools), 36)
             duplicate_process = await asyncio.to_thread(subprocess.run, ["D:\\projects\\agentic_srim\\.venv\\Scripts\\python.exe", "-W", "error", "-m", "src.mcp.project_mcp", "--root", str(self.root)], cwd=str(self.repository), input=b"", stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
             self.assertEqual(duplicate_process.returncode, 1)
             self.assertEqual(duplicate_process.stdout, b"")
@@ -131,30 +131,16 @@ class TestProtocol(Fixture, unittest.IsolatedAsyncioTestCase):
             self.assertEqual(exact["data"]["verification"]["record"], "verified")
             status = (await project.call_tool("knowledge_status", {})).structured_content
             self.assertEqual(status["data"]["counts"]["case"]["entities"], 2)
-            observation = await project.call_tool("improvement_observe", {"request_id": str(uuid4()), "details": {"problem": "Synthetic protocol test", "evidence": "Local immutable event read", "sources": [], "criteria": ["quality"], "measurements": [], "uncertainty": "Fixture only"}})
-            self.assertTrue(observation.structured_content["ok"], observation)
-            observation_job_id = observation.structured_content["data"]["job_id"]
-            deadline = time.monotonic() + 10
-            sequence = 0
-            while True:
-                observation_job = (await project.call_tool("job_get", {"job_id": observation_job_id, "after_sequence": sequence, "wait_seconds": 1})).structured_content["data"]
-                sequence = observation_job["sequence"]
-                if observation_job["state"] in ("succeeded", "failed", "interrupted", "cancelled") or time.monotonic() >= deadline:
-                    break
-            self.assertEqual(observation_job["state"], "succeeded", observation_job)
-            observation_result = await project.call_tool("artifact_read", {"reference": observation_job["result"]})
-            self.assertTrue(observation_result.structured_content["ok"], observation_result)
-            observation_data = json.loads(base64.b64decode(observation_result.structured_content["data"]["content"]))["data"]
-            event_reference = observation_data["reference"]
-            self.assertTrue(event_reference["path"].startswith(".local/workflow-improvement/events/"))
-            event_read = await project.call_tool("artifact_read", {"reference": event_reference})
-            self.assertTrue(event_read.structured_content["ok"], event_read)
-            event_bytes = base64.b64decode(event_read.structured_content["data"]["content"])
-            self.assertEqual(json.loads(event_bytes), observation_data["event"])
-            forged_reference = {**event_reference, "path": event_reference["path"].replace(".local/", ".cache/", 1)}
-            old_path = self.root / forged_reference["path"]
-            old_path.parent.mkdir(parents=True)
-            old_path.write_bytes(event_bytes)
+            case_path = self.paths.cases / identities[-1] / "revisions" / "r000001.json"
+            case_reference = {**decoded["data"]["reference"], "path": case_path.relative_to(self.root).as_posix(), "size_bytes": case_path.stat().st_size}
+            case_read = await project.call_tool("artifact_read", {"reference": case_reference})
+            self.assertTrue(case_read.structured_content["ok"], case_read)
+            case_bytes = base64.b64decode(case_read.structured_content["data"]["content"])
+            self.assertEqual(json.loads(case_bytes)["id"], identities[-1])
+            forged_reference = {**case_reference, "path": ".cache/" + case_reference["path"]}
+            forged_path = self.root / forged_reference["path"]
+            forged_path.parent.mkdir(parents=True)
+            forged_path.write_bytes(case_bytes)
             rejected = await project.call_tool("artifact_read", {"reference": forged_reference})
             self.assertTrue(rejected.is_error)
             self.assertFalse(rejected.structured_content["ok"])

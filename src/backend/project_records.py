@@ -261,9 +261,9 @@ def validate_record(document: JSONObject, kind: Literal["case", "analysis"]) -> 
             if not isinstance(document[key], str) or "\0" in document[key] or len(document[key].encode("utf-8")) > 1048576:
                 raise ValueError("Invalid analysis narrative")
         method = document["method"]
-        if not isinstance(method, dict) or set(method) != {"kind", "reference", "description", "citations", "code_artifacts"} or method["kind"] not in ("ad-hoc", "registered") or not isinstance(method["description"], str) or not method["description"].strip() or not isinstance(method["citations"], list) or not isinstance(method["code_artifacts"], list):
+        if not isinstance(method, dict) or set(method) != {"kind", "reference", "description", "citations", "code_artifacts"} or method["kind"] != "ad-hoc" or not isinstance(method["description"], str) or not method["description"].strip() or not isinstance(method["citations"], list) or not isinstance(method["code_artifacts"], list):
             raise ValueError("Invalid analysis method")
-        if method["kind"] == "ad-hoc" and method["reference"] is not None or method["kind"] == "registered" and not isinstance(method["reference"], dict):
+        if method["reference"] is not None:
             raise ValueError("Invalid method reference")
         if any(not isinstance(citation, dict) or set(citation) != {"title", "locator"} or any(not isinstance(value, str) or not value.strip() for value in citation.values()) for citation in method["citations"]) or any(not isinstance(name, str) for name in method["code_artifacts"]):
             raise ValueError("Invalid method citations/code artifacts")

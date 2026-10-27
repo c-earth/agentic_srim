@@ -22,10 +22,8 @@ One agent session can create and work with multiple cases. Each operation select
 | project_mcp | Cases | cases_list, case_get, case_create, case_revise |
 | project_mcp | Run references | runs_list, run_get, run_source, physics_job_get |
 | project_mcp | Analysis records | analyses_list, analysis_get, analysis_create, analysis_revise, analysis_attach, analysis_finish |
-| project_mcp | Reusable capabilities | collections_list, collection_entries, collection_entry_get, candidates_list, candidate_get, candidate_create, repository_skills_list |
-| project_mcp | Self-improvement evidence | improvement_status, improvement_observe, improvement_assess, improvement_proposal_create |
 
-srim_mcp owns native calculation execution and verified result access. project_mcp organizes cases, references and analysis evidence. Initial reusable collections are empty, and analysis recording does not execute an unspecified scientific method. Individual TRIM execution supports cooperative cancellation; active SR execution uses its configured timeout. See the [interface reference](../reference/mcp-format.md) and [project guide](project-management.md) for record contracts, side effects and limitations. Use `schema_get` and `capability_get` for exact current tool arguments.
+srim_mcp owns native calculation execution and verified result access. project_mcp organizes cases, references and analysis evidence. Analysis recording does not execute an unspecified scientific method. Individual TRIM execution supports cooperative cancellation; active SR execution uses its configured timeout. See the [interface reference](../reference/mcp-format.md) and [project guide](project-management.md) for record contracts, side effects and limitations. Use `schema_get` and `capability_get` for exact current tool arguments.
 
 ## Setup and launch
 

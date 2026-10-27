@@ -59,12 +59,10 @@ Cache is local, Git-ignored storage, not a durable backup. Do not assume
 another worktree contains the same cache. Preserve replay inputs, unique
 scripts, custom tables, human notes, approval records and workspace-role
 configuration. SRIM/TRIM-regenerable outputs are eligible for reviewed cleanup.
-Do not automatically clear self-improvement evidence, proposals or snapshots.
 
-Self-improvement records belong under `.local/workflow-improvement/`. Their preserved
-dependencies belong under `.local/preserved-dependencies/`, which is protected
-persistent storage. Routine cleanup of repository-root `.cache/` must not
-touch these stores. They remain local ignored state, not a durable backup.
+Preserved dependencies belong under `.local/preserved-dependencies/`, which is
+protected persistent storage. Routine cleanup of repository-root `.cache/` must
+not touch this store. It remains local ignored state, not a durable backup.
 
 For historical paths, consult the inventories and reports under
 `.local/migrations/`. Mappings do not redirect filesystem or MCP reads
@@ -99,7 +97,6 @@ may require explicit mapped paths before separately authorized reuse.
 
 - Create files and artifacts that are only indirectly related to the project under the repository-root `.cache/` directory. This includes auxiliary document extractions, page renders, temporary scripts, and other supporting work products.
 - Do not create repository-root `tmp/` or `output/` directories for this auxiliary work. Use descriptive subdirectories within `.cache/` instead.
-- The self-improvement artifact store and its protected dependencies use the `.local/` locations specified above instead.
 
 # File editing
 
@@ -108,8 +105,3 @@ may require explicit mapped paths before separately authorized reuse.
 # Git command execution
 
 - Never use standalone `--` in Git commands; it triggers sandbox permission errors. Use `./` for filenames starting with `-`.
-
-# Self-improvement
-
-- Classify concrete user-requested changes as ordinary project work, including edits to agent instructions, skills and workflows. Do not impose self-improvement trial, rollback or adoption gates on them. Apply the skill lifecycle only to separate agent-initiated improvements or explicitly requested self-improvement reviews/trials; normal project approval requirements still apply.
-- Consult `.agents/skills/self-improvement/SKILL.md` after substantial avoidable failures, recurring ineffective attempts and material user corrections when they affect the next action, and at task completion. Follow its assessment and proposal procedure within the user's scope. Before trial behavior, consult it to reconcile recorded state and boundaries.

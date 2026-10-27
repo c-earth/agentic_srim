@@ -1,4 +1,4 @@
-# Cases, analyses and reusable capabilities
+# Cases and analyses
 
 [Server/tool guide](mcp-servers.md) · [Record/interface reference](../reference/mcp-format.md)
 
@@ -82,7 +82,7 @@ report. Restart the owning MCP connections after updating the server code.
 
 ## Record an analysis
 
-analysis_create records a draft question, explicit method, selected source/files, parameters and required eligibility booleans. The method is ad-hoc with a full description or references an exact registered analysis version. Active registered collections initially contain no methods. No analysis_run or arbitrary Python executor is exposed.
+analysis_create records a draft question, explicit method, selected source/files, parameters and required eligibility booleans. The method is ad-hoc with a full description and explicit supporting evidence. No analysis_run or arbitrary Python executor is exposed.
 
 The three eligibility flags are required: allow_failed_runs, allow_checkpoint_recovery and require_complete_parser. They prevent an agent from silently treating diagnostic failures, partial output or recovered checkpoints as equivalent to successful fresh native results. Recovered input retains its source hashes, availability, precision and inferred-geometry warnings.
 
@@ -93,21 +93,12 @@ For completed analyses, each exact case-sensitive filename in
 Written method documents remain valid for manual analyses. Missing names and
 other roles produce a clear error before publishing a revision. Completion still
 requires nonempty findings and at least one attachment, including when the
-declared list is empty; registered-method schema checks also apply. Failed
+declared list is empty. Failed
 completion retains its existing evidence and failure-reason requirements. This
 rule checks metadata consistency and does not execute or scientifically validate
 the method. Historical terminal records remain readable without rewriting them.
 
 Analysis records use backend post IDs under memory/post and their own revision schema. Completed/failed analyses are terminal; further work gets a new analysis record. A completed analysis revision can be referenced by multiple cases. Cross-record commits are explicit: finalizing an analysis does not silently revise its cases. artifact_read accepts exact listed case/analysis revision and analysis artifact references; native files remain accessible through the scientific source reader.
-
-## Reuse and self-improvement
-
-collections_list reports workflow, analysis and skill collections separately. Candidate creation preserves an unapproved definition, explicit schemas/declarative procedure, supporting file hashes, rationale and evidence. It does not activate a workflow, add a scientific algorithm, edit instructions or grant execution authority. Existing repository skills are inventoried separately and remain intact.
-
-Use improvement_observe for meaningful evidence, improvement_assess for a saved evidence-based disposition, and improvement_proposal_create for exact complete proposal Markdown linked to observations. The [self-improvement skill](../../.agents/skills/self-improvement/SKILL.md) and [protocol](../../.agents/skills/self-improvement/references/protocol.md) define review triggers, selective independent review, follow-through, explicit trial approval, snapshots, restoration and separate adoption approval. improvement_status reports valid assessment chains, unassessed/deferred/conflicting findings and proposals still owed alongside existing event graphs and trial counts. Version-1 events remain readable; only assessment events use version 2. A structurally valid draft closes a drafting obligation, not an implementation or quality requirement. No background service enforces reconsideration, expiry or rollback.
-
-No MCP tool creates approval events, starts a trial, promotes a candidate, edits skills, or adopts behavior. After real user approval, the coordinating agent performs the specifically approved repository workflow. The Python-only publication API checks exact candidate/proposal/adoption hashes before making a new immutable reusable version; record checks cannot cryptographically authenticate human consent. Files under `.local/workflow-improvement/` remain persistent local ignored evidence rather than durable cloud memory or a backup. Preserved dependencies live under protected `.local/preserved-dependencies/`. Routine repository-root cache cleanup must not remove these stores. Consult `.local/migrations/` inventories for historical paths; mappings do not automatically redirect old reads.
-
 
 ## Retrieve prior cases and findings
 

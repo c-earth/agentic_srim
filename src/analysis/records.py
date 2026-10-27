@@ -13,8 +13,6 @@ import re
 from typing import Literal
 from uuid import uuid4
 
-from jsonschema import Draft202012Validator
-
 from src.backend.config import Config
 from src.backend.paths import ProjectPaths
 from src.backend.project_records import initialize_record, list_records, read_record, revise_record
@@ -33,12 +31,6 @@ def create_analysis(paths: ProjectPaths, config: Config, spec: JSONObject, reque
     if not isinstance(spec, dict) or set(spec) != fields or spec["findings"] != "" or spec["limitations"] != "":
         raise ValueError("New AnalysisSpec requires exact fields and empty narratives")
     checks = check_analysis_inputs(paths, spec["inputs"], spec["eligibility"])
-    if spec["method"].get("kind") == "registered":
-        from src.plan.catalog import read_capability
-        method = read_capability(paths, spec["method"]["reference"])["manifest"]
-        errors = list(Draft202012Validator(method["input_schema"]).iter_errors({key: spec[key] for key in ("inputs", "eligibility", "parameters")}))
-        if errors:
-            raise ValueError("Registered method input schema rejected analysis: " + errors[0].message)
     document = deepcopy(spec)
     document.update(status="draft", artifacts=[], failure=None)
     result = initialize_record(paths, config, "analysis", document, request_id, allocated_id=allocated_id)
@@ -73,19 +65,13 @@ def read_analysis(paths: ProjectPaths, analysis_id: str, *, revision: int | None
 def revise_analysis(paths: ProjectPaths, config: Config, analysis_id: str, expected_revision: int, spec: JSONObject, request_id: str) -> JSONObject:
     """Append a full draft spec to analysis_id with CAS and request_id.
 
-    Preserve attached artifacts, validate registered method/input schemas and
+    Preserve attached artifacts, validate the explicit method and inputs, and
     return revision/checks; terminal, stale, unsafe or disallowed changes raise.
     """
     if not isinstance(spec, dict) or set(spec) != {"title", "question", "method", "inputs", "eligibility", "parameters", "findings", "limitations"}:
         raise ValueError("Invalid AnalysisSpec")
     old = read_record(paths, "analysis", analysis_id)["record"]
     checks = check_analysis_inputs(paths, spec["inputs"], spec["eligibility"])
-    if spec["method"].get("kind") == "registered":
-        from src.plan.catalog import read_capability
-        method = read_capability(paths, spec["method"]["reference"])["manifest"]
-        errors = list(Draft202012Validator(method["input_schema"]).iter_errors({key: spec[key] for key in ("inputs", "eligibility", "parameters")}))
-        if errors:
-            raise ValueError("Registered method input schema rejected analysis: " + errors[0].message)
     document = deepcopy(spec)
     document.update(status="draft", artifacts=old["artifacts"], failure=None)
     result = revise_record(paths, config, "analysis", analysis_id, expected_revision, document, request_id)
@@ -180,13 +166,6 @@ def finish_analysis(paths: ProjectPaths, config: Config, analysis_id: str, expec
                 raise ValueError("Completed analysis code_artifacts reference is missing: " + name)
             if artifacts[name]["role"] not in ("code", "method"):
                 raise ValueError(f"Completed analysis code_artifacts reference {name!r} has role {artifacts[name]['role']!r}; expected code or method")
-        if old["method"]["kind"] == "registered":
-            from src.plan.catalog import read_capability
-            method = read_capability(paths, old["method"]["reference"])["manifest"]
-            errors = list(Draft202012Validator(method["input_schema"]).iter_errors({key: old[key] for key in ("inputs", "eligibility", "parameters")}))
-            errors.extend(Draft202012Validator(method["output_schema"]).iter_errors({"artifacts": old["artifacts"], "findings": findings, "limitations": limitations}))
-            if errors:
-                raise ValueError("Registered method schema rejected analysis: " + errors[0].message)
     document = {key: value for key, value in old.items() if key not in {"schema_version", "kind", "id", "revision", "previous_sha256", "request_id", "created_at", "updated_at"}}
     document.update(status=status, findings=findings, limitations=limitations, failure=failure)
     return revise_record(paths, config, "analysis", analysis_id, expected_revision, document, request_id)

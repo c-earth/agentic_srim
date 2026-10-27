@@ -135,19 +135,7 @@ independently and share pinned evidence through explicit references. The agent
 applies these boundaries; MCP does not infer them from query text or add required
 target, recipe or validation fields. Cleanup is not a prerequisite.
 
-project_mcp exposes 47 tools. It records multiple independent cases, terminal native evidence, analysis provenance, unapproved capability candidates and improvement evidence. Active reusable workflow/analysis/skill collections start empty. It has no native execution, generic code executor, trial-approval or candidate-promotion tool.
-
-improvement_assess accepts closed project.assessment.v2 details plus the standard request_id and publishes one immutable version-2 assessment event through the normal mutation-job envelope. It grants no approval. Existing event kinds remain version 1. improvement_status retains its existing fields and adds assessments and pending_assessments; malformed records and chain conflicts remain issues. See the [protocol](../../.agents/skills/self-improvement/references/protocol.md#assessment-event-extension) for the exact record contract.
-
-Improvement events, proposals and trial snapshots use `.local/workflow-improvement/`.
-This is persistent Git-ignored worktree state, not a backup. Preserved historical
-cache dependencies use protected `.local/preserved-dependencies/`.
-Migration inventories under `.local/migrations/`
-map historical paths without rewriting evidence bytes or automatically redirecting
-filesystem/MCP reads. New references use `.local/`; old saved `.cache/` references
-are not aliases. Obtain current references by reading the current records.
-Restart the project MCP server through its owning session after updating the
-implementation; already-running processes may retain the old storage behavior.
+project_mcp exposes 36 tools. It records multiple independent cases, terminal native evidence and analysis provenance. It has no native execution or generic code executor.
 
 The wire tool result uses structuredContent; SDK 2.3.0 Python clients access result.structured_content. Every structured tool response has:
 
@@ -237,7 +225,7 @@ TRIM continuation keeps the approved checkpoint-first lifecycle, saved-value che
 
 ## Resources
 
-The srim:// and project:// schemes expose capability/schema/example indexes and identity templates, job snapshots and artifact manifests. project:// additionally exposes case and analysis revisions, collection entries/candidates and improvement state. Tools provide equivalent discovery when a host does not expose resources conveniently. URI parameters are identities, never arbitrary filesystem paths. Initial subscriptions, sampling, elicitation, prompts and remote HTTP transports are not advertised.
+The srim:// and project:// schemes expose capability/schema/example indexes and identity templates, job snapshots and artifact manifests. project:// additionally exposes case and analysis revisions. Tools provide equivalent discovery when a host does not expose resources conveniently. URI parameters are identities, never arbitrary filesystem paths. Initial subscriptions, sampling, elicitation, prompts and remote HTTP transports are not advertised.
 
 
 ## Unified retrieval tools

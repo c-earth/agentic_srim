@@ -74,21 +74,6 @@ verification and required return evidence. Review returned changes against
 the approved scope and verification. Do not merge merely because the coding
 agent reports success.
 
-## Self-improvement
-
-Concrete user-requested project changes, including instruction and skill
-edits, follow the ordinary project workflow. Do not route them through a
-self-improvement trial or adoption gate. Assess additional agent-initiated
-improvements separately under the [skill's classification rule](../.agents/skills/self-improvement/SKILL.md#classify-the-requested-work-first).
-
-Review substantial avoidable failures, recurring ineffective attempts and
-material user corrections when they affect the next action, and review
-meaningful findings at task completion. Follow the self-improvement skill
-for evidence assessment, saved dispositions, supported proposals and selective
-independent review. Save supported proposals without waiting for a separate
-request; drafting does not authorize implementation. Honor explicit user
-limits, preserve approval gates and stop trials at their approved boundaries.
-
 ## Worker reuse across batches
 
 For a task using batch concurrency N, maintain a task-owned pool of at most N
